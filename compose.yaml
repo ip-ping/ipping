@@ -1,0 +1,87 @@
+# The complete central application: reverse proxy, frontend, backend and PostgreSQL.
+# Measurement nodes are installed separately (see the ipping-node repository).
+#
+#   cp .env.example .env     # then edit it
+#   docker compose up -d
+#
+# Only the proxy publishes a port. The backend and the database stay on the internal network.
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${IPPING_HTTP_PORT:-80}:80"
+      - "${IPPING_HTTPS_PORT:-443}:443"
+    environment:
+      IPPING_SITE_ADDRESS: ${IPPING_SITE_ADDRESS:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  frontend:
+    image: ${IPPING_FRONTEND_IMAGE:-tonyliuzj/ipping:latest}
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    image: ${IPPING_BACKEND_IMAGE:-tonyliuzj/ipping-backend:latest}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      IPPING_DATABASE_URL: postgresql://ipping:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/ipping
+      IPPING_SETUP_TOKEN: ${IPPING_SETUP_TOKEN:-}
+      IPPING_PUBLIC_URL: ${IPPING_PUBLIC_URL:-}
+      IPPING_COOKIE_SECURE: ${IPPING_COOKIE_SECURE:-false}
+      # Only the proxy can reach this container, so its X-Forwarded-For can be trusted.
+      FORWARDED_ALLOW_IPS: "*"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # One-shot schema upgrade. The backend never changes the schema itself, and does not start until
+  # this has finished successfully.
+  migrate:
+    image: ${IPPING_BACKEND_IMAGE:-tonyliuzj/ipping-backend:latest}
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      IPPING_DATABASE_URL: postgresql://ipping:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/ipping
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ipping
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ipping
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ipping -d ipping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

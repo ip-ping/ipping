@@ -1,0 +1,26 @@
+# Reverse proxy for the central application.
+#
+#   IPPING_SITE_ADDRESS=:80                  plain HTTP (the default; fine behind another proxy or on a LAN)
+#   IPPING_SITE_ADDRESS=ping.example.com     Caddy obtains and renews a TLS certificate by itself
+{$IPPING_SITE_ADDRESS::80} {
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		-Server
+	}
+
+	# The API, the live result stream (Server-Sent Events) and the node WebSockets all go straight
+	# to the backend. Responses are flushed immediately so results appear as they arrive, and are
+	# not compressed, which would hold events back.
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		encode zstd gzip
+		reverse_proxy frontend:3000
+	}
+}

@@ -4,6 +4,18 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: Docker image and the full-stack compose file
+- `Dockerfile` (Next.js standalone, non-root, health check) built once on the build machine and
+  shared by both architectures; `sharp` is excluded because the app never uses `next/image`.
+- `compose.yaml`: Caddy + frontend + backend + PostgreSQL + one-shot `migrate`, only the proxy
+  publishes ports, backend and frontend run read-only with all capabilities dropped.
+  `deploy/Caddyfile` flushes `/api/*` immediately (live streams) and does not compress it.
+- `docker.yml` publishes `tonyliuzj/ipping` (`latest` + commit SHA) on pushes to `main`, like
+  `file-node`; `ci.yml` also builds the image for both architectures.
+- Verified with the whole stack in Docker and a real node connecting through the proxy: setup,
+  enrollment, approval, live measurement over SSE, emergency stop, and real client addresses in the
+  audit log.
+
 ### 2026-11-04: first-run setup and administration
 - `/setup`: one-time creation of the administrator, gated by the setup token (printed in the backend
   log, or `IPPING_SETUP_TOKEN` from the installer).

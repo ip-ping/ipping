@@ -19,6 +19,28 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
+## Run the whole application with Docker
+
+```bash
+cp .env.example .env      # set POSTGRES_PASSWORD (and IPPING_SITE_ADDRESS for a domain)
+docker compose up -d
+docker compose logs backend | grep -i "setup token"    # unless you set IPPING_SETUP_TOKEN
+```
+
+Then open the site, go to `/setup`, and create the administrator. `compose.yaml` runs
+
+| Service | What it is |
+|---|---|
+| `proxy` | Caddy: the only published ports (80/443); automatic TLS when `IPPING_SITE_ADDRESS` is a domain; sends `/api/*` (including the live-result stream and the node WebSockets) to the backend, everything else to the frontend |
+| `frontend` | this repository's image (`tonyliuzj/ipping`) |
+| `backend` | `tonyliuzj/ipping-backend`; waits for the migration, runs read-only with no capabilities |
+| `migrate` | one-shot schema upgrade; the backend never changes the schema itself |
+| `postgres` | PostgreSQL 16 with a named volume; never published |
+
+Images are built by GitHub Actions on every push to `main` (`latest` and the commit SHA,
+`linux/amd64` + `linux/arm64`). The frontend build contains no platform-specific binaries, so it
+is compiled once and shipped to both architectures without emulation.
+
 ## Run it for development
 
 ```bash
@@ -53,8 +75,8 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] App shell, theme, typed API client with CSRF handling, public Nodes page
 - [x] Measure form and live results page (table first, SSE with resume)
 - [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
-- [ ] Dockerfile and Docker Hub publishing
-- [ ] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
+- [x] Dockerfile and Docker Hub publishing
+- [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [ ] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore
 - [ ] `release-manifest.json`: the tested frontend + backend + node-protocol combination
 - [ ] Map overview and estimated network location (needs the backend estimator first)
