@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Lint the installer and release scripts
+        run: shellcheck ipping.sh scripts/*.sh
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck

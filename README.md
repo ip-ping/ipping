@@ -19,6 +19,33 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
+## Install with the installer
+
+```bash
+# Docker: the compose stack below, with generated secrets, health checks and backups.
+sudo bash ipping.sh install --mode docker --version v0.1.0
+
+# Direct: systemd services, no Docker (Debian / Ubuntu). PostgreSQL comes from apt; Python (via
+# uv), Node.js and Caddy are downloaded as pinned releases and checked against their publishers'
+# checksums. The backend is installed from a hash-locked requirements file.
+sudo bash ipping.sh install --mode direct --version v0.1.0 --domain ping.example.com
+
+sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
+```
+
+A release of this repository carries `release-manifest.json`, the one frontend + backend +
+node-protocol combination that was tested together; the installer installs exactly that and never
+fetches the "latest" of each part. Without `--domain` the site is plain HTTP on port 80 (fine on a
+LAN or behind another proxy) and nodes on other hosts need `--allow-insecure`; with a domain Caddy
+obtains a certificate. `--version main` is the edge channel (Docker only: images tagged `latest`).
+
+* **Updates** back up the database first, run the migration as an explicit step, keep the previous
+  release on disk, and go back to it if the migration fails.
+* **Reinstalling** after `uninstall` reuses the kept configuration and database; `--purge` removes
+  them. Other databases and PostgreSQL itself are never touched.
+* **Secrets** (database password, setup token) are generated and stay in a file only root (and the
+  service) can read.
+
 ## Run the whole application with Docker
 
 ```bash
@@ -77,7 +104,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [x] Dockerfile and Docker Hub publishing
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
-- [ ] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore
+- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore (tested in clean containers, see CHANGELOG)
 - [ ] `release-manifest.json`: the tested frontend + backend + node-protocol combination
 - [ ] Map overview and estimated network location (needs the backend estimator first)
 

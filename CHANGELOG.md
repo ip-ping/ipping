@@ -4,6 +4,26 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: central installer (`ipping.sh`)
+- Docker mode and direct mode (systemd, no Docker), `install` / `update` / `start` / `stop` /
+  `restart` / `status` / `logs` / `doctor` / `backup` / `restore` / `uninstall`, interactive menu.
+- `release-manifest.json` (see `scripts/release-manifest.sh`) pins the frontend, backend and
+  node-protocol versions that were tested together; the installer never fetches "latest" parts.
+- Direct mode downloads pinned uv, Node.js and Caddy (SHA-256 or SHA-512 as each publisher lists),
+  installs the backend from a hash-locked requirements file, runs three unprivileged services under
+  hardened units, and creates the `ipping` database and role only if they do not exist.
+- Updates take a database backup first and roll back on a failed migration. Release directories are
+  named by version and checksum, so an update never overwrites the release that is running.
+- Tested in clean containers against the real services, both modes: install, health checks (only
+  the proxy publishes ports), setup, a real node enrolling and measuring 1.1.1.1 through the
+  installed stack, backup and a restore that really rolls data back, update, uninstall keeping data,
+  reinstall reusing it, purge. Direct mode ran with `systemctl` shimmed (containers have no
+  systemd), so the generated unit files were executed by the shim, not by systemd.
+- Found and fixed while testing: published SHA-512 checksums (Caddy) were compared as SHA-256 and
+  the installer correctly refused; a bundle with a 0700 top directory made the frontend unreadable
+  to its service user; reinstall after a plain uninstall was blocked and would have generated a
+  password that no longer matched the kept database.
+
 ### 2026-11-04: CI fix
 - `npm run typecheck` now generates Next's route types first (`next typegen`). It had only passed
   locally because a previous build had already created them; CI on a clean checkout caught it.
