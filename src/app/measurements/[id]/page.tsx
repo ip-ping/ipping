@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { LocationPanel } from "@/features/location/location-panel";
 import { Overview } from "@/features/measurements/overview";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";
@@ -121,6 +122,7 @@ export default function MeasurementPage() {
 
       <Overview measurement={measurement} />
       <ResultsTable measurement={measurement} />
+      <LocationPanel measurementId={id} finished={!running} />
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">
         <Switch id="share" checked={isShared} onCheckedChange={share} />

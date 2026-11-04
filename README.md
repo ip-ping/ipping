@@ -121,7 +121,13 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] `release-manifest.json` and the release workflow (written and linted, not run yet: needs the first tags below)
 - [x] Release process: tags, dry runs, rolling `edge` installer ([RELEASING.md](RELEASING.md))
 - [x] First tagged release: v0.1.0 of all three repositories
-- [ ] Map overview and estimated network location (needs the backend estimator first)
+- [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
+- [ ] Dark-mode and mobile polish for the map; per-node latency circles
+
+## Credits
+
+The world outline in `src/lib/geo/world-path.ts` is generated from [Natural Earth](https://www.naturalearthdata.com)
+110m land (public domain) by `scripts/build-world-map.mjs`.
 
 ## License
 

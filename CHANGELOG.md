@@ -4,6 +4,19 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: estimated network location
+- A panel under the results table for finished measurements: the likely place, a heuristic evidence
+  label (with a tooltip saying what it is not), the closest node's physical distance limit, other
+  places that also fit, warnings, the measurements used, and what the method cannot tell you.
+  Contradictory evidence and too little evidence are shown as such, with the reason.
+- A plain SVG world map (no map library, nothing fetched at runtime): nodes that measured, the likely
+  area, alternatives. The outline is generated from Natural Earth by `scripts/build-world-map.mjs`.
+- API contract re-pinned to the backend that serves `/location`.
+- Verified in headless Chromium against the real backend with ten synthetic nodes: a target in
+  Amsterdam is placed in Amsterdam (moderate evidence), every node at ~2 ms gives "a single location
+  could not be established" naming the contradiction, and a regional-DNS measurement explains why it
+  cannot be estimated. Real-world accuracy is not measured (see the backend README).
+
 ### 2026-11-04: verification and hardening
 - Run for real under systemd 255 (a container with systemd as PID 1): the published v0.1.0 installers
   bring up PostgreSQL, backend, frontend, Caddy and a node, a measurement completes through the

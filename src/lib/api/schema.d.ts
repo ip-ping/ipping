@@ -334,6 +334,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/measurements/{measurement_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estimated Location
+         * @description Where the target address appears to be, from the nodes' round-trip times (experimental).
+         */
+        get: operations["estimated_location_api_v1_measurements__measurement_id__location_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/measurements/{measurement_id}/share": {
         parameters: {
             query?: never;
@@ -504,6 +524,15 @@ export interface components {
             /** Version */
             version: string | null;
         };
+        /** AlternativeOut */
+        AlternativeOut: {
+            /**
+             * Distance Km
+             * @description From the likely place
+             */
+            distance_km: number;
+            place: components["schemas"]["PlaceOut"];
+        };
         /** AuditOut */
         AuditOut: {
             /** Action */
@@ -525,6 +554,25 @@ export interface components {
             source_ip: string | null;
             /** Subject */
             subject: string | null;
+        };
+        /** ClosestOut */
+        ClosestOut: {
+            /**
+             * Max Distance Km
+             * @description A physical limit: light cannot cover more in that time
+             */
+            max_distance_km: number;
+            /** Node Id */
+            node_id: string;
+            /** Node Name */
+            node_name: string;
+            /** Rtt Ms */
+            rtt_ms: number;
+            /**
+             * Typical Distance Km
+             * @description At the speed of light in fibre; paths are usually longer
+             */
+            typical_distance_km: number;
         };
         /** CreateMeasurementRequest */
         CreateMeasurementRequest: {
@@ -619,10 +667,76 @@ export interface components {
              */
             status: "pending" | "approved";
         };
+        /** EvidenceOut */
+        EvidenceOut: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Node Id */
+            node_id: string;
+            /** Node Name */
+            node_name: string;
+            /** Rtt Ms */
+            rtt_ms: number;
+            /**
+             * Used
+             * @description False for nodes beyond the twelve nearest, which the estimate ignores
+             */
+            used: boolean;
+            /** Verified */
+            verified: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** LocationEstimateOut */
+        LocationEstimateOut: {
+            /**
+             * Alternatives
+             * @default []
+             */
+            alternatives: components["schemas"]["AlternativeOut"][];
+            closest?: components["schemas"]["ClosestOut"] | null;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
+            likely?: components["schemas"]["PlaceOut"] | null;
+            /**
+             * Limitations
+             * @default []
+             */
+            limitations: string[];
+            /** Model Version */
+            model_version: string;
+            /**
+             * Nodes Total
+             * @default 0
+             */
+            nodes_total: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "estimated" | "inconclusive" | "insufficient_evidence" | "unavailable" | "pending";
+            /**
+             * Strength
+             * @description A heuristic label, not a probability or a radius; those would need calibration
+             */
+            strength?: ("low" | "moderate" | "strong") | null;
+            /** Summary */
+            summary: string;
+            /** Target Ip */
+            target_ip?: string | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
         };
         /** LoginRequest */
         LoginRequest: {
@@ -706,6 +820,11 @@ export interface components {
             id: string;
             /** Latitude */
             latitude?: number | null;
+            /**
+             * Location Verified
+             * @default false
+             */
+            location_verified: boolean;
             /** Longitude */
             longitude?: number | null;
             /** Name */
@@ -723,6 +842,17 @@ export interface components {
             interval_ms: number;
             /** Timeout Ms */
             timeout_ms: number;
+        };
+        /** PlaceOut */
+        PlaceOut: {
+            /** Country */
+            country: string;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Name */
+            name: string;
         };
         /** PublicNode */
         PublicNode: {
@@ -1654,6 +1784,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estimated_location_api_v1_measurements__measurement_id__location_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationEstimateOut"];
                 };
             };
             /** @description Validation Error */

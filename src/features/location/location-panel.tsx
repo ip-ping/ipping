@@ -1,0 +1,184 @@
+"use client";
+
+import { InfoIcon } from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorldMap } from "@/features/location/world-map";
+import { useLocation, type LocationEstimate } from "@/features/location/use-location";
+import { ms } from "@/lib/format";
+
+const STRENGTH_HELP =
+  "A rough label, not a probability or a radius. It rises with the number of nodes that measured, how close the nearest one was and how tightly the measurements agree. It has not been calibrated against real locations.";
+
+function StrengthBadge({ strength }: { strength: NonNullable<LocationEstimate["strength"]> }) {
+  const label = { low: "Low evidence", moderate: "Moderate evidence", strong: "Strong evidence" }[strength];
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="cursor-help" />}>
+        <Badge variant={strength === "low" ? "outline" : strength === "moderate" ? "secondary" : "default"}>{label}</Badge>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">{STRENGTH_HELP}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function Details({ summary, children }: { summary: string; children: React.ReactNode }) {
+  return (
+    <details className="group rounded-md border px-3 py-2 text-sm">
+      <summary className="cursor-pointer select-none text-muted-foreground group-open:mb-2 group-open:text-foreground">
+        {summary}
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+function Evidence({ estimate }: { estimate: LocationEstimate }) {
+  if (estimate.evidence.length === 0) return null;
+  return (
+    <Details summary={`Measurements used (${estimate.evidence.filter((e) => e.used).length} of ${estimate.evidence.length} nodes)`}>
+      <table className="w-full text-left text-xs">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="py-1 font-medium">Node</th>
+            <th className="py-1 text-right font-medium">Smallest RTT</th>
+            <th className="py-1 text-right font-medium">At most</th>
+            <th className="py-1 pl-3 font-medium">Position</th>
+          </tr>
+        </thead>
+        <tbody>
+          {estimate.evidence.map((e) => (
+            <tr key={e.node_id} className={e.used ? "" : "text-muted-foreground"}>
+              <td className="py-1">{e.node_name}</td>
+              <td className="py-1 text-right tabular-nums">{ms(e.rtt_ms)} ms</td>
+              <td className="py-1 text-right tabular-nums">{Math.round(e.rtt_ms * 150).toLocaleString()} km</td>
+              <td className="py-1 pl-3">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-xs text-muted-foreground">
+        “At most” is a physical limit: light cannot cover more distance than that in half the round-trip time.
+      </p>
+    </Details>
+  );
+}
+
+function Limitations({ estimate }: { estimate: LocationEstimate }) {
+  return (
+    <Details summary="What this can and cannot tell you">
+      <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+        {estimate.limitations.map((text) => (
+          <li key={text}>{text}</li>
+        ))}
+        <li>Model {estimate.model_version}. Experimental: not yet checked against real targets of known location.</li>
+      </ul>
+    </Details>
+  );
+}
+
+function Body({ estimate }: { estimate: LocationEstimate }) {
+  if (estimate.status === "unavailable") {
+    return <p className="text-sm text-muted-foreground">{estimate.summary}</p>;
+  }
+
+  if (estimate.status !== "estimated") {
+    const title =
+      estimate.status === "inconclusive" ? "A single location could not be established" : "Not enough evidence";
+    return (
+      <div className="space-y-4">
+        <Alert>
+          <InfoIcon />
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription className="space-y-1">
+            <p>{estimate.summary}</p>
+            {estimate.warnings.map((w) => (
+              <p key={w}>{w}</p>
+            ))}
+          </AlertDescription>
+        </Alert>
+        {estimate.evidence.length > 0 && <WorldMap estimate={estimate} />}
+        <Evidence estimate={estimate} />
+        <Limitations estimate={estimate} />
+      </div>
+    );
+  }
+
+  const { likely, closest } = estimate;
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="text-2xl font-semibold tracking-tight">
+          {likely?.name}, {likely?.country}
+        </div>
+        {estimate.strength && <StrengthBadge strength={estimate.strength} />}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {closest && (
+          <>
+            The closest node, <strong className="text-foreground">{closest.node_name}</strong>, measured{" "}
+            {ms(closest.rtt_ms)} ms. That puts the target within{" "}
+            <strong className="text-foreground">{closest.max_distance_km.toLocaleString()} km</strong> of it (a physical
+            limit), and typically within about {closest.typical_distance_km.toLocaleString()} km.
+          </>
+        )}
+      </p>
+      {estimate.alternatives.length > 0 && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Also fits: </span>
+          {estimate.alternatives.map((a, i) => (
+            <span key={a.place.name}>
+              {i > 0 && ", "}
+              {a.place.name}, {a.place.country}{" "}
+              <span className="text-muted-foreground">({a.distance_km.toLocaleString()} km away)</span>
+            </span>
+          ))}
+        </p>
+      )}
+      {estimate.warnings.length > 0 && (
+        <Alert>
+          <InfoIcon />
+          <AlertTitle>Keep in mind</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {estimate.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      <WorldMap estimate={estimate} />
+      <Evidence estimate={estimate} />
+      <Limitations estimate={estimate} />
+    </div>
+  );
+}
+
+export function LocationPanel({ measurementId, finished }: { measurementId: string; finished: boolean }) {
+  const { estimate, error } = useLocation(measurementId, finished);
+  if (!finished) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <CardTitle>Estimated network location</CardTitle>
+          <Badge variant="outline">Experimental</Badge>
+        </div>
+        <CardDescription>
+          Where this address’s network appears to be, worked out from the round-trip times above and the nodes’
+          positions. It is not a person or a business.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {!estimate && !error && <Skeleton className="h-40 w-full" />}
+        {estimate && <Body estimate={estimate} />}
+      </CardContent>
+    </Card>
+  );
+}
