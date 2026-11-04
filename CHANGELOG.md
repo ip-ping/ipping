@@ -4,6 +4,22 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: verification and hardening
+- Run for real under systemd 255 (a container with systemd as PID 1): the published v0.1.0 installers
+  bring up PostgreSQL, backend, frontend, Caddy and a node, a measurement completes through the
+  sandboxed node, systemd restarts a killed node, all services are enabled for boot, and uninstall
+  removes the units.
+- Units tightened (clock, hostname, /proc, SUID, IPC, native syscalls only, private umask, no
+  capabilities unless needed, a syscall filter on the node). `systemd-analyze security` exposure:
+  node 5.8 -> 1.5, backend 3.5, frontend 3.5, Caddy 5.0 (it must bind low ports).
+- The `CAP_NET_RAW` fallback was exercised: with unprivileged ping disabled on the host the node's unit
+  keeps exactly that one capability and still measures (raw sockets).
+- The installers' message for a normal user with no sudo was run (clear error, exit code 1; `--help`
+  needs neither).
+- Release files get signed build-provenance attestations (`gh attestation verify`), and the
+  `compose.yaml` attached to a release pins that release's image tags. Both take effect with the next
+  release; attestations cannot be created by a dry run.
+
 ## v0.1.0 (2026-11-04)
 
 First release. Everything below shipped in it. Installs from the release pages work in both modes (tested in clean containers with the published artifacts).

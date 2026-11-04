@@ -62,6 +62,23 @@ workflow artifact for you to inspect. A real run publishes only from `main`.
 If a run fails halfway, fix the cause and run the same version again: publishing replaces files
 instead of failing on the ones that already exist.
 
+## Verifying a download
+
+* **Checksums:** every release has a `SHA256SUMS`, and both installers check what they download
+  against it before installing anything.
+* **Provenance:** from the first release after v0.1.0, every release file also carries a signed GitHub
+  attestation, which proves it was built by this repository's release workflow from the tagged
+  commit. With the [GitHub CLI](https://cli.github.com):
+
+  ```bash
+  gh attestation verify ipping.sh -R ip-ping/ipping
+  gh attestation verify ipping-node-linux-amd64 -R ip-ping/ipping-node
+  gh attestation verify ipping_backend-0.1.1-py3-none-any.whl -R ip-ping/ipping-backend
+  ```
+
+A release's `compose.yaml` pins the images of that release; the one in the repository (and on
+`edge`) follows `latest`, which is whatever `main` built last.
+
 ## Compatibility
 
 * **Node ↔ backend:** they talk protocol version 1 (`node-protocol-v1.schema.json`). A backend can
