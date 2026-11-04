@@ -4,6 +4,10 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: CI fix
+- `npm run typecheck` now generates Next's route types first (`next typegen`). It had only passed
+  locally because a previous build had already created them; CI on a clean checkout caught it.
+
 ### 2026-11-04: Docker image and the full-stack compose file
 - `Dockerfile` (Next.js standalone, non-root, health check) built once on the build machine and
   shared by both architectures; `sharp` is excluded because the app never uses `next/image`.
