@@ -96,7 +96,7 @@ detect_arch() {
   esac
 }
 
-installed_mode() { [ -f "$MODE_FILE" ] && cat "$MODE_FILE" || true; }
+installed_mode() { if [ -f "$MODE_FILE" ]; then cat "$MODE_FILE"; fi; }
 require_mode() {
   local m; m="$(installed_mode)"
   [ -n "$m" ] || die "No installation found. Run: bash $0 install --mode docker|direct"

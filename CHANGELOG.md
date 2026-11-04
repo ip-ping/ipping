@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: installer lint fixes
+- Fixed what the newest ShellCheck (the one on CI runners) reports: `A && B || C` chains, and a
+  `grep -q` inside a pipeline under `pipefail`, which could end the "wait until the node has
+  connected" loop early.
+
 ### 2026-11-04: docs
 - README shows how to download `ipping.sh` from a release.
 
