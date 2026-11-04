@@ -1,0 +1,108 @@
+name: Release
+
+# A version tag (v1.2.3) publishes the versioned image and a GitHub release that holds the
+# installer, the compose file, the frontend bundle for direct installs and release-manifest.json.
+# `latest` is owned by docker.yml (it tracks main).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    name: Publish versioned image
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}/ipping
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: GitHub release
+    needs: [ci, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the frontend bundle for direct installs
+        run: |
+          BACKEND_URL=http://127.0.0.1:8000 npm run build
+          mkdir -p dist
+          sh scripts/make-bundle.sh "dist/ipping-frontend-${GITHUB_REF_NAME}.tar.gz"
+      - name: Gather the pinned backend release
+        run: |
+          set -eu
+          cat release.env >> "$GITHUB_ENV"
+          . ./release.env
+          gh release download "$BACKEND_TAG" -R ip-ping/ipping-backend -p SHA256SUMS -p requirements.lock -D backend-assets
+      - name: Write release-manifest.sh output
+        run: |
+          set -eu
+          sum() { awk -v f="$1" '$2 == f || $2 == "*" f { print $1 }' backend-assets/SHA256SUMS; }
+          wheel="$(awk '{ print $2 }' backend-assets/SHA256SUMS | grep '\.whl$' | head -n 1)"
+          [ -n "$wheel" ] || { echo "no wheel in the backend release"; exit 1; }
+          bundle="dist/ipping-frontend-${GITHUB_REF_NAME}.tar.gz"
+          backend_url="https://github.com/ip-ping/ipping-backend/releases/download/${BACKEND_TAG}"
+          STACK_VERSION="${GITHUB_REF_NAME#v}" \
+          FRONTEND_VERSION="${GITHUB_REF_NAME#v}" \
+          FRONTEND_IMAGE="${NAMESPACE}/ipping:${GITHUB_REF_NAME#v}" \
+          FRONTEND_BUNDLE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$(basename "$bundle")" \
+          FRONTEND_BUNDLE_SHA256="$(sha256sum "$bundle" | awk '{ print $1 }')" \
+          BACKEND_VERSION="${BACKEND_TAG#v}" \
+          BACKEND_IMAGE="${NAMESPACE}/ipping-backend:${BACKEND_TAG#v}" \
+          BACKEND_WHEEL_URL="${backend_url}/${wheel}" \
+          BACKEND_WHEEL_SHA256="$(sum "$wheel")" \
+          BACKEND_LOCK_URL="${backend_url}/requirements.lock" \
+          BACKEND_LOCK_SHA256="$(sum requirements.lock)" \
+          BACKEND_SCHEMA_REVISION="$BACKEND_SCHEMA_REVISION" \
+          NODE_MIN_VERSION="$NODE_MIN_VERSION" \
+          sh scripts/release-manifest.sh > dist/release-manifest.json
+          cat dist/release-manifest.json
+      - name: Create the release
+        run: |
+          set -eu
+          cp ipping.sh compose.yaml dist/
+          cp deploy/Caddyfile dist/Caddyfile
+          (cd dist && sha256sum ipping.sh compose.yaml Caddyfile release-manifest.json ipping-frontend-*.tar.gz > SHA256SUMS)
+          args=(--generate-notes)
+          case "${GITHUB_REF_NAME}" in *-*) args+=(--prerelease) ;; esac
+          gh release create "${GITHUB_REF_NAME}" dist/* "${args[@]}"

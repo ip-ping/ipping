@@ -105,7 +105,8 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Dockerfile and Docker Hub publishing
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore (tested in clean containers, see CHANGELOG)
-- [ ] `release-manifest.json`: the tested frontend + backend + node-protocol combination
+- [x] `release-manifest.json` and the release workflow (written and linted, not run yet: needs the first tags below)
+- [ ] First tagged release of all three repositories (backend, then node, then this one)
 - [ ] Map overview and estimated network location (needs the backend estimator first)
 
 ## License

@@ -4,6 +4,13 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: release workflow
+- `release.yml`: a `v*` tag publishes the versioned image and a GitHub release holding `ipping.sh`,
+  `compose.yaml`, `Caddyfile`, the frontend bundle for direct installs, `release-manifest.json` and
+  `SHA256SUMS`. The manifest is built from `release.env`, which pins the backend release this
+  frontend was tested with. Linted with actionlint; **not run yet**, because no release has been
+  tagged (the backend and node need theirs first).
+
 ### 2026-11-04: central installer (`ipping.sh`)
 - Docker mode and direct mode (systemd, no Docker), `install` / `update` / `start` / `stop` /
   `restart` / `status` / `logs` / `doctor` / `backup` / `restore` / `uninstall`, interactive menu.
