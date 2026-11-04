@@ -52,7 +52,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 
 - [x] App shell, theme, typed API client with CSRF handling, public Nodes page
 - [x] Measure form and live results page (table first, SSE with resume)
-- [ ] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
+- [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [ ] Dockerfile and Docker Hub publishing
 - [ ] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [ ] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore
