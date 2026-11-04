@@ -4,6 +4,9 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: docs
+- README shows how to download `ipping.sh` from a release.
+
 ### 2026-11-04: release workflow
 - `release.yml`: a `v*` tag publishes the versioned image and a GitHub release holding `ipping.sh`,
   `compose.yaml`, `Caddyfile`, the frontend bundle for direct installs, `release-manifest.json` and

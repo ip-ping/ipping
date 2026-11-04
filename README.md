@@ -22,6 +22,8 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
 ## Install with the installer
 
 ```bash
+curl -fsSLO https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh
+
 # Docker: the compose stack below, with generated secrets, health checks and backups.
 sudo bash ipping.sh install --mode docker --version v0.1.0
 
