@@ -120,7 +120,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore (tested in clean containers, see CHANGELOG)
 - [x] `release-manifest.json` and the release workflow (written and linted, not run yet: needs the first tags below)
 - [x] Release process: tags, dry runs, rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [ ] First tagged release of all three repositories (backend, then node, then this one)
+- [x] First tagged release: v0.1.0 of all three repositories
 - [ ] Map overview and estimated network location (needs the backend estimator first)
 
 ## License

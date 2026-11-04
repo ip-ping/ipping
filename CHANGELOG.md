@@ -4,6 +4,10 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+## v0.1.0 (2026-11-04)
+
+First release. Everything below shipped in it. Installs from the release pages work in both modes (tested in clean containers with the published artifacts).
+
 ### 2026-11-04: release tags and published installers
 - [RELEASING.md](RELEASING.md): semantic versions, `vX.Y.Z` tags (`-rc.N` previews), release order
   (backend, node, application), what each tag publishes, compatibility rules, how to take one back.
