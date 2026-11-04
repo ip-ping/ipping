@@ -29,8 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <SiteHeader />
             <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
             <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-              ICMP ping tests the host, not the web page. Results show reachability from each node,
-              not how a site performs for visitors.
+              Results show how each node reaches the target, not how a site performs for visitors.
             </footer>
           </TooltipProvider>
           <Toaster />

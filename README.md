@@ -51,7 +51,7 @@ CI fails if the committed types do not match the pinned contract.
 Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 
 - [x] App shell, theme, typed API client with CSRF handling, public Nodes page
-- [ ] Measure form and live results page (table first, SSE with resume)
+- [x] Measure form and live results page (table first, SSE with resume)
 - [ ] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [ ] Dockerfile and Docker Hub publishing
 - [ ] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
