@@ -4,6 +4,19 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-04: release tags and published installers
+- [RELEASING.md](RELEASING.md): semantic versions, `vX.Y.Z` tags (`-rc.N` previews), release order
+  (backend, node, application), what each tag publishes, compatibility rules, how to take one back.
+- `release.yml` can be started by pushing a tag or by hand (`gh workflow run release.yml -f
+  version=0.1.0 -f dry_run=true`); it refuses a tag that does not match `package.json`, publishes only
+  from `main`, and a dry run builds and checks everything but publishes nothing. A re-run replaces
+  files instead of failing.
+- `edge.yml`: every change to the installer on `main` re-uploads `ipping.sh`, `compose.yaml` and the
+  `Caddyfile` to a rolling `edge` prerelease (the link-guide approach), after ShellCheck passes. It is a
+  prerelease, so `releases/latest/download/ipping.sh` keeps serving the newest tagged release.
+- `ipping.sh` starts itself again through sudo when run as a normal user, so the download-and-run
+  one-liner in the README works as typed.
+
 ### 2026-11-04: installer lint fixes
 - Fixed what the newest ShellCheck (the one on CI runners) reports: `A && B || C` chains, and a
   `grep -q` inside a pipeline under `pipefail`, which could end the "wait until the node has

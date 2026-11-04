@@ -21,9 +21,16 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
 
 ## Install with the installer
 
-```bash
-curl -fsSLO https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh
+Download the installer from the newest release and run it (it asks for sudo itself, and shows a
+menu when given no arguments):
 
+```bash
+curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh -o ipping.sh && chmod +x ipping.sh && bash ipping.sh
+```
+
+Or run it non-interactively:
+
+```bash
 # Docker: the compose stack below, with generated secrets, health checks and backups.
 sudo bash ipping.sh install --mode docker --version v0.1.0
 
@@ -34,6 +41,10 @@ sudo bash ipping.sh install --mode direct --version v0.1.0 --domain ping.example
 
 sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
 ```
+
+That link always serves the installer of the newest *tagged* release. The unreleased installer from
+`main` is at `https://github.com/ip-ping/ipping/releases/download/edge/ipping.sh` (a rolling
+prerelease the CI re-uploads on every change). How releases are cut: [RELEASING.md](RELEASING.md).
 
 A release of this repository carries `release-manifest.json`, the one frontend + backend +
 node-protocol combination that was tested together; the installer installs exactly that and never
@@ -108,6 +119,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore (tested in clean containers, see CHANGELOG)
 - [x] `release-manifest.json` and the release workflow (written and linted, not run yet: needs the first tags below)
+- [x] Release process: tags, dry runs, rolling `edge` installer ([RELEASING.md](RELEASING.md))
 - [ ] First tagged release of all three repositories (backend, then node, then this one)
 - [ ] Map overview and estimated network location (needs the backend estimator first)
 
