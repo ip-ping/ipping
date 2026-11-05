@@ -66,15 +66,19 @@ instead of failing on the ones that already exist.
 
 * **Checksums:** every release has a `SHA256SUMS`, and both installers check what they download
   against it before installing anything.
-* **Provenance:** from the first release after v0.1.0, every release file also carries a signed GitHub
+* **Provenance:** from v0.2.0 on, every release file also carries a signed GitHub
   attestation, which proves it was built by this repository's release workflow from the tagged
   commit. With the [GitHub CLI](https://cli.github.com):
 
   ```bash
   gh attestation verify ipping.sh -R ip-ping/ipping
   gh attestation verify ipping-node-linux-amd64 -R ip-ping/ipping-node
-  gh attestation verify ipping_backend-0.1.1-py3-none-any.whl -R ip-ping/ipping-backend
+  gh attestation verify ipping_backend-0.2.0-py3-none-any.whl -R ip-ping/ipping-backend
   ```
+
+  `gh attestation verify` prints nothing when its output is not a terminal; the exit code is the
+  answer (`0` verified, non-zero refused, including for a file that was altered after release).
+  Add `--format json` to see who built it: the workflow, the commit and what triggered it.
 
 A release's `compose.yaml` pins the images of that release; the one in the repository (and on
 `edge`) follows `latest`, which is whatever `main` built last.

@@ -4,6 +4,8 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+## v0.2.0 (2026-11-05)
+
 ### 2026-11-04: estimated network location
 - A panel under the results table for finished measurements: the likely place, a heuristic evidence
   label (with a tooltip saying what it is not), the closest node's physical distance limit, other
