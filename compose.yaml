@@ -43,6 +43,9 @@ services:
       IPPING_SETUP_TOKEN: ${IPPING_SETUP_TOKEN:-}
       IPPING_PUBLIC_URL: ${IPPING_PUBLIC_URL:-}
       IPPING_COOKIE_SECURE: ${IPPING_COOKIE_SECURE:-false}
+      # Backend processes in this container. They share one PostgreSQL, so any of them can serve
+      # any request and any node connection.
+      IPPING_WORKERS: ${IPPING_BACKEND_WORKERS:-1}
       # Only the proxy can reach this container, so its X-Forwarded-For can be trusted.
       FORWARDED_ALLOW_IPS: "*"
     read_only: true

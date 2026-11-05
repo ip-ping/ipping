@@ -4,6 +4,13 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-05: several backend processes
+- `compose.yaml`, `.env.example` and `ipping.sh` (`--backend-workers N`) can run more than one backend
+  process; they cooperate through PostgreSQL (see the backend README).
+- Verified with the whole Docker stack and three workers behind Caddy, driven in a browser: first-run
+  setup, enrollment, a live measurement streamed through the proxy, the emergency stop, and rotating a
+  node's key (which closes a socket another worker may hold).
+
 ## v0.2.0 (2026-11-05)
 
 ### 2026-11-04: estimated network location

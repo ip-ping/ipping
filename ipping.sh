@@ -41,6 +41,7 @@ VERSION=""
 DOMAIN=""
 HTTP_PORT="80"
 HTTPS_PORT="443"
+BACKEND_WORKERS="1"
 DATABASE_URL=""
 PURGE=0
 SETUP_TOKEN=""
@@ -275,6 +276,7 @@ IPPING_PUBLIC_URL=${PUBLIC_URL}
 IPPING_COOKIE_SECURE=${COOKIE_SECURE}
 IPPING_HTTP_PORT=${HTTP_PORT}
 IPPING_HTTPS_PORT=${HTTPS_PORT}
+IPPING_BACKEND_WORKERS=${BACKEND_WORKERS}
 IPPING_FRONTEND_IMAGE=${FRONTEND_IMAGE}
 IPPING_BACKEND_IMAGE=${BACKEND_IMAGE}
 EOF
@@ -605,6 +607,7 @@ IPPING_PUBLIC_URL=${PUBLIC_URL}
 IPPING_COOKIE_SECURE=${COOKIE_SECURE}
 IPPING_HOST=127.0.0.1
 IPPING_PORT=8000
+IPPING_WORKERS=${BACKEND_WORKERS}
 EOF
     )
     chown root:ipping-backend "${CONF_DIR}/backend.env"; chmod 640 "${CONF_DIR}/backend.env"
@@ -872,6 +875,8 @@ Options:
   --domain NAME          Serve HTTPS for this domain (Caddy gets a certificate). Default: plain HTTP.
   --http-port N          Host port for HTTP (default 80)
   --https-port N         Host port for HTTPS (default 443)
+  --backend-workers N    Backend processes (default 1). They share PostgreSQL, so any of them can serve
+                         any request or node; more than one is for more CPU cores or crash tolerance.
   --database-url URL     Use your own PostgreSQL instead of a local one (direct mode)
   --purge                With uninstall: also delete the data
   -y, --yes              Do not ask questions
@@ -932,6 +937,7 @@ main() {
       --domain) DOMAIN="${2:?--domain needs a value}"; shift ;;
       --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift ;;
       --https-port) HTTPS_PORT="${2:?--https-port needs a value}"; shift ;;
+      --backend-workers) BACKEND_WORKERS="${2:?--backend-workers needs a value}"; shift ;;
       --database-url) DATABASE_URL="${2:?--database-url needs a value}"; shift ;;
       --purge) PURGE=1 ;;
       -y | --yes) ASSUME_YES=1 ;;
@@ -940,6 +946,10 @@ main() {
     esac
     shift
   done
+  case "$BACKEND_WORKERS" in
+    '' | *[!0-9]* | 0) die "--backend-workers must be a whole number from 1 to 16." ;;
+    *) [ "$BACKEND_WORKERS" -le 16 ] || die "--backend-workers must be a whole number from 1 to 16." ;;
+  esac
   case "$command" in
     "") if [ -t 0 ]; then need_root; menu; else usage; exit 1; fi ;;
     install) cmd_install ;;

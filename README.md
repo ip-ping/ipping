@@ -56,6 +56,9 @@ obtains a certificate. `--version main` is the edge channel (Docker only: images
   release on disk, and go back to it if the migration fails.
 * **Reinstalling** after `uninstall` reuses the kept configuration and database; `--purge` removes
   them. Other databases and PostgreSQL itself are never touched.
+* **Scaling:** `--backend-workers 4` (Docker: `IPPING_BACKEND_WORKERS` in `.env`; direct: `IPPING_WORKERS`
+  in `/etc/ipping/backend.env`) runs several backend processes. They share PostgreSQL, so any of them
+  serves any request or node and a crashed one is cleaned up after; see the backend README.
 * **Secrets** (database password, setup token) are generated and stay in a file only root (and the
   service) can read.
 
