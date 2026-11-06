@@ -162,7 +162,7 @@ resolve_release() {
     return
   fi
   if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
-    case "$VERSION" in v*) TAG="$VERSION" ;; *) TAG="v$VERSION" ;; esac
+    TAG="$(normalize_tag "$VERSION")"
   else
     TAG="$(curl -fsSL "${API_BASE}/releases/latest" | jq -r '.tag_name // empty' 2>/dev/null)" || true
     [ -n "$TAG" ] || die "No published release of ${REPO} was found. Use --version vX.Y.Z, or --version main for the edge channel."
@@ -183,23 +183,49 @@ resolve_release() {
 # Docker mode
 # ------------------------------------------------------------------------------------------------
 
+# A release is vX.Y.Z (the v is optional), optionally with a -rc.N style suffix. Anything else is
+# refused up front, so a typo can never end up inside a download URL.
+valid_version() {
+  case "$1" in
+    "" | latest | main) return 0 ;;
+  esac
+  local pattern='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+  [[ $1 =~ $pattern ]]
+}
+
+normalize_tag() {
+  case "$1" in v*) printf '%s' "$1" ;; *) printf 'v%s' "$1" ;; esac
+}
+
+# One value from /etc/os-release, read in a subshell. Never `source` that file into this script:
+# it defines VERSION, NAME, ID and more, which silently replaced this script's own variables
+# (Debian 13 has VERSION="13 (trixie)", which became the release to download).
+os_release() {
+  ( # shellcheck source=/dev/null
+    . "${OS_RELEASE_FILE:-/etc/os-release}" 2>/dev/null
+    printf '%s' "${!1:-}" )
+}
+
 install_docker_if_missing() {
   if command_exists docker && docker compose version >/dev/null 2>&1; then return; fi
   need_apt "Docker with the compose plugin is required (https://docs.docker.com/engine/install/)."
   confirm "Docker (with the compose plugin) is not installed. Install it from Docker's apt repository?" \
     || die "Docker is required for --mode docker."
   step "Installing Docker from Docker's apt repository"
-  # shellcheck source=/dev/null
-  . /etc/os-release
-  case "$ID" in ubuntu | debian) ;; *) die "Automatic Docker installation supports Debian and Ubuntu; install Docker manually." ;; esac
+  local distro codename
+  distro="$(os_release ID)"
+  codename="$(os_release UBUNTU_CODENAME)"
+  codename="${codename:-$(os_release VERSION_CODENAME)}"
+  case "$distro" in ubuntu | debian) ;; *) die "Automatic Docker installation supports Debian and Ubuntu; install Docker manually." ;; esac
+  [ -n "$codename" ] || die "Could not tell which release of ${distro} this is (no codename in /etc/os-release)."
   apt_install ca-certificates curl
   install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o /etc/apt/keyrings/docker.asc
+  curl -fsSL "https://download.docker.com/linux/${distro}/gpg" -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
   cat >/etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
-URIs: https://download.docker.com/linux/${ID}
-Suites: ${UBUNTU_CODENAME:-$VERSION_CODENAME}
+URIs: https://download.docker.com/linux/${distro}
+Suites: ${codename}
 Components: stable
 Architectures: $(dpkg --print-architecture)
 Signed-By: /etc/apt/keyrings/docker.asc
@@ -925,15 +951,17 @@ elevate_if_needed() {
 }
 
 main() {
-  elevate_if_needed "$@"
-  local command="" restore_file=""
+  local command="" original_args=("$@") restore_file=""
   SETUP_TOKEN="${IPPING_SETUP_TOKEN:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
       install | update | start | stop | restart | status | logs | doctor | backup | uninstall) command="$1" ;;
       restore) command=restore; restore_file="${2:-}"; [ $# -gt 1 ] && shift ;;
       --mode) MODE="${2:?--mode needs a value}"; shift ;;
-      --version) VERSION="${2:?--version needs a value}"; shift ;;
+      --version)
+        VERSION="${2:?--version needs a value}"; shift
+        valid_version "$VERSION" || die "'${VERSION}' is not a version. Use something like v0.2.0, latest, or main."
+        ;;
       --domain) DOMAIN="${2:?--domain needs a value}"; shift ;;
       --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift ;;
       --https-port) HTTPS_PORT="${2:?--https-port needs a value}"; shift ;;
@@ -950,6 +978,8 @@ main() {
     '' | *[!0-9]* | 0) die "--backend-workers must be a whole number from 1 to 16." ;;
     *) [ "$BACKEND_WORKERS" -le 16 ] || die "--backend-workers must be a whole number from 1 to 16." ;;
   esac
+  # Only now, with the arguments known to be good: asking for a password for a typo is rude.
+  elevate_if_needed "${original_args[@]}"
   case "$command" in
     "") if [ -t 0 ]; then need_root; menu; else usage; exit 1; fi ;;
     install) cmd_install ;;
@@ -966,4 +996,7 @@ main() {
   esac
 }
 
-main "$@"
+# Run when executed (also when piped from curl), but not when a test sources this file.
+if [ -z "${BASH_SOURCE[0]:-}" ] || [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

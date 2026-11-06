@@ -4,6 +4,21 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-06: fix: installing Docker on Debian 13 broke the release lookup
+- The installer *sourced* `/etc/os-release` into its own shell, and that file defines `VERSION`
+  (Debian 13: `13 (trixie)`). Whenever Docker had to be installed, `VERSION` became the release to
+  download, giving `Could not download .../releases/download/v13 (trixie)/release-manifest.json`.
+  The file is now read in a subshell (`os_release KEY`), so it can never touch the script's variables.
+- `--version` is validated up front (`v1.2.3`, `latest`, `main`), so any other value is refused with a
+  clear message instead of ending up inside a URL.
+- Arguments are validated *before* asking for sudo, not after.
+- Reproduced on a real Debian 13 machine (systemd, no Docker): v0.2.0 fails with the exact error above;
+  with the fix the same machine installs Docker, fetches the right release and the whole stack comes
+  up healthy.
+- Why it was missed: every earlier test ran with Docker already installed, so the install-Docker branch
+  never executed. `tests/installer.sh` now covers the helper (Debian 13 and Ubuntu 24.04 fixtures), the
+  version rules and the command line, and runs in CI.
+
 ### 2026-11-05: several backend processes
 - `compose.yaml`, `.env.example` and `ipping.sh` (`--backend-workers N`) can run more than one backend
   process; they cooperate through PostgreSQL (see the backend README).

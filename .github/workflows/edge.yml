@@ -39,7 +39,9 @@ jobs:
         with:
           persist-credentials: false
       - name: ShellCheck (never publish a script that fails it)
-        run: shellcheck ipping.sh scripts/*.sh
+        run: |
+          shellcheck ipping.sh tests/installer.sh scripts/*.sh
+          bash tests/installer.sh
       - name: Stage the files under their release names
         run: |
           mkdir dist
