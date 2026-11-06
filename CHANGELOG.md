@@ -4,6 +4,12 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+## v0.3.0 (2026-11-06)
+
+TCP, HTTP and traceroute measurements in the interface, a guided installer, and the fix for installing
+on Debian 13. Installs backend v0.3.0 (database migrations 0004 and 0005 run during install and update).
+Nodes of any earlier version keep working for ping and need v0.3.0 for the new kinds.
+
 ### 2026-11-06: what the strength labels have meant in practice
 - The tooltip on the location panel no longer says the labels are uncalibrated: it quotes what they
   meant when checked against real measurements (see the backend's README), with the caveat that a

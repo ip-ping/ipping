@@ -73,7 +73,7 @@ instead of failing on the ones that already exist.
   ```bash
   gh attestation verify ipping.sh -R ip-ping/ipping
   gh attestation verify ipping-node-linux-amd64 -R ip-ping/ipping-node
-  gh attestation verify ipping_backend-0.2.0-py3-none-any.whl -R ip-ping/ipping-backend
+  gh attestation verify ipping_backend-0.3.0-py3-none-any.whl -R ip-ping/ipping-backend
   ```
 
   `gh attestation verify` prints nothing when its output is not a terminal; the exit code is the
