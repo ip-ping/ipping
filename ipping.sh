@@ -50,40 +50,240 @@ SETUP_TOKEN=""
 # Helpers
 # ------------------------------------------------------------------------------------------------
 
-if [ -t 1 ]; then
-  BOLD=$'\033[1m'; RED=$'\033[31m'; YELLOW=$'\033[33m'; GREEN=$'\033[32m'; RESET=$'\033[0m'
-else
-  BOLD=""; RED=""; YELLOW=""; GREEN=""; RESET=""
-fi
+# ------------------------------------------------------------------------------------------------
+# Terminal interface
+#
+# These helpers are shared with the other ipping installer and kept identical in both. Colour,
+# symbols and the spinner appear only on a terminal that can show them (NO_COLOR is honoured); in a
+# pipe or a log file the same information is printed as plain lines. Slow commands go through `run`:
+# their output is written to a log file and shown only if the command fails.
+# ------------------------------------------------------------------------------------------------
 
-step() { printf '%s==>%s %s\n' "$BOLD" "$RESET" "$*"; }
-info() { printf '    %s\n' "$*"; }
-warn() { printf '%sWarning:%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
-ok()   { printf '%s%s%s\n' "$GREEN" "$*" "$RESET"; }
-die()  { printf '%sError:%s %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
+UI_LOG="/dev/null"
+UI_SPINNER_PID=""
+
+ui_init() {
+  UI_TTY=0; UI_COLOR=0; UI_UNICODE=0
+  if [ -t 1 ]; then UI_TTY=1; fi
+  if [ "$UI_TTY" -eq 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then UI_COLOR=1; fi
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) UI_UNICODE=1 ;; esac
+  if [ "$UI_TTY" -eq 0 ]; then UI_UNICODE=0; fi
+  UI_WIDTH="${COLUMNS:-}"
+  case "$UI_WIDTH" in '' | *[!0-9]*) UI_WIDTH="$(tput cols 2>/dev/null || echo 80)" ;; esac
+  if [ "$UI_WIDTH" -lt 60 ]; then UI_WIDTH=60; fi
+  if [ "$UI_WIDTH" -gt 100 ]; then UI_WIDTH=100; fi
+  if [ "$UI_COLOR" -eq 1 ]; then
+    C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'; C_GREEN=$'\033[32m'
+    C_YELLOW=$'\033[33m'; C_CYAN=$'\033[36m'; C_RESET=$'\033[0m'
+  else
+    C_BOLD=""; C_DIM=""; C_RED=""; C_GREEN=""; C_YELLOW=""; C_CYAN=""; C_RESET=""
+  fi
+  if [ "$UI_UNICODE" -eq 1 ]; then
+    S_OK="✔"; S_FAIL="✖"; S_WARN="!"; S_STEP="▸"; S_UP="●"; S_DOWN="○"; S_SEP="·"
+    S_H="─"; S_V="│"; S_TL="┌"; S_TR="┐"; S_BL="└"; S_BR="┘"
+    UI_SPIN=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+  else
+    S_OK="ok"; S_FAIL="!!"; S_WARN="!"; S_STEP="==>"; S_UP="*"; S_DOWN="-"; S_SEP="-"
+    S_H="-"; S_V="|"; S_TL="+"; S_TR="+"; S_BL="+"; S_BR="+"
+    UI_SPIN=("-" "\\" "|" "/")
+  fi
+}
+ui_init
+
+ui_rule() {
+  local width=$UI_WIDTH line="" i
+  if [ "$width" -gt 64 ]; then width=64; fi
+  for ((i = 0; i < width; i++)); do line+="$S_H"; done
+  printf '%s%s%s\n' "$C_DIM" "$line" "$C_RESET"
+}
+
+banner() { # banner TITLE [SUBTITLE]
+  printf '\n%s%s%s' "$C_BOLD" "$1" "$C_RESET"
+  if [ -n "${2:-}" ]; then printf '  %s%s%s' "$C_DIM" "$2" "$C_RESET"; fi
+  printf '\n'
+  ui_rule
+}
+
+step() { printf '\n%s%s%s %s%s%s\n' "$C_CYAN" "$S_STEP" "$C_RESET" "$C_BOLD" "$*" "$C_RESET"; }
+info() { printf '  %s\n' "$*"; }
+note() { printf '  %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+# para INDENT TEXT   dim text, wrapped at word boundaries to the width of the terminal.
+para() {
+  local pad="" i
+  for ((i = 0; i < $1; i++)); do pad+=" "; done
+  printf '%s\n' "$2" | fold -s -w $((UI_WIDTH - $1 - 1)) | sed "s/ *$//; s/^/${pad}/; s/^\(.*\)\$/${C_DIM}\1${C_RESET}/"
+}
+tick() { printf '  %s%s%s %s\n' "$C_GREEN" "$S_OK" "$C_RESET" "$*"; }
+warn() { printf '  %s%s%s %s\n' "$C_YELLOW" "$S_WARN" "$C_RESET" "$*" >&2; }
+ok() { printf '\n%s%s%s %s%s%s\n' "$C_GREEN" "$S_OK" "$C_RESET" "$C_BOLD" "$*" "$C_RESET"; }
+die() { printf '\n%s%s%s %s\n' "$C_RED" "$S_FAIL" "$C_RESET" "$*" >&2; exit 1; }
+
+# The file that collects the output of commands run through `run`.
+ui_log_init() { # ui_log_init DEFAULT_PATH
+  UI_LOG="${IPPING_LOG:-$1}"
+  if ! { mkdir -p "$(dirname "$UI_LOG")" && : >>"$UI_LOG"; } 2>/dev/null; then UI_LOG="$(mktemp)"; fi
+  chmod 600 "$UI_LOG" 2>/dev/null || true
+  printf '\n===== %s  %s =====\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "$0")" >>"$UI_LOG"
+}
+
+ui_log_tail() {
+  if [ "$UI_LOG" = "/dev/null" ] || [ ! -f "$UI_LOG" ]; then return 0; fi
+  printf '\n  %slast lines of the output (everything is in %s):%s\n' "$C_DIM" "$UI_LOG" "$C_RESET" >&2
+  tail -n 15 "$UI_LOG" | sed 's/^/    /' >&2
+}
+
+ui_spin_start() {
+  UI_SPINNER_PID=""
+  if [ "$UI_TTY" -ne 1 ]; then return 0; fi
+  printf '\033[?25l'
+  (
+    i=0
+    n=${#UI_SPIN[@]}
+    while :; do
+      printf '\r  %s%s%s %s' "$C_CYAN" "${UI_SPIN[i % n]}" "$C_RESET" "$1"
+      i=$((i + 1))
+      sleep 0.1
+    done
+  ) &
+  UI_SPINNER_PID=$!
+}
+
+ui_spin_stop() {
+  if [ -n "$UI_SPINNER_PID" ]; then
+    kill "$UI_SPINNER_PID" 2>/dev/null || true
+    wait "$UI_SPINNER_PID" 2>/dev/null || true
+    UI_SPINNER_PID=""
+    printf '\r\033[K\033[?25h'
+  fi
+}
+
+# run_soft "what this does" command args...   shows progress, returns the command's exit status.
+# The command must be a program (or a function that is a single command): a function with several
+# commands loses `set -e` inside it here, because it is called as part of a `||` list.
+run_soft() {
+  local what="$1" start=$SECONDS rc=0 took suffix=""
+  shift
+  printf '\n-- %s\n' "$what" >>"$UI_LOG"
+  ui_spin_start "$what"
+  "$@" >>"$UI_LOG" 2>&1 </dev/null || rc=$?
+  ui_spin_stop
+  took=$((SECONDS - start))
+  if [ "$took" -ge 3 ]; then suffix=" ${C_DIM}(${took}s)${C_RESET}"; fi
+  if [ "$rc" -eq 0 ]; then
+    printf '  %s%s%s %s%s\n' "$C_GREEN" "$S_OK" "$C_RESET" "$what" "$suffix"
+  else
+    printf '  %s%s%s %s%s\n' "$C_RED" "$S_FAIL" "$C_RESET" "$what" "$suffix"
+  fi
+  return "$rc"
+}
+
+# run "what this does" command args...   as run_soft, but a failure ends the installer.
+run() {
+  local what="$1"
+  if run_soft "$@"; then return 0; fi
+  ui_log_tail
+  die "${what} failed."
+}
+
+# box "Title" "line" ...   a framed block. Lines are plain text: their width is measured.
+box() {
+  local title="$1" line w i bar="" tbar="" color="${UI_BOX_COLOR:-$C_GREEN}"
+  shift
+  w=$((${#title} + 2))
+  for line in "$@"; do if [ "${#line}" -gt "$w" ]; then w=${#line}; fi; done
+  for ((i = 0; i < w + 2; i++)); do bar+="$S_H"; done
+  for ((i = 0; i < w - ${#title} - 1; i++)); do tbar+="$S_H"; done
+  printf '\n%s%s%s %s%s%s%s %s%s%s\n' "$color" "$S_TL" "$S_H" "$C_BOLD" "$title" "$C_RESET" "$color" "$tbar" "$S_TR" "$C_RESET"
+  for line in "$@"; do
+    printf '%s%s%s %-*s %s%s%s\n' "$color" "$S_V" "$C_RESET" "$w" "$line" "$color" "$S_V" "$C_RESET"
+  done
+  printf '%s%s%s%s%s\n' "$color" "$S_BL" "$bar" "$S_BR" "$C_RESET"
+}
+
+# prompt VAR "Question" [DEFAULT] [VALIDATOR] [HINT]
+# Skipped when VAR already has a value (it came from the command line) or there is no terminal.
+prompt() {
+  local var="$1" question="$2" default="${3:-}" validator="${4:-}" hint="${5:-}" answer
+  if [ -n "${!var}" ] || ! is_interactive; then return 0; fi
+  while :; do
+    printf '\n%s%s%s\n' "$C_BOLD" "$question" "$C_RESET"
+    if [ -n "$hint" ]; then para 2 "$hint"; fi
+    if [ -n "$default" ]; then printf '  %s>%s %s[%s]%s ' "$C_CYAN" "$C_RESET" "$C_DIM" "$default" "$C_RESET"; else printf '  %s>%s ' "$C_CYAN" "$C_RESET"; fi
+    read -r answer || answer=""
+    answer="${answer:-$default}"
+    if [ -z "$validator" ] || "$validator" "$answer"; then
+      printf -v "$var" '%s' "$answer"
+      return 0
+    fi
+    warn "That does not look right. Try again."
+  done
+}
+
+# prompt_secret VAR "Question" [HINT]   like prompt, but what is typed is not shown.
+prompt_secret() {
+  local var="$1" question="$2" hint="${3:-}" answer
+  if [ -n "${!var}" ] || ! is_interactive; then return 0; fi
+  while :; do
+    printf '\n%s%s%s\n' "$C_BOLD" "$question" "$C_RESET"
+    if [ -n "$hint" ]; then para 2 "$hint"; fi
+    printf '  %s>%s ' "$C_CYAN" "$C_RESET"
+    read -r -s answer || answer=""
+    printf '\n'
+    if [ -n "$answer" ]; then printf -v "$var" '%s' "$answer"; return 0; fi
+    warn "Nothing was entered."
+  done
+}
+
+# choose VAR "Question" DEFAULT_NUMBER "Label|Description" ...   VAR becomes the chosen number.
+choose() {
+  local var="$1" question="$2" default="$3" item answer n=0
+  shift 3
+  if ! is_interactive; then return 0; fi
+  printf '\n%s%s%s\n' "$C_BOLD" "$question" "$C_RESET"
+  for item in "$@"; do
+    n=$((n + 1))
+    printf '  %s%d%s  %s\n' "$C_CYAN" "$n" "$C_RESET" "${item%%|*}"
+    if [ "$item" != "${item#*|}" ]; then para 5 "${item#*|}"; fi
+  done
+  while :; do
+    printf '  %s>%s %s[%s]%s ' "$C_CYAN" "$C_RESET" "$C_DIM" "$default" "$C_RESET"
+    read -r answer || answer=""
+    answer="${answer:-$default}"
+    if [[ $answer =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le "$n" ]; then
+      printf -v "$var" '%s' "$answer"
+      return 0
+    fi
+    warn "Enter a number from 1 to ${n}."
+  done
+}
+
+# confirm "Question" [y|n]   the default answer is the second argument (y when omitted).
+confirm() {
+  if ! is_interactive; then return 0; fi
+  local default="${2:-y}" hint="Y/n" reply
+  if [ "$default" = n ]; then hint="y/N"; fi
+  printf '\n%s%s%s %s[%s]%s ' "$C_BOLD" "$1" "$C_RESET" "$C_DIM" "$hint" "$C_RESET"
+  read -r reply || reply=""
+  reply="${reply:-$default}"
+  case "$reply" in [Yy]*) return 0 ;; *) return 1 ;; esac
+}
+
+# A host name such as ping.example.com (empty is allowed: it means "no domain").
+valid_domain() {
+  if [ -z "$1" ]; then return 0; fi
+  local pattern='^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$'
+  [[ ${#1} -le 253 && $1 =~ $pattern ]]
+}
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 need_root() { [ "$(id -u)" -eq 0 ] || die "Run this as root (for example: sudo bash $0 $*)."; }
 is_interactive() { [ -t 0 ] && [ "$ASSUME_YES" -eq 0 ]; }
 
-confirm() {
-  if ! is_interactive; then return 0; fi
-  local reply
-  read -r -p "$1 [Y/n] " reply
-  case "${reply:-y}" in [Yy]*) return 0 ;; *) return 1 ;; esac
-}
-
-ask() {
-  # ask VAR "prompt": leaves VAR alone when it is set already or there is no terminal.
-  local var="$1" prompt="$2" current
-  current="${!var}"
-  if [ -n "$current" ] || ! is_interactive; then return 0; fi
-  read -r -p "$prompt: " current
-  printf -v "$var" '%s' "$current"
-}
-
 TMP_DIRS=()
-cleanup() { [ "${#TMP_DIRS[@]}" -eq 0 ] || rm -rf "${TMP_DIRS[@]}"; }
+cleanup() {
+  ui_spin_stop
+  if [ "${#TMP_DIRS[@]}" -gt 0 ]; then rm -rf "${TMP_DIRS[@]}"; fi
+}
 trap cleanup EXIT
 make_temp_dir() { local d; d="$(mktemp -d)"; TMP_DIRS+=("$d"); echo "$d"; }
 
@@ -104,18 +304,23 @@ require_mode() {
   echo "$m"
 }
 
+APT_UPDATED=0
+
 need_apt() { command_exists apt-get || die "$1 Automatic installation of system packages supports Debian and Ubuntu only."; }
 
 apt_install() {
+  # apt_install PACKAGE... : the package lists are refreshed once, unless something changed them.
   need_apt "Missing: $*."
-  step "Installing system packages: $*"
-  DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$@" >/dev/null
+  if [ "$APT_UPDATED" -eq 0 ]; then
+    run "Updating the package lists" env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+    APT_UPDATED=1
+  fi
+  run "Installing ${APT_LABEL:-$*}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$@"
 }
 
 ensure_tools() {
   # ensure_tools [extra tools...]: the basics every mode needs, plus whatever the caller names.
-  local missing=()
+  local missing=() tool
   for tool in curl sha256sum tar "$@"; do command_exists "$tool" || missing+=("$tool"); done
   command_exists jq || missing+=(jq)
   if [ "${#missing[@]}" -gt 0 ]; then
@@ -123,6 +328,7 @@ ensure_tools() {
     for tool in "${missing[@]}"; do
       case "$tool" in sha256sum | tar) pkgs+=(coreutils tar) ;; xz) pkgs+=(xz-utils) ;; *) pkgs+=("$tool") ;; esac
     done
+    step "Installing what the installer itself needs"
     apt_install ca-certificates "${pkgs[@]}"
   fi
 }
@@ -140,8 +346,12 @@ verify_sha256() {
 }
 
 download() {
-  # download URL DEST
-  curl -fsSL --retry 3 "$1" -o "$2" || die "Could not download $1"
+  # download URL DEST [LABEL]: with a label the download shows progress (curl's own output goes to the log).
+  if [ -n "${3:-}" ]; then
+    run "$3" curl -fsSL --retry 3 "$1" -o "$2"
+  else
+    curl -fsSL --retry 3 "$1" -o "$2" || die "Could not download $1"
+  fi
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -153,7 +363,8 @@ resolve_release() {
   REL_DIR="$(make_temp_dir)"
   if [ "$VERSION" = "main" ]; then
     TAG="main"
-    step "Using the edge channel (images tagged latest, files from the main branch)"
+    step "Using the edge channel"
+    note "Images tagged latest and files from the main branch: the newest, least tested build."
     download "${RAW_BASE}/main/compose.yaml" "${REL_DIR}/compose.yaml"
     download "${RAW_BASE}/main/deploy/Caddyfile" "${REL_DIR}/Caddyfile"
     STACK_VERSION="main"
@@ -176,7 +387,7 @@ resolve_release() {
   STACK_VERSION="$(jq -r '.stack_version' "$m")"
   FRONTEND_IMAGE="$(jq -r '.frontend.image' "$m")"
   BACKEND_IMAGE="$(jq -r '.backend.image' "$m")"
-  info "stack ${STACK_VERSION}: frontend $(jq -r '.frontend.version' "$m"), backend $(jq -r '.backend.version' "$m")"
+  tick "Release ${STACK_VERSION}: frontend $(jq -r '.frontend.version' "$m"), backend $(jq -r '.backend.version' "$m")"
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -209,18 +420,18 @@ os_release() {
 install_docker_if_missing() {
   if command_exists docker && docker compose version >/dev/null 2>&1; then return; fi
   need_apt "Docker with the compose plugin is required (https://docs.docker.com/engine/install/)."
-  confirm "Docker (with the compose plugin) is not installed. Install it from Docker's apt repository?" \
-    || die "Docker is required for --mode docker."
-  step "Installing Docker from Docker's apt repository"
   local distro codename
   distro="$(os_release ID)"
   codename="$(os_release UBUNTU_CODENAME)"
   codename="${codename:-$(os_release VERSION_CODENAME)}"
   case "$distro" in ubuntu | debian) ;; *) die "Automatic Docker installation supports Debian and Ubuntu; install Docker manually." ;; esac
   [ -n "$codename" ] || die "Could not tell which release of ${distro} this is (no codename in /etc/os-release)."
+  confirm "Docker is not installed. Install it from Docker's apt repository?" \
+    || die "Docker is required for --mode docker."
+  step "Installing Docker"
   apt_install ca-certificates curl
   install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL "https://download.docker.com/linux/${distro}/gpg" -o /etc/apt/keyrings/docker.asc
+  run "Adding Docker's package signing key" curl -fsSL "https://download.docker.com/linux/${distro}/gpg" -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
   cat >/etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
@@ -230,7 +441,8 @@ Components: stable
 Architectures: $(dpkg --print-architecture)
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
-  apt_install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  APT_UPDATED=0   # a new package source: the lists have to be refreshed again
+  APT_LABEL="Docker Engine and the compose plugin" apt_install docker-ce docker-ce-cli containerd.io docker-compose-plugin
   systemctl enable --now docker >/dev/null 2>&1 || true
 }
 
@@ -274,14 +486,13 @@ wait_for_ready() {
 
 install_docker_mode() {
   install_docker_if_missing
-  resolve_release
   local reuse=0
   if [ -f "${APP_DIR}/.env" ]; then
     [ ! -f "$MODE_FILE" ] || die "ipping is already installed in ${APP_DIR}. Use 'update' to change versions, or 'uninstall' first."
     reuse=1
-    info "Found the configuration kept by an earlier uninstall; reusing it (the database password in it matches the kept database)."
+    note "Reusing the settings an earlier install or uninstall saved (the database password in them matches its database)."
   fi
-  step "Writing ${APP_DIR}"
+  step "Setting up ${APP_DIR}"
   install -d -m 0750 "${APP_DIR}" "${APP_DIR}/deploy"
   install -m 0644 "${REL_DIR}/compose.yaml" "${APP_DIR}/compose.yaml"
   install -m 0644 "${REL_DIR}/Caddyfile" "${APP_DIR}/deploy/Caddyfile"
@@ -289,7 +500,6 @@ install_docker_mode() {
     env_set IPPING_FRONTEND_IMAGE "$FRONTEND_IMAGE"
     env_set IPPING_BACKEND_IMAGE "$BACKEND_IMAGE"
   else
-    ask DOMAIN "Domain name for HTTPS (leave empty for plain HTTP on port ${HTTP_PORT})"
     site_settings
     SETUP_TOKEN="${SETUP_TOKEN:-$(random_secret 32)}"
     (
@@ -307,16 +517,18 @@ IPPING_FRONTEND_IMAGE=${FRONTEND_IMAGE}
 IPPING_BACKEND_IMAGE=${BACKEND_IMAGE}
 EOF
     )
+    tick "Generated the database password and setup token (${APP_DIR}/.env, root only)"
   fi
+
+  step "Starting ipping"
+  run_soft "Downloading the images" compose pull --quiet \
+    || warn "Could not download every image; continuing with local copies if there are any."
+  run "Starting the containers" compose up -d
+  # Only now is it "installed": a failure before this point can simply be retried.
   echo docker >"$MODE_FILE"
   echo "$TAG" >"$VERSION_FILE"
-
-  step "Pulling images and starting the stack"
-  compose pull --quiet || warn "Could not pull every image; continuing with local copies if present."
-  compose up -d
-  step "Waiting for the application to answer"
-  wait_for_ready "http://127.0.0.1:${HTTP_PORT}/api/v1/health/ready" 120 \
-    || { compose ps; die "The application did not become ready. See: bash $0 logs"; }
+  run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:${HTTP_PORT}/api/v1/health/ready" 120 \
+    || { compose ps; die "ipping did not become ready. Look at the logs with: sudo bash $0 logs"; }
   finish_message
 }
 
@@ -333,33 +545,38 @@ ensure_user() {
 }
 
 fetch_runtime() {
-  # fetch_runtime NAME URL CHECKSUM-FILE-URL ARCHIVE-NAME DEST_DIR: download, verify against the
-  # publisher's checksum list, unpack into DEST_DIR (stripping the top-level folder where asked).
+  # fetch_runtime NAME URL CHECKSUM-FILE-URL ARCHIVE-NAME DEST_DIR [STRIP]: download, verify against
+  # the publisher's checksum list, unpack into DEST_DIR (stripping the top-level folder where asked).
   local name="$1" url="$2" sums_url="$3" archive="$4" dest="$5" strip="${6:-0}" tmp expected
-  [ -x "${dest}/.complete" ] && { info "${name} already present"; return; }
+  if [ -x "${dest}/.complete" ]; then note "${name} is already installed"; return; fi
   tmp="$(make_temp_dir)"
-  step "Downloading ${name}"
-  download "$url" "${tmp}/${archive}"
+  download "$url" "${tmp}/${archive}" "Downloading ${name}"
   download "$sums_url" "${tmp}/sums"
   expected="$(awk -v f="$archive" '{ n = $2; sub(/^\*/, "", n); if (n == f) print $1 }' "${tmp}/sums" | head -n 1)"
   [ -n "$expected" ] || expected="$(awk '{ print $1 }' "${tmp}/sums" | head -n 1)"   # a bare .sha256 file
   [ -n "$expected" ] || die "No checksum published for ${archive}."
   verify_sha256 "${tmp}/${archive}" "$expected"
+  tick "Checked ${name} against its publisher's checksum"
   rm -rf "$dest"; install -d -m 0755 "$dest"
-  tar -xf "${tmp}/${archive}" -C "$dest" --strip-components="$strip" --no-same-owner --no-same-permissions
+  run "Unpacking ${name}" tar -xf "${tmp}/${archive}" -C "$dest" --strip-components="$strip" --no-same-owner --no-same-permissions
   chmod 755 "$dest"
   printf '#!/bin/sh\n' >"${dest}/.complete"; chmod +x "${dest}/.complete"
 }
 
-install_postgres() {
-  if [ -n "$DATABASE_URL" ]; then info "Using the database you provided."; return; fi
-  command_exists psql || apt_install postgresql
-  step "Starting PostgreSQL and creating the ipping database"
-  systemctl enable --now postgresql >/dev/null 2>&1 || true
+wait_for_postgres() {
   local waited=0
   until runuser -u postgres -- psql -tAc 'SELECT 1' >/dev/null 2>&1; do
-    sleep 1; waited=$((waited + 1)); [ "$waited" -lt 30 ] || die "PostgreSQL did not start."
+    sleep 1; waited=$((waited + 1))
+    if [ "$waited" -ge 30 ]; then return 1; fi
   done
+}
+
+install_postgres() {
+  if [ -n "$DATABASE_URL" ]; then note "Using the database you provided."; return; fi
+  step "Setting up PostgreSQL"
+  if ! command_exists psql; then apt_install postgresql; fi
+  run_soft "Starting PostgreSQL" systemctl enable --now postgresql || true
+  run "Waiting for PostgreSQL to accept connections" wait_for_postgres
   local pw
   pw="$(random_secret 40)"
   if [ "$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='ipping'")" != "1" ]; then
@@ -372,6 +589,7 @@ install_postgres() {
   fi
   [ "$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='ipping'")" = "1" ] \
     || runuser -u postgres -- psql -qc "CREATE DATABASE ipping OWNER ipping"
+  tick "The ipping database and its user are ready"
 }
 
 write_direct_units() {
@@ -527,13 +745,14 @@ install_direct_artifacts() {
   FRONTEND_NEW="$frontend_dir"
 
   if [ -x "${backend_dir}/venv/bin/ipping-backend" ]; then
-    info "backend ${bver} is already installed"
+    note "Backend ${bver} is already installed"
   else
     step "Installing the backend ${bver}"
-    download "$(jq -r '.backend.wheel.url' "$m")" "${tmp}/backend.whl"
+    download "$(jq -r '.backend.wheel.url' "$m")" "${tmp}/backend.whl" "Downloading the backend"
     verify_sha256 "${tmp}/backend.whl" "$wheel_sha"
     download "$(jq -r '.backend.lock.url' "$m")" "${tmp}/requirements.lock"
     verify_sha256 "${tmp}/requirements.lock" "$lock_sha"
+    tick "Checked the backend and its dependency list against the release manifest"
     # The wheel's file name carries its version and must be kept for pip to accept it.
     local wheel_name
     wheel_name="$(basename "$(jq -r '.backend.wheel.url' "$m")")"
@@ -543,22 +762,23 @@ install_direct_artifacts() {
     # the same on every distribution whatever Python it ships.
     export UV_PYTHON_INSTALL_DIR="${APP_DIR}/python" UV_CACHE_DIR="${tmp}/uv-cache"
     install -d -m 0755 "$UV_PYTHON_INSTALL_DIR"
-    "${APP_DIR}/uv/uv" python install --quiet 3.12
-    "${APP_DIR}/uv/uv" venv --quiet --python 3.12 --python-preference only-managed "${backend_dir}/venv"
-    "${APP_DIR}/uv/uv" pip install --quiet --python "${backend_dir}/venv/bin/python" \
-      --require-hashes -r "${tmp}/requirements.lock"
-    "${APP_DIR}/uv/uv" pip install --quiet --python "${backend_dir}/venv/bin/python" --no-deps "${tmp}/${wheel_name}"
+    run "Setting up Python 3.12" "${APP_DIR}/uv/uv" python install --quiet 3.12
+    run "Creating the backend's environment" "${APP_DIR}/uv/uv" venv --quiet --python 3.12 --python-preference only-managed "${backend_dir}/venv"
+    run "Installing the backend's dependencies (each checked against a hash)" "${APP_DIR}/uv/uv" pip install --quiet \
+      --python "${backend_dir}/venv/bin/python" --require-hashes -r "${tmp}/requirements.lock"
+    run "Installing the backend" "${APP_DIR}/uv/uv" pip install --quiet --python "${backend_dir}/venv/bin/python" --no-deps "${tmp}/${wheel_name}"
   fi
 
   if [ -f "${frontend_dir}/server.js" ]; then
-    info "frontend ${fver} is already installed"
+    note "Frontend ${fver} is already installed"
   else
     step "Installing the frontend ${fver}"
-    download "$(jq -r '.frontend.bundle.url' "$m")" "${tmp}/frontend.tar.gz"
+    download "$(jq -r '.frontend.bundle.url' "$m")" "${tmp}/frontend.tar.gz" "Downloading the frontend"
     verify_sha256 "${tmp}/frontend.tar.gz" "$bundle_sha"
+    tick "Checked the frontend against the release manifest"
     rm -rf "$frontend_dir"; install -d -m 0755 "$frontend_dir"
     # Whatever owner and modes the archive carries, the service user must be able to read it.
-    tar -xzf "${tmp}/frontend.tar.gz" -C "$frontend_dir" --no-same-owner --no-same-permissions
+    run "Unpacking the frontend" tar -xzf "${tmp}/frontend.tar.gz" -C "$frontend_dir" --no-same-owner --no-same-permissions
     chmod 755 "$frontend_dir"
   fi
 }
@@ -577,6 +797,7 @@ direct_prepare_runtimes() {
   detect_arch
   direct_runtime_versions
   install -d -m 0755 "$APP_DIR"
+  step "Getting the runtimes"
   fetch_runtime "uv ${UV_VERSION}" \
     "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${ARCH_UV}-unknown-linux-gnu.tar.gz" \
     "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${ARCH_UV}-unknown-linux-gnu.tar.gz.sha256" \
@@ -593,16 +814,13 @@ direct_prepare_runtimes() {
 
 install_direct_mode() {
   need_systemd
-  ensure_tools xz
   local reuse=0
   if [ -f "${CONF_DIR}/backend.env" ]; then
     [ ! -f "$MODE_FILE" ] || die "ipping is already installed. Use 'update' to change versions, or 'uninstall' first."
     reuse=1
-    info "Found the configuration kept by an earlier uninstall; reusing it."
+    note "Reusing the settings an earlier install or uninstall saved."
   fi
-  resolve_release
   if [ "$reuse" -eq 0 ]; then
-    ask DOMAIN "Domain name for HTTPS (leave empty for plain HTTP on port ${HTTP_PORT})"
     site_settings
     SETUP_TOKEN="${SETUP_TOKEN:-$(random_secret 32)}"
   fi
@@ -612,18 +830,19 @@ install_direct_mode() {
   install -d -m 0755 "$APP_DIR" "$APP_DIR/backend" "$APP_DIR/frontend"
   install -d -m 0755 "$CONF_DIR"
   install -d -m 0700 -o ipping-caddy -g ipping-caddy /var/lib/ipping-caddy
+  tick "Three unprivileged service accounts: ${DIRECT_USERS[*]}"
 
   direct_prepare_runtimes
   [ "$reuse" -eq 0 ] || DATABASE_URL="$(sed -n 's/^IPPING_DATABASE_URL=//p' "${CONF_DIR}/backend.env" | head -n 1)"
   install_postgres
-  install_direct_artifacts
-  switch_direct_releases
 
+  # Saved as soon as the database exists, so that an install that stops here can be run again
+  # (the database password lives only in this file).
   sed -e 's#reverse_proxy backend:8000#reverse_proxy 127.0.0.1:8000#' \
       -e 's#reverse_proxy frontend:3000#reverse_proxy 127.0.0.1:3000#' "${REL_DIR}/Caddyfile" >"${CONF_DIR}/Caddyfile"
   chmod 644 "${CONF_DIR}/Caddyfile"
   if [ "$reuse" -eq 0 ]; then
-    step "Writing configuration"
+    step "Writing the configuration"
     (
       umask 027
       cat >"${CONF_DIR}/backend.env" <<EOF
@@ -640,21 +859,22 @@ EOF
     if [ "$HTTP_PORT" != "80" ] && [ -z "$DOMAIN" ]; then SITE_ADDRESS=":${HTTP_PORT}"; fi
     echo "IPPING_SITE_ADDRESS=${SITE_ADDRESS}" >"${CONF_DIR}/caddy.env"
     chmod 644 "${CONF_DIR}/caddy.env"
+    tick "Wrote ${CONF_DIR} (the secrets are readable by root and the backend only)"
   fi
-  echo direct >"$MODE_FILE"
-  echo "$TAG" >"$VERSION_FILE"
 
-  step "Applying database migrations"
-  run_migration
+  install_direct_artifacts
+  switch_direct_releases
 
-  step "Starting the services"
+  step "Starting ipping"
+  run "Updating the database schema" run_migration
   write_direct_units "$TAG"
   systemctl daemon-reload
-  systemctl enable ipping-backend ipping-frontend ipping-caddy >/dev/null 2>&1
-  systemctl restart ipping-backend ipping-frontend ipping-caddy
-  step "Waiting for the application to answer"
-  wait_for_ready "http://127.0.0.1:${HTTP_PORT}/api/v1/health/ready" 90 \
-    || die "The application did not become ready. See: bash $0 logs"
+  run "Enabling the services at boot" systemctl enable ipping-backend ipping-frontend ipping-caddy
+  run "Starting the backend, the frontend and the web server" systemctl restart ipping-backend ipping-frontend ipping-caddy
+  echo direct >"$MODE_FILE"
+  echo "$TAG" >"$VERSION_FILE"
+  run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:${HTTP_PORT}/api/v1/health/ready" 90 \
+    || die "ipping did not become ready. Look at the logs with: sudo bash $0 logs"
   finish_message
 }
 
@@ -698,28 +918,80 @@ finish_message() {
   local url token
   url="$(public_address)"
   token="$(setup_token_value)"
-  echo
-  ok "ipping is running at ${url}"
-  info "1. Open ${url}/setup and create the administrator with this one-time setup token:"
-  info "     ${token}"
-  info "2. In Admin -> Enrollment create a token, then install a node on each measurement host:"
-  info "     sudo bash ipping-node.sh install --mode docker --server ${url} --token <token>"
-  case "$url" in http://*) info "   (plain HTTP: add --allow-insecure to the node install, or give this site a domain for HTTPS)" ;; esac
-  info "Backups: sudo bash $0 backup    Health: sudo bash $0 doctor"
+  box "ipping is running" \
+    "" \
+    "Open          ${url}/setup" \
+    "Setup token   ${token}" \
+    ""
+  printf '\n%sNext%s\n' "$C_BOLD" "$C_RESET"
+  info "1  Open the address above and create the administrator with the setup token."
+  info "2  In Admin > Enrollment create a token, then on each measurement host run:"
+  note "     sudo bash ipping-node.sh install --server ${url} --token <token>"
+  case "$url" in http://*) note "     (this site is plain HTTP: add --allow-insecure, or give it a domain for HTTPS)" ;; esac
+  printf '\n%sLater%s   sudo bash %s status | doctor | backup | update | access\n' "$C_BOLD" "$C_RESET" "$(basename "$0")"
 }
 
-svc() { systemctl "$1" ipping-backend ipping-frontend ipping-caddy; }
+cmd_start() {
+  case "$(require_mode)" in
+    docker) run "Starting ipping" compose up -d ;;
+    direct) run "Starting ipping" systemctl start ipping-backend ipping-frontend ipping-caddy ;;
+  esac
+  ok "ipping is started."
+}
+cmd_stop() {
+  case "$(require_mode)" in
+    docker) run "Stopping ipping" compose stop ;;
+    direct) run "Stopping ipping" systemctl stop ipping-caddy ipping-frontend ipping-backend ;;
+  esac
+  ok "ipping is stopped. The data is untouched; 'start' brings it back."
+}
+cmd_restart() {
+  case "$(require_mode)" in
+    docker) run "Restarting ipping" compose restart ;;
+    direct) run "Restarting ipping" systemctl restart ipping-backend ipping-frontend ipping-caddy ;;
+  esac
+  ok "ipping is restarted."
+}
 
-cmd_start()   { case "$(require_mode)" in docker) compose up -d ;; direct) svc start ;; esac; }
-cmd_stop()    { case "$(require_mode)" in docker) compose stop ;; direct) svc stop ;; esac; }
-cmd_restart() { case "$(require_mode)" in docker) compose restart ;; direct) svc restart ;; esac; }
+docker_running_services() { compose ps --status running --services 2>/dev/null || true; }
+
+service_up() { # service_up MODE NAME  (docker: a compose service, direct: a systemd unit)
+  if [ "$1" = docker ]; then
+    case $'\n'"$(docker_running_services)"$'\n' in *$'\n'"$2"$'\n'*) return 0 ;; *) return 1 ;; esac
+  else
+    systemctl is-active --quiet "$2"
+  fi
+}
 
 cmd_status() {
-  case "$(require_mode)" in
-    docker) compose ps ;;
-    direct) systemctl status ipping-backend ipping-frontend ipping-caddy --no-pager || true ;;
-  esac
-  [ -f "$VERSION_FILE" ] && echo "Installed release: $(cat "$VERSION_FILE")"
+  local mode name release services
+  mode="$(require_mode)"
+  release="$(cat "$VERSION_FILE" 2>/dev/null || echo unknown)"
+  banner "ipping" "${release}  ${S_SEP}  ${mode}"
+  if [ "$mode" = docker ]; then services="proxy frontend backend postgres"; else services="ipping-backend ipping-frontend ipping-caddy"; fi
+  step "Services"
+  for name in $services; do
+    if service_up "$mode" "$name"; then
+      printf '  %s%s%s %-16s running\n' "$C_GREEN" "$S_UP" "$C_RESET" "$name"
+    else
+      printf '  %s%s%s %-16s %sstopped%s\n' "$C_RED" "$S_DOWN" "$C_RESET" "$name" "$C_RED" "$C_RESET"
+    fi
+  done
+  step "Address"
+  info "$(public_address)"
+  note "Run 'doctor' for a full check, 'access' for the setup token."
+}
+
+cmd_access() {
+  local url
+  require_mode >/dev/null
+  url="$(public_address)"
+  box "ipping" \
+    "" \
+    "Open          ${url}" \
+    "Setup token   $(setup_token_value)" \
+    "" \
+    "The setup token only works until the first administrator exists."
 }
 
 cmd_logs() {
@@ -735,7 +1007,7 @@ cmd_backup() {
   mode="$(require_mode)"; ts="$(date +%Y%m%d-%H%M%S)"
   install -d -m 0700 "$BACKUP_DIR"
   out="${BACKUP_DIR}/ipping-${ts}.dump"
-  step "Backing up the database to ${out}"
+  step "Backing up the database"
   if [ "$mode" = "docker" ]; then
     compose exec -T postgres pg_dump -U ipping -Fc ipping >"$out"
   else
@@ -750,15 +1022,18 @@ cmd_backup() {
   BACKUP_FILE="$out"
 }
 
+stop_app_for_restore() {
+  if [ "$1" = docker ]; then compose stop frontend backend proxy; else systemctl stop ipping-caddy ipping-backend ipping-frontend; fi
+}
+
 cmd_restore() {
   need_root restore
   local file="${1:-}" mode
   [ -f "$file" ] || die "Usage: bash $0 restore /path/to/ipping-….dump"
   mode="$(require_mode)"
   confirm "This replaces the current database with ${file}. Continue?" || exit 0
-  step "Stopping the application"
-  if [ "$mode" = "docker" ]; then compose stop frontend backend proxy; else systemctl stop ipping-caddy ipping-backend ipping-frontend; fi
-  step "Restoring"
+  step "Restoring the database"
+  run "Stopping the application" stop_app_for_restore "$mode"
   if [ "$mode" = "docker" ]; then
     compose exec -T postgres pg_restore -U ipping -d ipping --clean --if-exists --no-owner <"$file"
   elif [ -f "${APP_DIR}/created-database" ]; then
@@ -768,52 +1043,52 @@ cmd_restore() {
     url="$(sed -n 's/^IPPING_DATABASE_URL=//p' "${CONF_DIR}/backend.env" | head -n 1)"
     pg_restore -d "${url/postgresql+asyncpg:/postgresql:}" --clean --if-exists --no-owner <"$file"
   fi
-  step "Starting the application"
-  if [ "$mode" = "docker" ]; then compose up -d; else systemctl start ipping-backend ipping-frontend ipping-caddy; fi
+  if [ "$mode" = "docker" ]; then run "Starting the application" compose up -d; else run "Starting the application" systemctl start ipping-backend ipping-frontend ipping-caddy; fi
   ok "Restored. If you restored a backup from an older release, also install that release (update --version)."
 }
 
 cmd_update() {
   need_root update
+  banner "ipping" "update"
   local mode
   mode="$(require_mode)"
   ensure_tools
   resolve_release
   local current; current="$(cat "$VERSION_FILE" 2>/dev/null || echo unknown)"
   if [ "$current" = "$TAG" ] && [ "$TAG" != "main" ]; then
-    info "Already on ${TAG}."
+    ok "Already on ${TAG}; nothing to do."
     return
   fi
-  step "Updating ${current} -> ${TAG}"
+  step "Updating ${current} to ${TAG}"
   cmd_backup
-  info "If the update goes wrong: bash $0 restore ${BACKUP_FILE}, then install the previous release."
+  note "If the update goes wrong: sudo bash $0 restore ${BACKUP_FILE}, then install the previous release."
 
   if [ "$mode" = "docker" ]; then
     install -m 0644 "${REL_DIR}/compose.yaml" "${APP_DIR}/compose.yaml"
     install -m 0644 "${REL_DIR}/Caddyfile" "${APP_DIR}/deploy/Caddyfile"
     env_set IPPING_FRONTEND_IMAGE "$FRONTEND_IMAGE"
     env_set IPPING_BACKEND_IMAGE "$BACKEND_IMAGE"
-    compose pull --quiet || warn "Could not pull every image; continuing with local copies if present."
-    compose up -d
-    wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 120 \
+    run_soft "Downloading the images" compose pull --quiet || warn "Could not download every image; continuing with local copies if there are any."
+    run "Starting the containers" compose up -d
+    run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 120 \
       || die "The updated stack did not become ready. Backup: ${BACKUP_FILE}"
   else
     need_systemd
     direct_prepare_runtimes
     DATABASE_URL="$(sed -n 's/^IPPING_DATABASE_URL=//p' "${CONF_DIR}/backend.env" | head -n 1)"
     install_direct_artifacts
-    systemctl stop ipping-backend ipping-frontend
+    run "Stopping the backend and frontend" systemctl stop ipping-backend ipping-frontend
     switch_direct_releases
-    if ! run_migration; then
+    if ! run_soft "Updating the database schema" run_migration; then
       warn "Migration failed; going back to the previous version."
       [ -n "${BACKEND_PREVIOUS:-}" ] && ln -sfn "$BACKEND_PREVIOUS" "${APP_DIR}/backend/current"
       [ -n "${FRONTEND_PREVIOUS:-}" ] && ln -sfn "$FRONTEND_PREVIOUS" "${APP_DIR}/frontend/current"
       systemctl start ipping-backend ipping-frontend
       die "Update failed during the database migration. Backup: ${BACKUP_FILE}"
     fi
-    systemctl start ipping-backend ipping-frontend
-    systemctl reload-or-restart ipping-caddy
-    wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 90 \
+    run "Starting the backend and frontend" systemctl start ipping-backend ipping-frontend
+    run "Reloading the web server" systemctl reload-or-restart ipping-caddy
+    run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 90 \
       || die "The updated application did not become ready. Backup: ${BACKUP_FILE}"
   fi
   echo "$TAG" >"$VERSION_FILE"
@@ -821,25 +1096,50 @@ cmd_update() {
 }
 
 cmd_doctor() {
-  local mode problems=0
+  local mode problems=0 total=0 port s
   mode="$(installed_mode)"
   [ -n "$mode" ] || die "Not installed."
-  check() { local what="$1"; shift; if "$@" >/dev/null 2>&1; then printf '  %sok%s   %s\n' "$GREEN" "$RESET" "$what"; else printf '  %sFAIL%s %s\n' "$RED" "$RESET" "$what"; problems=$((problems + 1)); fi; }
-  echo "ipping doctor (mode: ${mode}, release: $(cat "$VERSION_FILE" 2>/dev/null || echo unknown))"
-  local port
+  banner "ipping doctor" "$(cat "$VERSION_FILE" 2>/dev/null || echo unknown)  ${S_SEP}  ${mode}"
+  # check "what" "what to try if it fails" command...
+  check() {
+    local what="$1" hint="$2"
+    shift 2
+    total=$((total + 1))
+    if "$@" >/dev/null 2>&1; then
+      tick "$what"
+    else
+      printf '  %s%s%s %s\n' "$C_RED" "$S_FAIL" "$C_RESET" "$what"
+      note "   try: ${hint}"
+      problems=$((problems + 1))
+    fi
+  }
   port="$(http_port)"
+  step "Services"
   if [ "$mode" = "docker" ]; then
     for s in proxy frontend backend postgres; do
-      check "${s} container running" bash -c "docker compose -p '$COMPOSE_PROJECT' -f '${APP_DIR}/compose.yaml' --env-file '${APP_DIR}/.env' ps --status running --services | grep -qx ${s}"
+      check "${s} is running" "sudo bash $0 logs" service_up docker "$s"
     done
-    check ".env is private (mode 600)" bash -c "[ \"\$(stat -c %a '${APP_DIR}/.env')\" = 600 ]"
   else
-    for s in ipping-backend ipping-frontend ipping-caddy; do check "${s} running" systemctl is-active --quiet "$s"; done
-    check "backend.env is not world-readable" bash -c "[ \"\$(stat -c %a '${CONF_DIR}/backend.env')\" = 640 ]"
+    for s in ipping-backend ipping-frontend ipping-caddy; do
+      check "${s} is running" "sudo bash $0 logs" service_up direct "$s"
+    done
   fi
-  check "API ready (http://127.0.0.1:${port}/api/v1/health/ready)" curl -fsS --max-time 6 "http://127.0.0.1:${port}/api/v1/health/ready"
-  check "frontend served through the proxy" curl -fsS --max-time 6 -o /dev/null "http://127.0.0.1:${port}/nodes"
-  if [ "$problems" -eq 0 ]; then ok "No problems found."; else die "${problems} problem(s) found."; fi
+  step "The site"
+  check "the API answers (http://127.0.0.1:${port}/api/v1/health/ready)" "sudo bash $0 logs" \
+    curl -fsS --max-time 6 "http://127.0.0.1:${port}/api/v1/health/ready"
+  check "the web pages are served through the proxy" "sudo bash $0 restart" \
+    curl -fsS --max-time 6 -o /dev/null "http://127.0.0.1:${port}/nodes"
+  step "Files"
+  if [ "$mode" = "docker" ]; then
+    check ".env is private (root only)" "sudo chmod 600 ${APP_DIR}/.env" bash -c "[ \"\$(stat -c %a '${APP_DIR}/.env')\" = 600 ]"
+  else
+    check "backend.env is not world-readable" "sudo chmod 640 ${CONF_DIR}/backend.env" bash -c "[ \"\$(stat -c %a '${CONF_DIR}/backend.env')\" = 640 ]"
+  fi
+  if [ "$problems" -eq 0 ]; then
+    ok "All ${total} checks passed."
+  else
+    die "${problems} of ${total} checks failed."
+  fi
 }
 
 cmd_uninstall() {
@@ -852,9 +1152,13 @@ cmd_uninstall() {
     elif [ -f "${CONF_DIR}/backend.env" ]; then mode=direct
     else die "Nothing to uninstall."; fi
   fi
-  confirm "Remove ipping from this host?" || exit 0
+  step "Uninstalling ipping"
+  if [ "$PURGE" -eq 1 ]; then
+    warn "--purge also deletes the database: every measurement, node and account."
+  fi
+  confirm "Remove ipping from this host?" n || exit 0
   if [ "$mode" = "docker" ]; then
-    if [ "$PURGE" -eq 1 ]; then compose down -v; else compose down; fi
+    if [ "$PURGE" -eq 1 ]; then run "Removing the containers and their data" compose down -v; else run "Removing the containers" compose down; fi
   else
     systemctl disable --now ipping-caddy ipping-frontend ipping-backend >/dev/null 2>&1 || true
     rm -f /etc/systemd/system/ipping-backend.service /etc/systemd/system/ipping-frontend.service /etc/systemd/system/ipping-caddy.service
@@ -890,6 +1194,7 @@ Commands:
   update         Install another release (backs up the database first)
   start | stop | restart | status | logs
   doctor         Check the installation
+  access         Show the address and the setup token
   backup         Dump the database to ${BACKUP_DIR}
   restore FILE   Replace the database with a backup
   uninstall      Remove it (data is kept unless --purge)
@@ -899,6 +1204,7 @@ Options:
                          direct: systemd services, no Docker (Debian/Ubuntu; PostgreSQL from apt).
   --version vX.Y.Z       Release to install (default: latest). "main" is the edge channel (Docker only).
   --domain NAME          Serve HTTPS for this domain (Caddy gets a certificate). Default: plain HTTP.
+                         Run without options for a guided install.
   --http-port N          Host port for HTTP (default 80)
   --https-port N         Host port for HTTPS (default 443)
   --backend-workers N    Backend processes (default 1). They share PostgreSQL, so any of them can serve
@@ -909,32 +1215,132 @@ Options:
 EOF
 }
 
+port_in_use() { # port_in_use PORT
+  command_exists ss || return 1
+  [ -n "$(ss -H -ltn "sport = :$1" 2>/dev/null)" ]
+}
+
+port_owner() { # the program listening on PORT, when ss can tell us
+  ss -H -ltnp "sport = :$1" 2>/dev/null | sed -n 's/.*users:(("\([^"]*\)".*/\1/p' | head -n 1
+}
+
+preflight() {
+  # Catch the common mistakes before anything is installed.
+  [ "$(uname -s)" = Linux ] || die "ipping installs on Linux; this is $(uname -s)."
+  local ports="$HTTP_PORT" port owner
+  if [ "$MODE" = docker ] || [ -n "$DOMAIN" ]; then ports="$ports $HTTPS_PORT"; fi
+  for port in $ports; do
+    if port_in_use "$port"; then
+      owner="$(port_owner "$port")"
+      die "Port ${port} is already in use${owner:+ by ${owner}}. Stop that program, or pick other ports with --http-port and --https-port."
+    fi
+  done
+}
+
+describe_address() {
+  if [ -n "$DOMAIN" ]; then printf 'https://%s  (a certificate is requested automatically)' "$DOMAIN"
+  elif [ "$HTTP_PORT" = 80 ]; then printf 'plain HTTP on this machine, port 80'
+  else printf 'plain HTTP on this machine, port %s' "$HTTP_PORT"; fi
+}
+
+central_questions() {
+  is_interactive || return 0
+  local pick=1 reuse=0
+  if [ -f "${APP_DIR}/.env" ] || [ -f "${CONF_DIR}/backend.env" ]; then reuse=1; fi
+  if [ -z "$MODE" ]; then
+    choose pick "How should ipping run on this machine?" 1 \
+      "Docker (recommended)|Everything runs in containers. Docker is installed for you if it is missing." \
+      "Directly on this machine|systemd services and a local PostgreSQL, no Docker. Debian or Ubuntu."
+    case "$pick" in 1) MODE=docker ;; *) MODE=direct ;; esac
+  fi
+  if [ "$reuse" -eq 1 ]; then
+    note "Found the settings of an earlier install; they will be reused."
+  elif [ -z "$DOMAIN" ]; then
+    prompt DOMAIN "Do you have a domain name for this site?" "" valid_domain \
+      "Enter it (for example ping.example.com) for automatic HTTPS. It must already point at this machine, with ports 80 and 443 open. Leave empty to use plain HTTP for now."
+  fi
+  box "Ready to install" \
+    "" \
+    "Mode      $( [ "$MODE" = docker ] && echo "Docker" || echo "Directly on this machine (systemd)" )" \
+    "Address   $(describe_address)" \
+    "Release   ${VERSION:-latest}" \
+    "Log       ${UI_LOG}" \
+    ""
+  confirm "Install now?" || { note "Nothing was changed."; exit 0; }
+}
+
 cmd_install() {
   need_root install
-  [ -n "$MODE" ] || ask MODE "Mode (docker or direct)"
+  ui_log_init /var/log/ipping-install.log
+  banner "ipping" "installer"
+  if [ -n "$(installed_mode)" ]; then
+    die "ipping is already installed. Use 'update' to change versions, or 'uninstall' first."
+  fi
+  central_questions
   case "$MODE" in
-    docker) ensure_tools; install_docker_mode ;;
+    docker) ensure_tools ;;
+    direct) need_systemd; ensure_tools xz ;;
+    *) die "Choose how to run it with --mode docker or --mode direct." ;;
+  esac
+  preflight
+  resolve_release
+  case "$MODE" in
+    docker) install_docker_mode ;;
     direct) install_direct_mode ;;
-    *) die "--mode must be docker or direct." ;;
   esac
 }
 
+menu_status_line() {
+  local mode state="not installed"
+  mode="$(installed_mode)"
+  if [ -n "$mode" ]; then
+    if service_up "$mode" "$( [ "$mode" = docker ] && echo proxy || echo ipping-caddy )"; then state="running"; else state="stopped"; fi
+    printf '%s  %s  %s  %s  %s' "$(cat "$VERSION_FILE" 2>/dev/null || echo unknown)" "$S_SEP" "$mode" "$S_SEP" "$state"
+  else
+    printf 'not installed'
+  fi
+}
+
 menu() {
-  echo "ipping"
-  # shellcheck disable=SC2034  # the menu acts on $REPLY, not the selected text
-  select choice in "Install (Docker)" "Install (direct, systemd)" "Update" "Status" "Logs" "Doctor" "Backup" "Restart" "Uninstall" "Quit"; do
-    case "$REPLY" in
-      1) MODE=docker; cmd_install; break ;;
-      2) MODE=direct; cmd_install; break ;;
-      3) cmd_update; break ;;
-      4) cmd_status; break ;;
-      5) cmd_logs; break ;;
-      6) cmd_doctor; break ;;
-      7) cmd_backup; break ;;
-      8) cmd_restart; break ;;
-      9) cmd_uninstall; break ;;
-      10) break ;;
-    esac
+  local choice mode keys=() labels=() i
+  trap ':' INT   # Ctrl-C stops a running action (such as logs), not the menu
+  while :; do
+    mode="$(installed_mode)"
+    keys=(); labels=()
+    if [ -z "$mode" ]; then
+      keys=(install_docker install_direct); labels=("Install with Docker (recommended)" "Install directly on this machine")
+    else
+      keys=(status access doctor logs update backup restart stop start uninstall)
+      labels=("Show what is running" "Show the address and setup token" "Check that everything works" "Follow the logs" "Update to the latest release" "Back up the database" "Restart" "Stop" "Start" "Uninstall")
+    fi
+    banner "ipping" "$(menu_status_line)"
+    printf '\n'
+    for ((i = 0; i < ${#keys[@]}; i++)); do printf '  %s%2d%s  %s\n' "$C_CYAN" $((i + 1)) "$C_RESET" "${labels[i]}"; done
+    printf '  %s q%s  Quit\n\n' "$C_CYAN" "$C_RESET"
+    printf '  %s>%s ' "$C_CYAN" "$C_RESET"
+    read -r choice || exit 0
+    case "$choice" in q | Q | quit | exit | "") exit 0 ;; esac
+    if [[ $choice =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#keys[@]}" ]; then
+      case "${keys[choice - 1]}" in
+        install_docker) ( MODE=docker; cmd_install ) || true ;;
+        install_direct) ( MODE=direct; cmd_install ) || true ;;
+        status) ( cmd_status ) || true ;;
+        access) ( cmd_access ) || true ;;
+        doctor) ( cmd_doctor ) || true ;;
+        logs) ( cmd_logs ) || true ;;
+        update) ( cmd_update ) || true ;;
+        backup) ( cmd_backup ) || true ;;
+        restart) ( cmd_restart ) || true ;;
+        stop) ( cmd_stop ) || true ;;
+        start) ( cmd_start ) || true ;;
+        uninstall) ( cmd_uninstall ) || true ;;
+      esac
+      printf '\n%sPress Enter to return to the menu.%s ' "$C_DIM" "$C_RESET"
+      read -r _ || exit 0
+    else
+      warn "Choose a number from the list, or q to quit."
+      sleep 1
+    fi
   done
 }
 
@@ -946,7 +1352,7 @@ elevate_if_needed() {
   for arg in "$@"; do case "$arg" in -h | --help) return 0 ;; esac; done
   if ! command_exists sudo; then die "This needs root and sudo is not installed. Run it as root."; fi
   if [ ! -f "$0" ]; then die "Save the script to a file and run it from there (it has to start itself again with sudo)."; fi
-  info "Root is needed; running again with sudo."
+  note "This needs root: running again with sudo."
   exec sudo --preserve-env bash "$0" "$@"
 }
 
@@ -955,14 +1361,17 @@ main() {
   SETUP_TOKEN="${IPPING_SETUP_TOKEN:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
-      install | update | start | stop | restart | status | logs | doctor | backup | uninstall) command="$1" ;;
+      install | update | start | stop | restart | status | logs | doctor | access | backup | uninstall) command="$1" ;;
       restore) command=restore; restore_file="${2:-}"; [ $# -gt 1 ] && shift ;;
       --mode) MODE="${2:?--mode needs a value}"; shift ;;
       --version)
         VERSION="${2:?--version needs a value}"; shift
         valid_version "$VERSION" || die "'${VERSION}' is not a version. Use something like v0.2.0, latest, or main."
         ;;
-      --domain) DOMAIN="${2:?--domain needs a value}"; shift ;;
+      --domain)
+        DOMAIN="${2:?--domain needs a value}"; shift
+        valid_domain "$DOMAIN" || die "'${DOMAIN}' is not a domain name. Use something like ping.example.com."
+        ;;
       --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift ;;
       --https-port) HTTPS_PORT="${2:?--https-port needs a value}"; shift ;;
       --backend-workers) BACKEND_WORKERS="${2:?--backend-workers needs a value}"; shift ;;
@@ -981,18 +1390,19 @@ main() {
   # Only now, with the arguments known to be good: asking for a password for a typo is rude.
   elevate_if_needed "${original_args[@]}"
   case "$command" in
-    "") if [ -t 0 ]; then need_root; menu; else usage; exit 1; fi ;;
+    "") if [ -t 0 ]; then need_root; ui_log_init /var/log/ipping-install.log; menu; else usage; exit 1; fi ;;
     install) cmd_install ;;
-    update) cmd_update ;;
-    start) need_root; cmd_start ;;
-    stop) need_root; cmd_stop ;;
-    restart) need_root; cmd_restart ;;
+    update) ui_log_init /var/log/ipping-install.log; cmd_update ;;
+    start) need_root; ui_log_init /var/log/ipping-install.log; cmd_start ;;
+    stop) need_root; ui_log_init /var/log/ipping-install.log; cmd_stop ;;
+    restart) need_root; ui_log_init /var/log/ipping-install.log; cmd_restart ;;
     status) cmd_status ;;
+    access) cmd_access ;;
     logs) cmd_logs ;;
     doctor) cmd_doctor ;;
-    backup) cmd_backup ;;
-    restore) cmd_restore "$restore_file" ;;
-    uninstall) cmd_uninstall ;;
+    backup) ui_log_init /var/log/ipping-install.log; cmd_backup ;;
+    restore) ui_log_init /var/log/ipping-install.log; cmd_restore "$restore_file" ;;
+    uninstall) ui_log_init /var/log/ipping-install.log; cmd_uninstall ;;
   esac
 }
 

@@ -52,6 +52,30 @@ done
 check "tag gets its v" "v0.2.0" "$(normalize_tag 0.2.0)"
 check "tag keeps its v" "v0.2.0" "$(normalize_tag v0.2.0)"
 
+echo "interface helpers"
+UI_LOG="$(mktemp)"
+out="$(run "Say hello" echo hello 2>&1)"; rc=$?
+check "run: a command that works returns 0" 0 "$rc"
+case "$out" in *"Say hello"*) check "run: reports what it did" ok ok ;; *) check "run: reports what it did" ok "$out" ;; esac
+check "run: keeps the command's output in the log, not on screen" "hello" "$(grep -x hello "$UI_LOG")"
+case "$out" in *hello*"Say hello"* | *"Say hello"*hello*) check "run: does not print the command's output" "no" "yes" ;; *) check "run: does not print the command's output" ok ok ;; esac
+out="$( ( run "Break things" sh -c 'echo boom-text >&2; exit 3' ) 2>&1 )"; rc=$?
+check "run: a failing command ends the installer" 1 "$rc"
+case "$out" in *"Break things failed"*) check "run: says which step failed" ok ok ;; *) check "run: says which step failed" ok "$out" ;; esac
+case "$out" in *boom-text*) check "run: shows the command's own error" ok ok ;; *) check "run: shows the command's own error" ok "$out" ;; esac
+run_soft "Soft failure" false >/dev/null 2>&1; check "run_soft: returns the exit status" 1 "$?"
+out="$(box "Title" "one" "a much longer line of text")"
+check "box: every line has the same width" 1 "$(printf '%s\n' "$out" | grep -v '^$' | awk '{ print length }' | sort -u | wc -l | tr -d ' ')"
+# shellcheck disable=SC2034  # ASSUME_YES is read by is_interactive in the script under test
+X=already; ASSUME_YES=1; prompt X "Question?" "" ""; check "prompt: leaves a value given on the command line alone" already "$X"
+Y=""; prompt Y "Question?" "default" ""; check "prompt: asks nothing without a terminal" "" "$Y"
+# shellcheck disable=SC2034
+ASSUME_YES=0
+
+echo "domain names"
+for d in "" ping.example.com a.co sub-1.example.org; do valid_domain "$d"; check "accepted domain: '$d'" 0 "$?"; done
+for d in "nope!" example -a.example.com a..b.com http://x.com x.com/path "a b.com" "$(printf 'a%.0s' $(seq 1 64)).example.com"; do valid_domain "$d"; check "refused domain: '${d:0:30}'" 1 "$?"; done
+
 echo "the command line"
 out="$(bash "$SCRIPT" --help 2>&1)"; rc=$?
 check "--help exits 0" 0 "$rc"

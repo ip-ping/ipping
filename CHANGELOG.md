@@ -4,6 +4,26 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-06: a nicer installer
+- Guided install: pick Docker or direct, give a domain (validated, with an explanation of what HTTPS
+  needs), see a summary, confirm. Nothing changes until you do.
+- Progress: every step is a line with a spinner that becomes a check mark and a time; the output of
+  the commands behind it goes to `/var/log/ipping-install.log` and appears only when a step fails,
+  with the last lines and the log path. Packages are refreshed once, not three times.
+- A summary box with the address and the setup token, the next steps, and `access` to show them again.
+- `status` (services with running/stopped), `doctor` (grouped, and each failing check says what to
+  try), a menu that shows the current state and returns after each action.
+- Mistakes are caught early: a port that is already taken (and by which program), an invalid domain or
+  `--version`, and arguments are validated before sudo is requested.
+- An install that fails part-way can be run again: the "installed" marker is written only once the
+  services are up, and the direct install saves its configuration (including the database password)
+  as soon as the database exists. Before, a retry hit "already installed" or "role exists but its
+  password is unknown".
+- Plain output without a terminal (ASCII, no colour, no spinner); `NO_COLOR` honoured.
+- Verified through a real terminal emulator (and in pipes) on Debian 13 machines with systemd: Docker
+  and direct installs, update from 0.1.0 to 0.2.0, backup and restore, uninstall keeping data,
+  reinstall, purge, and the error paths.
+
 ### 2026-11-06: fix: installing Docker on Debian 13 broke the release lookup
 - The installer *sourced* `/etc/os-release` into its own shell, and that file defines `VERSION`
   (Debian 13: `13 (trixie)`). Whenever Docker had to be installed, `VERSION` became the release to

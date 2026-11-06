@@ -28,6 +28,20 @@ menu when given no arguments):
 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh -o ipping.sh && chmod +x ipping.sh && bash ipping.sh
 ```
 
+Run with no options and it guides you: how to run ipping (Docker or directly), whether you have a
+domain for HTTPS, then a summary to confirm before anything is changed. Each step shows progress; the
+output of the commands behind it goes to `/var/log/ipping-install.log` and is shown only if a step
+fails. At the end a box shows the address and the one-time setup token (`access` shows it again).
+On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a pipe or CI log, the
+same information is plain text.
+
+Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
+`access`, `logs`, `backup`, `update`, `uninstall`.
+
+An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
+settings it already saved instead of refusing, and nothing is marked "installed" until the
+services are actually up.
+
 Or run it non-interactively:
 
 ```bash
