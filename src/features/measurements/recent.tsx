@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Measurement } from "@/lib/api/client";
 
+import { KIND_INFO, kindOf } from "./kinds";
 import { MeasurementStatus } from "./status";
 
 /** This browser session's latest measurements. */
@@ -29,7 +30,11 @@ export function RecentMeasurements() {
             href={`/measurements/${m.id}`}
             className="flex items-center justify-between gap-3 py-2 text-sm hover:text-foreground"
           >
-            <span className="truncate font-mono">{m.target.host}</span>
+            <span className="truncate">
+              <span className="mr-2 text-xs text-muted-foreground">{KIND_INFO[kindOf(m)].label}</span>
+              <span className="font-mono">{m.target.host}</span>
+              {m.options.port ? <span className="font-mono text-muted-foreground">:{m.options.port}</span> : null}
+            </span>
             <span className="flex shrink-0 items-center gap-3 text-muted-foreground">
               {m.stats.nodes_responding}/{m.stats.nodes_total} nodes
               <MeasurementStatus status={m.status} />

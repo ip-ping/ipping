@@ -48,7 +48,7 @@ function reduce(state: State, action: Action): State {
           ...task,
           ...update,
           // Live rows keep the summary computed from samples until the node's final one arrives.
-          summary: update.summary ?? summarize(task.samples),
+          summary: update.summary ?? summarize(task.samples, measurement.kind),
           samples: task.samples,
         }));
         next = { ...measurement, tasks, stats: computeStats(tasks) };
@@ -58,7 +58,7 @@ function reduce(state: State, action: Action): State {
           const samples = [...task.samples.filter((s) => s.seq !== rest.seq), rest].sort(
             (a, b) => a.seq - b.seq,
           );
-          return { ...task, samples, summary: summarize(samples) };
+          return { ...task, samples, summary: summarize(samples, measurement.kind) };
         });
         next = { ...measurement, tasks, stats: computeStats(tasks) };
       } else if (action.name === "measurement.finished") {

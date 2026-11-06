@@ -4,6 +4,27 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-06: TCP, HTTP and traceroute in the interface
+- The measure form has a switch for the kind (Ping, TCP, HTTP, Traceroute). TCP takes `host:port` or a
+  port field, HTTP takes a URL with an optional port and a "follow redirects" box, and the form says
+  how many of the online nodes can run the chosen kind (older nodes only know ping), instead of
+  failing after the click.
+- Each kind has its own results. **HTTP**: status, time in DNS / connect / TLS / first byte as a bar,
+  server, redirects, and the certificate (issuer, subject, validity with days left, trusted or not;
+  a certificate that is not trusted is described and says no request was sent over it). **TCP**: a
+  refusal is shown as "refused after N ms" (the machine answered) and not as a connection.
+  **Traceroute**: whether the destination was reached, and a hop table where a router inside a
+  private network is shown as such, never as an address.
+- The overview cards, the "recent" list and "Run again" follow the kind; the location panel appears
+  only for ping and TCP, which have round-trip times.
+- Admin: the kinds that can be started, the allowed ports, the redirect limit and the hop limit. The
+  node lists show what each node can run.
+- Contract re-pinned to backend `a7966d3`.
+- Checked in a browser against the real thing: a Docker backend on PostgreSQL and a real Linux node,
+  measuring 1.1.1.1 and example.com (ping, TCP, HTTP with the real certificate, a followed redirect to
+  github.com, `expired.badssl.com` and `wrong.host.badssl.com` reported as untrusted, traceroute),
+  no console errors, no horizontal overflow on a phone, light and dark.
+
 ### 2026-11-06: a nicer installer
 - Guided install: pick Docker or direct, give a domain (validated, with an explanation of what HTTPS
   needs), see a summary, confirm. Nothing changes until you do.

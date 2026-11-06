@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { LocationPanel } from "@/features/location/location-panel";
+import { KIND_INFO, kindOf } from "@/features/measurements/kinds";
 import { Overview } from "@/features/measurements/overview";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";
@@ -50,6 +51,15 @@ export default function MeasurementPage() {
   const running = measurement.status === "running";
   const isShared = shared ?? measurement.shared;
   const target = measurement.target;
+  const kind = kindOf(measurement);
+  const options = measurement.options;
+  // What goes back into the form to run the same measurement again.
+  const rerun =
+    kind === "tcp" && options.port
+      ? `${target.host}:${options.port}`
+      : kind === "http"
+        ? `${options.scheme}://${target.host}${options.port && ![80, 443].includes(options.port) ? `:${options.port}` : ""}${options.path ?? "/"}`
+        : target.host;
 
   const cancel = () =>
     api("POST", `/measurements/${id}/cancel`).catch((e) => toast.error(errorMessage(e)));
@@ -81,13 +91,27 @@ export default function MeasurementPage() {
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MeasurementStatus status={measurement.status} />
             {running && !live && <Badge variant="outline">Reconnecting…</Badge>}
+            <Badge variant="outline">{KIND_INFO[kind].label}</Badge>
+            {options.port ? <span className="font-mono">port {options.port}</span> : null}
             {target.ip && target.ip !== target.host && (
               <span>
-                every node pings <span className="font-mono">{target.ip}</span>
+                every node tests <span className="font-mono">{target.ip}</span>
               </span>
             )}
             {measurement.dns_mode === "regional" && <span>each node resolves the name itself</span>}
-            <span>· {measurement.options.count} echo requests per node</span>
+            {(kind === "ping" || kind === "tcp") && (
+              <span>
+                · {options.count} {KIND_INFO[kind].unit.many} per node
+              </span>
+            )}
+            {kind === "http" && (
+              <span className="font-mono">
+                · {options.scheme}://{target.host}
+                {options.path}
+                {options.max_redirects ? " (following redirects)" : ""}
+              </span>
+            )}
+            {kind === "traceroute" && <span>· up to {options.max_hops} hops</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -97,14 +121,17 @@ export default function MeasurementPage() {
             </Button>
           )}
           {!running && (
-            <Button variant="outline" render={<Link href={`/?target=${encodeURIComponent(target.host)}`} />}>
+            <Button
+              variant="outline"
+              render={<Link href={`/?kind=${kind}&target=${encodeURIComponent(rerun)}`} />}
+            >
               <RotateCwIcon /> Run again
             </Button>
           )}
         </div>
       </div>
 
-      {target.input_kind === "url" && (
+      {target.input_kind === "url" && kind === "ping" && (
         <Alert>
           <AlertTitle>ICMP ping tests the host, not the web page</AlertTitle>
           <AlertDescription>
@@ -122,7 +149,7 @@ export default function MeasurementPage() {
 
       <Overview measurement={measurement} />
       <ResultsTable measurement={measurement} />
-      <LocationPanel measurementId={id} finished={!running} />
+      {(kind === "ping" || kind === "tcp") && <LocationPanel measurementId={id} finished={!running} />}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">
         <Switch id="share" checked={isShared} onCheckedChange={share} />

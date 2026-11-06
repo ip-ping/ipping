@@ -197,7 +197,7 @@ export function NodesTab() {
               <TableCell>
                 <Badge variant={node.online ? "default" : "outline"}>{node.online ? "Online" : "Offline"}</Badge>
                 <div className="text-xs text-muted-foreground">
-                  {node.online ? [node.ipv4 && "IPv4", node.ipv6 && "IPv6"].filter(Boolean).join(" · ") : `seen ${ago(node.last_seen_at)}`}
+                  {node.online ? [node.ipv4 && "IPv4", node.ipv6 && "IPv6", ...(node.kinds ?? [])].filter(Boolean).join(" · ") : `seen ${ago(node.last_seen_at)}`}
                 </div>
               </TableCell>
               <TableCell>

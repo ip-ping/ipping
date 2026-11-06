@@ -3,6 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import type { Measurement } from "@/lib/api/client";
 import { ms, pct } from "@/lib/format";
 
+import { KIND_INFO, kindOf } from "./kinds";
 import { TERMINAL_TASK } from "./summary";
 
 function Stat({ title, value, hint }: { title: string; value: string; hint?: string }) {
@@ -25,10 +26,14 @@ export function Overview({ measurement }: { measurement: Measurement }) {
   const nameOf = (id: string | null | undefined) =>
     tasks.find((t) => t.id === id)?.node.name;
 
+  const kind = kindOf(measurement);
+  const unit = KIND_INFO[kind].unit;
   const sent = tasks.reduce((n, t) => n + (t.summary?.sent ?? 0), 0);
   const received = tasks.reduce((n, t) => n + (t.summary?.received ?? 0), 0);
-  // Only echo requests that were actually sent can be lost; offline nodes are not in this sum.
+  // Only probes that were actually sent can be lost; offline nodes are not in this sum.
   const loss = sent ? ((sent - received) * 100) / sent : null;
+  const reached = tasks.filter((t) => t.summary?.reached).length;
+  const finished = tasks.filter((t) => t.summary?.reached != null).length;
 
   const testedIps = [...new Set(tasks.map((t) => t.tested_ip).filter(Boolean))];
 
@@ -50,20 +55,34 @@ export function Overview({ measurement }: { measurement: Measurement }) {
           hint={stats.nodes_failed ? `${stats.nodes_failed} could not complete` : undefined}
         />
         <Stat
-          title="Fastest (median)"
+          title={kind === "http" ? "Fastest response" : kind === "traceroute" ? "Closest destination" : "Fastest (median)"}
           value={stats.fastest_median_ms == null ? "–" : `${ms(stats.fastest_median_ms)} ms`}
           hint={nameOf(stats.fastest_task_id)}
         />
         <Stat
-          title="Slowest (median)"
+          title={kind === "http" ? "Slowest response" : kind === "traceroute" ? "Farthest destination" : "Slowest (median)"}
           value={stats.slowest_median_ms == null ? "–" : `${ms(stats.slowest_median_ms)} ms`}
           hint={nameOf(stats.slowest_task_id)}
         />
-        <Stat
-          title="Packet loss"
-          value={pct(loss)}
-          hint={sent ? `${sent - received} of ${sent} echo requests` : undefined}
-        />
+        {kind === "traceroute" ? (
+          <Stat
+            title="Destination reached"
+            value={finished ? `${reached} / ${finished}` : "–"}
+            hint="Silent hops are normal; many networks drop these probes."
+          />
+        ) : kind === "http" ? (
+          <Stat
+            title="Answered"
+            value={sent ? `${received} / ${sent}` : "–"}
+            hint="Any HTTP status counts as an answer."
+          />
+        ) : (
+          <Stat
+            title={kind === "tcp" ? "Failed connections" : "Packet loss"}
+            value={pct(loss)}
+            hint={sent ? `${sent - received} of ${sent} ${unit.many}` : undefined}
+          />
+        )}
       </div>
       {measurement.dns_mode === "regional" && testedIps.length > 1 && (
         <p className="text-sm text-muted-foreground">

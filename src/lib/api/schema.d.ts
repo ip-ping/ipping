@@ -496,6 +496,8 @@ export interface components {
             ipv4: boolean | null;
             /** Ipv6 */
             ipv6: boolean | null;
+            /** Kinds */
+            kinds: string[] | null;
             /** Last Seen At */
             last_seen_at: string | null;
             /** Latitude */
@@ -578,7 +580,7 @@ export interface components {
         CreateMeasurementRequest: {
             /**
              * Count
-             * @description Echo requests per node
+             * @description ping and tcp: probes per node
              */
             count?: number | null;
             /**
@@ -600,16 +602,28 @@ export interface components {
              */
             family: "auto" | "4" | "6";
             /**
-             * Kind
-             * @default ping
-             * @constant
+             * Follow Redirects
+             * @description http only: follow redirects (up to the deployment's limit)
+             * @default false
              */
-            kind: "ping";
+            follow_redirects: boolean;
+            /**
+             * Kind
+             * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way.
+             * @default ping
+             * @enum {string}
+             */
+            kind: "ping" | "tcp" | "http" | "traceroute";
             /**
              * Node Ids
              * @description Limit to these nodes; omit for all eligible
              */
             node_ids?: string[] | null;
+            /**
+             * Port
+             * @description Destination port of a tcp check. For tcp it can also be given as host:port or in a URL. An http check takes its port from the URL.
+             */
+            port?: number | null;
             /**
              * Target
              * @description IP address, hostname or URL
@@ -692,6 +706,68 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HopDetail
+         * @description One traceroute hop: the router that answered at this TTL.
+         *
+         *     `ip` is only ever a public address. A router inside the node operator's own network (or any
+         *     other non-public address) is reported as `private` with no address, so a result never
+         *     discloses the layout of someone's LAN.
+         */
+        HopDetail: {
+            /** Ip */
+            ip?: string | null;
+            /**
+             * Private
+             * @default false
+             */
+            private: boolean;
+            /**
+             * Reached
+             * @default false
+             */
+            reached: boolean;
+            /** Rtts Us */
+            rtts_us?: number[];
+            /** Ttl */
+            ttl: number;
+        };
+        /**
+         * HttpDetail
+         * @description What one HTTP request found. Times are microseconds, measured on the node.
+         *
+         *     `total_us` covers the whole exchange, redirects included. The phases (`dns_us`, `connect_us`,
+         *     `tls_us`, `ttfb_us`) and `tls` belong to the final request, whose address is `final_host`.
+         */
+        HttpDetail: {
+            /** Connect Us */
+            connect_us?: number | null;
+            /** Content Type */
+            content_type?: string | null;
+            /** Dns Us */
+            dns_us?: number | null;
+            /** Final Host */
+            final_host?: string | null;
+            /** Final Path */
+            final_path?: string | null;
+            /** Final Scheme */
+            final_scheme?: string | null;
+            /** Http Version */
+            http_version?: string | null;
+            /** Redirects */
+            redirects?: components["schemas"]["RedirectHop"][];
+            /** Server */
+            server?: string | null;
+            /** Status Code */
+            status_code?: number | null;
+            tls?: components["schemas"]["TlsInfo"] | null;
+            /** Tls Us */
+            tls_us?: number | null;
+            /** Total Us */
+            total_us?: number | null;
+            /** Ttfb Us */
+            ttfb_us?: number | null;
+        };
         /** LocationEstimateOut */
         LocationEstimateOut: {
             /**
@@ -745,6 +821,28 @@ export interface components {
             /** Username */
             username: string;
         };
+        /**
+         * MeasurementOptions
+         * @description The settings a measurement was run with; which ones are present depends on its kind.
+         */
+        MeasurementOptions: {
+            /** Count */
+            count: number;
+            /** Interval Ms */
+            interval_ms: number;
+            /** Max Hops */
+            max_hops?: number | null;
+            /** Max Redirects */
+            max_redirects?: number | null;
+            /** Path */
+            path?: string | null;
+            /** Port */
+            port?: number | null;
+            /** Scheme */
+            scheme?: ("http" | "https") | null;
+            /** Timeout Ms */
+            timeout_ms: number;
+        };
         /** MeasurementOut */
         MeasurementOut: {
             /**
@@ -775,7 +873,7 @@ export interface components {
             kind: string;
             /** Last Event Seq */
             last_event_seq: number;
-            options: components["schemas"]["PingOptionsOut"];
+            options: components["schemas"]["MeasurementOptions"];
             /** Shared */
             shared: boolean;
             stats: components["schemas"]["MeasurementStats"];
@@ -834,15 +932,6 @@ export interface components {
             /** Region */
             region?: string | null;
         };
-        /** PingOptionsOut */
-        PingOptionsOut: {
-            /** Count */
-            count: number;
-            /** Interval Ms */
-            interval_ms: number;
-            /** Timeout Ms */
-            timeout_ms: number;
-        };
         /** PlaceOut */
         PlaceOut: {
             /** Country */
@@ -868,6 +957,8 @@ export interface components {
             ipv4: boolean;
             /** Ipv6 */
             ipv6: boolean;
+            /** Kinds */
+            kinds: string[];
             /** Latitude */
             latitude: number | null;
             /** Longitude */
@@ -881,6 +972,27 @@ export interface components {
             /** Region */
             region: string | null;
         };
+        /**
+         * RedirectHop
+         * @description A redirect that was followed or stopped at. Never carries a query string.
+         */
+        RedirectHop: {
+            /**
+             * Followed
+             * @default false
+             */
+            followed: boolean;
+            /** Location Host */
+            location_host?: string | null;
+            /** Location Path */
+            location_path?: string | null;
+            /** Location Port */
+            location_port?: number | null;
+            /** Location Scheme */
+            location_scheme?: string | null;
+            /** Status Code */
+            status_code: number;
+        };
         /** RotatedCredential */
         RotatedCredential: {
             /**
@@ -893,6 +1005,8 @@ export interface components {
         };
         /** RuntimeSettings */
         RuntimeSettings: {
+            /** Allowed Ports */
+            allowed_ports?: number[];
             /**
              * Creations Per Minute Per Ip
              * @default 10
@@ -903,6 +1017,8 @@ export interface components {
              * @default 4
              */
             default_count: number;
+            /** Enabled Kinds */
+            enabled_kinds?: string[];
             /**
              * Max Concurrent Per Ip
              * @default 4
@@ -929,6 +1045,11 @@ export interface components {
              */
             max_probes_per_measurement: number;
             /**
+             * Max Redirects
+             * @default 5
+             */
+            max_redirects: number;
+            /**
              * Measurement Deadline S
              * @default 30
              */
@@ -950,16 +1071,25 @@ export interface components {
             sample_retention_days: number;
             /** Target Denylist */
             target_denylist?: string[];
+            /**
+             * Traceroute Max Hops
+             * @default 30
+             */
+            traceroute_max_hops: number;
         };
         /**
          * RuntimeSettingsUpdate
          * @description Every field optional: only the ones that are sent change.
          */
         RuntimeSettingsUpdate: {
+            /** Allowed Ports */
+            allowed_ports?: number[] | null;
             /** Creations Per Minute Per Ip */
             creations_per_minute_per_ip?: number | null;
             /** Default Count */
             default_count?: number | null;
+            /** Enabled Kinds */
+            enabled_kinds?: string[] | null;
             /** Max Concurrent Per Ip */
             max_concurrent_per_ip?: number | null;
             /** Max Concurrent Per Session */
@@ -970,6 +1100,8 @@ export interface components {
             max_global_inflight_probes?: number | null;
             /** Max Probes Per Measurement */
             max_probes_per_measurement?: number | null;
+            /** Max Redirects */
+            max_redirects?: number | null;
             /** Measurement Deadline S */
             measurement_deadline_s?: number | null;
             /** Measurement Retention Days */
@@ -980,11 +1112,17 @@ export interface components {
             sample_retention_days?: number | null;
             /** Target Denylist */
             target_denylist?: string[] | null;
+            /** Traceroute Max Hops */
+            traceroute_max_hops?: number | null;
         };
         /** SampleOut */
         SampleOut: {
             /** Error Code */
             error_code?: string | null;
+            /** @description traceroute: the router at this hop */
+            hop?: components["schemas"]["HopDetail"] | null;
+            /** @description http: what the request found */
+            http?: components["schemas"]["HttpDetail"] | null;
             /** Rtt Ms */
             rtt_ms?: number | null;
             /** Seq */
@@ -1038,7 +1176,11 @@ export interface components {
             /** Shared */
             shared: boolean;
         };
-        /** Summary */
+        /**
+         * Summary
+         * @description ping and tcp: probes sent and answered. http: the one request. traceroute: hops probed and
+         *     hops that answered, with the timings of the destination when it was reached.
+         */
         Summary: {
             /** Avg Ms */
             avg_ms?: number | null;
@@ -1050,6 +1192,11 @@ export interface components {
             median_ms?: number | null;
             /** Min Ms */
             min_ms?: number | null;
+            /**
+             * Reached
+             * @description traceroute only: whether the destination answered
+             */
+            reached?: boolean | null;
             /** Received */
             received: number;
             /** Sent */
@@ -1099,6 +1246,28 @@ export interface components {
             summary?: components["schemas"]["Summary"] | null;
             /** Tested Ip */
             tested_ip?: string | null;
+        };
+        /** TlsInfo */
+        TlsInfo: {
+            /** Cipher */
+            cipher?: string | null;
+            /** Issuer */
+            issuer?: string | null;
+            /** Not After */
+            not_after?: string | null;
+            /** Not Before */
+            not_before?: string | null;
+            /** Subject */
+            subject?: string | null;
+            /**
+             * Verified
+             * @default false
+             */
+            verified: boolean;
+            /** Verify Error */
+            verify_error?: string | null;
+            /** Version */
+            version?: string | null;
         };
         /** TokenCreated */
         TokenCreated: {

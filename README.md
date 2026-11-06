@@ -139,6 +139,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Release process: tags, dry runs, rolling `edge` installer ([RELEASING.md](RELEASING.md))
 - [x] First tagged release: v0.1.0 of all three repositories
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
+- [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [ ] Dark-mode and mobile polish for the map; per-node latency circles
 
 ## Credits

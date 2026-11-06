@@ -1,6 +1,6 @@
 "use client";
 
-import { ActivityIcon, Loader2Icon } from "lucide-react";
+import { ActivityIcon, Loader2Icon, NetworkIcon, PlugIcon, GlobeIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -26,11 +26,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
 import { flag, place } from "@/lib/format";
 
+import { KIND_INFO, KINDS, type Kind } from "./kinds";
+
 type Request = Schemas["CreateMeasurementRequest"];
+
+const KIND_ICON: Record<Kind, typeof ActivityIcon> = {
+  ping: ActivityIcon,
+  tcp: PlugIcon,
+  http: GlobeIcon,
+  traceroute: NetworkIcon,
+};
 
 function Choice<T extends string>({
   label,
@@ -66,12 +76,24 @@ function Choice<T extends string>({
   );
 }
 
-export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) {
+export function MeasureForm({
+  initialTarget = "",
+  initialKind = "ping",
+}: {
+  initialTarget?: string;
+  initialKind?: Kind;
+}) {
   const router = useRouter();
   const { nodes } = useNodes();
+  const [kind, setKind] = useState<Kind>(initialKind);
+  const info = KIND_INFO[kind];
   const online = nodes?.filter((n) => n.online) ?? [];
+  // Older nodes only know ping; say so instead of failing after the click.
+  const capable = online.filter((n) => n.kinds.includes(kind));
 
   const [target, setTarget] = useState(initialTarget);
+  const [port, setPort] = useState("");
+  const [follow, setFollow] = useState(false);
   const [dnsMode, setDnsMode] = useState<Request["dns_mode"]>("fixed");
   const [family, setFamily] = useState<Request["family"]>("auto");
   const [count, setCount] = useState("4");
@@ -88,12 +110,14 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
     try {
       const body: Request = {
         target: target.trim(),
-        kind: "ping",
+        kind,
         dns_mode: dnsMode,
         family,
-        count: Number(count),
+        follow_redirects: kind === "http" && follow,
         node_ids: scope === "selected" ? [...selected] : null,
       };
+      if (kind === "ping" || kind === "tcp") body.count = Number(count);
+      if ((kind === "tcp" || kind === "http") && port.trim()) body.port = Number(port);
       const created = await api<Measurement>("POST", "/measurements", body);
       router.push(`/measurements/${created.id}`);
     } catch (e) {
@@ -103,12 +127,23 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
   };
 
   const noNodes = nodes !== null && online.length === 0;
+  const noCapable = nodes !== null && online.length > 0 && capable.length === 0;
   const needsSelection = scope === "selected" && selected.size === 0;
+  const KindIcon = KIND_ICON[kind];
 
   return (
     <Card>
       <CardContent>
         <form onSubmit={submit} className="space-y-5">
+          <Tabs value={kind} onValueChange={(next) => next !== null && setKind(next as Kind)}>
+            <TabsList>
+              {KINDS.map((k) => (
+                <TabsTrigger key={k} value={k}>
+                  {KIND_INFO[k].label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <div className="space-y-1.5">
             <Label htmlFor="target">IP address, hostname or URL</Label>
             <div className="flex gap-2">
@@ -116,7 +151,7 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
                 id="target"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="1.1.1.1, example.com or https://example.com/"
+                placeholder={info.placeholder}
                 autoComplete="off"
                 autoCapitalize="off"
                 spellCheck={false}
@@ -124,16 +159,21 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
                 required
                 autoFocus
               />
-              <Button type="submit" disabled={busy || !target.trim() || noNodes || needsSelection}>
-                {busy ? <Loader2Icon className="animate-spin" /> : <ActivityIcon />}
-                Ping
+              <Button
+                type="submit"
+                disabled={busy || !target.trim() || noNodes || noCapable || needsSelection}
+              >
+                {busy ? <Loader2Icon className="animate-spin" /> : <KindIcon />}
+                {info.action}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               {nodes === null
                 ? "Checking which nodes are online…"
-                : `${online.length} node${online.length === 1 ? "" : "s"} online.`}{" "}
-              For a URL only the host is used.
+                : `${online.length} node${online.length === 1 ? "" : "s"} online${
+                    kind !== "ping" && online.length > 0 ? `, ${capable.length} can run this` : ""
+                  }.`}{" "}
+              {info.explain}
             </p>
           </div>
 
@@ -157,13 +197,37 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
                 { value: "6", label: "IPv6" },
               ]}
             />
-            <Choice
-              label="Echo requests per node"
-              value={count}
-              onChange={setCount}
-              options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
-            />
-            <div className="space-y-1.5">
+            {(kind === "ping" || kind === "tcp") && (
+              <Choice
+                label={kind === "ping" ? "Echo requests per node" : "Connections per node"}
+                value={count}
+                onChange={setCount}
+                options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
+              />
+            )}
+            {(kind === "tcp" || kind === "http") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>
+                <Input
+                  id="port"
+                  type="number"
+                  min={1}
+                  max={65535}
+                  inputMode="numeric"
+                  value={port}
+                  onChange={(e) => setPort(e.target.value)}
+                  placeholder={kind === "tcp" ? "443, or host:port above" : "from the URL"}
+                  className="h-9"
+                />
+              </div>
+            )}
+            {kind === "http" && (
+              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
+                <Checkbox checked={follow} onCheckedChange={(checked) => setFollow(checked === true)} />
+                Follow redirects
+              </label>
+            )}
+            <div className="min-w-0 space-y-1.5">
               <Label>Nodes</Label>
               <div className="flex gap-2">
                 <Select
@@ -178,7 +242,7 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
                     if (next === "selected") setPicking(true);
                   }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,6 +299,15 @@ export function MeasureForm({ initialTarget = "" }: { initialTarget?: string }) 
             </div>
           </div>
 
+          {noCapable && (
+            <Alert>
+              <AlertTitle>No online node can run {info.label}</AlertTitle>
+              <AlertDescription>
+                The nodes that are online are older and only know ping. Update them to run{" "}
+                {info.label} measurements.
+              </AlertDescription>
+            </Alert>
+          )}
           {noNodes && (
             <Alert>
               <AlertTitle>No node is online</AlertTitle>

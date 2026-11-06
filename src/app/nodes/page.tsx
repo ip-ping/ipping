@@ -75,6 +75,9 @@ export default function NodesPage() {
               <TableCell className="space-x-1">
                 {node.ipv4 && <Badge variant="secondary">IPv4</Badge>}
                 {node.ipv6 && <Badge variant="secondary">IPv6</Badge>}
+                {node.online && (
+                  <div className="text-xs text-muted-foreground">{node.kinds.join(" · ")}</div>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <Badge variant={node.online ? "default" : "outline"}>
