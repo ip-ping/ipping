@@ -21,11 +21,21 @@ const LABELS: Record<string, { label: string; variant: "default" | "secondary" |
 export function TaskStatus({ task }: { task: Task }) {
   const entry = LABELS[task.status] ?? { label: task.status, variant: "outline" as const };
   const badge = <Badge variant={entry.variant}>{entry.label}</Badge>;
-  if (!task.error_message) return badge;
+  const retried = (task.attempts ?? 1) > 1;
+  const note = [
+    task.error_message,
+    retried ? "Sent again after the service instance holding it stopped." : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (!note) return badge;
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="cursor-help" />}>{badge}</TooltipTrigger>
-      <TooltipContent>{task.error_message}</TooltipContent>
+      <TooltipTrigger render={<span className="cursor-help" />}>
+        {badge}
+        {retried && <span className="ml-1 text-xs text-muted-foreground">retried</span>}
+      </TooltipTrigger>
+      <TooltipContent>{note}</TooltipContent>
     </Tooltip>
   );
 }

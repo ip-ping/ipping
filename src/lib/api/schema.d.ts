@@ -1072,6 +1072,11 @@ export interface components {
             /** Target Denylist */
             target_denylist?: string[];
             /**
+             * Task Retries
+             * @default 1
+             */
+            task_retries: number;
+            /**
              * Traceroute Max Hops
              * @default 30
              */
@@ -1112,6 +1117,8 @@ export interface components {
             sample_retention_days?: number | null;
             /** Target Denylist */
             target_denylist?: string[] | null;
+            /** Task Retries */
+            task_retries?: number | null;
             /** Traceroute Max Hops */
             traceroute_max_hops?: number | null;
         };
@@ -1221,6 +1228,12 @@ export interface components {
         };
         /** TaskOut */
         TaskOut: {
+            /**
+             * Attempts
+             * @description Above 1 if the task was sent again because a backend instance died
+             * @default 1
+             */
+            attempts: number;
             /** Error Code */
             error_code?: string | null;
             /** Error Message */

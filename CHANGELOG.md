@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-06: a retried task says so
+- A task that was sent again because the backend instance holding it stopped shows "retried" next to
+  its status, with an explanation on hover; the admin page can set how many times that may happen.
+  Contract re-pinned to backend `501f74b`.
+
 ### 2026-11-06: TCP, HTTP and traceroute in the interface
 - The measure form has a switch for the kind (Ping, TCP, HTTP, Traceroute). TCP takes `host:port` or a
   port field, HTTP takes a URL with an optional port and a "follow redirects" box, and the form says

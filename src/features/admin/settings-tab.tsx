@@ -31,6 +31,7 @@ const LIMITS: { key: NumericKey; label: string; help: string; min?: number }[] =
   { key: "sample_retention_days", label: "Keep individual echo results (days)", help: "Per-node summaries are kept longer." },
   { key: "measurement_retention_days", label: "Keep measurements (days)", help: "" },
   { key: "max_redirects", label: "Redirects an HTTP check may follow", help: "0 turns following off. Your blocklist applies to the first address only; each redirect is checked by the node for public addresses and allowed ports.", min: 0 },
+  { key: "task_retries", label: "Times a task is sent again", help: "When the service instance holding a task stops before the node produced anything. 0 turns it off; partial results are never discarded.", min: 0 },
   { key: "traceroute_max_hops", label: "Most hops in a traceroute", help: "Between 5 and 30.", min: 5 },
 ];
 
