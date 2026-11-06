@@ -23,12 +23,12 @@ const LIMITS: { key: NumericKey; label: string; help: string; min?: number }[] =
   { key: "max_concurrent_per_session", label: "Running measurements per visitor", help: "One browser session." },
   { key: "max_concurrent_per_ip", label: "Running measurements per IP address", help: "Across all sessions behind one address." },
   { key: "creations_per_minute_per_ip", label: "New measurements per minute per IP", help: "" },
-  { key: "max_probes_per_measurement", label: "Probe budget per measurement", help: "Nodes × echo requests. A request over the budget is refused, never silently trimmed." },
+  { key: "max_probes_per_measurement", label: "Probe budget per measurement", help: "Nodes × probes. A request over the budget is refused, never silently trimmed." },
   { key: "max_global_inflight_probes", label: "Probes in flight, whole service", help: "New measurements wait (are refused) above this." },
   { key: "measurement_deadline_s", label: "Measurement deadline (seconds)", help: "Nodes that have not finished by then are marked as timed out." },
-  { key: "default_count", label: "Default echo requests per node", help: "" },
-  { key: "max_count", label: "Most echo requests per node", help: "Never more than 10." },
-  { key: "sample_retention_days", label: "Keep individual echo results (days)", help: "Per-node summaries are kept longer." },
+  { key: "default_count", label: "Default probes per node (ping, TCP)", help: "" },
+  { key: "max_count", label: "Most probes per node (ping, TCP)", help: "Never more than 10." },
+  { key: "sample_retention_days", label: "Keep individual results (days)", help: "Per-node summaries are kept longer." },
   { key: "measurement_retention_days", label: "Keep measurements (days)", help: "" },
   { key: "max_redirects", label: "Redirects an HTTP check may follow", help: "0 turns following off. Your blocklist applies to the first address only; each redirect is checked by the node for public addresses and allowed ports.", min: 0 },
   { key: "task_retries", label: "Times a task is sent again", help: "When the service instance holding a task stops before the node produced anything. 0 turns it off; partial results are never discarded.", min: 0 },
@@ -117,8 +117,8 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
           <CardHeader>
             <CardTitle>Limits</CardTitle>
             <CardDescription>
-              Counted as nodes × echo requests, not just browser requests, so one click on a large
-              fleet cannot be a flood.
+              Counted as nodes × probes (echo requests, connections, requests or hops), not just browser
+              requests, so one click on a large fleet cannot be a flood.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">

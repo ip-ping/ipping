@@ -21,9 +21,21 @@ import { kindOf, type Kind } from "./kinds";
 import { CertificateBadge, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
 import { TaskStatus } from "./status";
 
+/** Below this width the column is hidden; the row's details carry what the table drops. */
+type Show = "always" | "sm" | "md" | "lg" | "xl";
+
+const SHOW: Record<Show, string> = {
+  always: "",
+  sm: "hidden sm:table-cell",
+  md: "hidden md:table-cell",
+  lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
+};
+
 type Column = {
   head: string;
   align?: "right";
+  show?: Show;
   cell: (task: Task, context: { fastest: boolean; slowest: number }) => ReactNode;
 };
 
@@ -44,10 +56,10 @@ const bar = (task: Task, { fastest, slowest }: { fastest: boolean; slowest: numb
 };
 
 const latency = (loss: string): Column[] => [
-  { head: "Min", align: "right", cell: (t) => ms(t.summary?.min_ms) },
+  { head: "Min", align: "right", show: "md", cell: (t) => ms(t.summary?.min_ms) },
   { head: "Median", align: "right", cell: bar },
-  { head: "Avg", align: "right", cell: (t) => ms(t.summary?.avg_ms) },
-  { head: "Max", align: "right", cell: (t) => ms(t.summary?.max_ms) },
+  { head: "Avg", align: "right", show: "lg", cell: (t) => ms(t.summary?.avg_ms) },
+  { head: "Max", align: "right", show: "md", cell: (t) => ms(t.summary?.max_ms) },
   { head: loss, align: "right", cell: (t) => pct(t.summary?.loss_pct) },
 ];
 
@@ -68,11 +80,11 @@ const COLUMNS: Record<Kind, Column[]> = {
         );
       },
     },
-    { head: "Total", align: "right", cell: bar },
-    { head: "Connect", align: "right", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
-    { head: "TLS", align: "right", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
-    { head: "First byte", align: "right", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
-    { head: "Certificate", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
+    { head: "Total", align: "right", show: "sm", cell: bar },
+    { head: "Connect", align: "right", show: "md", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
+    { head: "TLS", align: "right", show: "md", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
+    { head: "First byte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
+    { head: "Certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
   ],
   traceroute: [
     {
@@ -89,13 +101,14 @@ const COLUMNS: Record<Kind, Column[]> = {
     {
       head: "Hops",
       align: "right",
+      show: "sm",
       cell: (t) => {
         const last = t.samples.at(-1)?.hop;
         return last ? `${last.ttl}` : "–";
       },
     },
-    { head: "Answered", align: "right", cell: (t) => (t.summary ? `${t.summary.received} / ${t.summary.sent}` : "–") },
-    { head: "Round trip", align: "right", cell: (t) => ms(t.summary?.median_ms) },
+    { head: "Answered", align: "right", show: "md", cell: (t) => (t.summary ? `${t.summary.received} / ${t.summary.sent}` : "–") },
+    { head: "Round trip", align: "right", show: "sm", cell: (t) => ms(t.summary?.median_ms) },
   ],
 };
 
@@ -113,76 +126,93 @@ export function ResultsTable({ measurement }: { measurement: Measurement }) {
   const width = 6 + columns.length;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-8" />
-          <TableHead>Node</TableHead>
-          <TableHead>Region</TableHead>
-          <TableHead>Provider / ASN</TableHead>
-          <TableHead>Tested IP</TableHead>
-          {columns.map((c) => (
-            <TableHead key={c.head} className={c.align === "right" ? "text-right" : undefined}>
-              {c.head}
-            </TableHead>
-          ))}
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {measurement.tasks.map((task) => {
-          const expanded = open.has(task.id);
-          const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest };
-          return (
-            <Fragment key={task.id}>
-              <TableRow
-                className="cursor-pointer"
-                onClick={() => toggle(task.id)}
-                aria-expanded={expanded}
+    // The container lets a row's details be exactly as wide as what is visible, however far the
+    // table itself scrolls sideways (see `100cqw` below).
+    <div className="@container">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-8" />
+            <TableHead>Node</TableHead>
+            <TableHead className={SHOW.md}>Region</TableHead>
+            <TableHead className={SHOW.xl}>Provider / ASN</TableHead>
+            <TableHead className={SHOW.lg}>Tested IP</TableHead>
+            {columns.map((c) => (
+              <TableHead
+                key={c.head}
+                className={cn(SHOW[c.show ?? "always"], c.align === "right" && "text-right")}
               >
-                <TableCell>
-                  <ChevronRightIcon
-                    className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-90")}
-                  />
-                </TableCell>
-                <TableCell className="font-medium">{task.node.name}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {flag(task.node.country)} {place(task.node)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {task.node.provider ?? "–"}
-                  {task.node.asn ? ` · AS${task.node.asn}` : ""}
-                </TableCell>
-                <TableCell className="font-mono text-xs">{task.tested_ip ?? "–"}</TableCell>
-                {columns.map((c) => (
-                  <TableCell key={c.head} className={c.align === "right" ? "text-right tabular-nums" : undefined}>
-                    {c.cell(task, context)}
+                {c.head}
+              </TableHead>
+            ))}
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {measurement.tasks.map((task) => {
+            const expanded = open.has(task.id);
+            const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest };
+            return (
+              <Fragment key={task.id}>
+                <TableRow
+                  className="cursor-pointer"
+                  onClick={() => toggle(task.id)}
+                  aria-expanded={expanded}
+                >
+                  <TableCell>
+                    <ChevronRightIcon
+                      className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-90")}
+                    />
                   </TableCell>
-                ))}
-                <TableCell>
-                  <TaskStatus task={task} />
-                </TableCell>
-              </TableRow>
-              {expanded && (
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableCell />
-                  <TableCell colSpan={width - 1}>
-                    <TaskDetail task={task} kind={kind} expected={measurement.options.count} />
+                  <TableCell className="font-medium">
+                    {task.node.name}
+                    <div className="text-xs font-normal text-muted-foreground md:hidden">
+                      {flag(task.node.country)} {place(task.node)}
+                    </div>
+                  </TableCell>
+                  <TableCell className={cn("whitespace-nowrap", SHOW.md)}>
+                    {flag(task.node.country)} {place(task.node)}
+                  </TableCell>
+                  <TableCell className={cn("text-muted-foreground", SHOW.xl)}>
+                    {task.node.provider ?? "–"}
+                    {task.node.asn ? ` · AS${task.node.asn}` : ""}
+                  </TableCell>
+                  <TableCell className={cn("font-mono text-xs", SHOW.lg)}>{task.tested_ip ?? "–"}</TableCell>
+                  {columns.map((c) => (
+                    <TableCell
+                      key={c.head}
+                      className={cn(SHOW[c.show ?? "always"], c.align === "right" && "text-right tabular-nums")}
+                    >
+                      {c.cell(task, context)}
+                    </TableCell>
+                  ))}
+                  <TableCell>
+                    <TaskStatus task={task} />
                   </TableCell>
                 </TableRow>
-              )}
-            </Fragment>
-          );
-        })}
-        {measurement.tasks.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={width} className="py-8 text-center text-muted-foreground">
-              No nodes took part in this measurement.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+                {expanded && (
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={width} className="p-0 whitespace-normal">
+                      {/* Stays put while the table scrolls and never wider than the screen. */}
+                      <div className="sticky left-0 box-border w-[100cqw] max-w-full px-4 py-2 sm:pl-12">
+                        <TaskDetail task={task} kind={kind} expected={measurement.options.count} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })}
+          {measurement.tasks.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={width} className="py-8 text-center text-muted-foreground">
+                No nodes took part in this measurement.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -198,6 +228,13 @@ function TaskDetail({ task, kind, expected }: { task: Task; kind: Kind; expected
       )}
       <div className="space-y-1 pb-1 text-sm">
         {task.error_message && kind !== "http" && <p className="text-muted-foreground">{task.error_message}</p>}
+        {task.tested_ip && (
+          <p className="text-muted-foreground lg:hidden">
+            Tested <span className="font-mono text-xs">{task.tested_ip}</span>
+            {task.node.provider ? ` · ${task.node.provider}` : ""}
+            {task.node.asn ? ` · AS${task.node.asn}` : ""}
+          </p>
+        )}
         {task.resolved_ips.length > 0 && (
           <p className="text-muted-foreground">
             Resolved on this node:{" "}

@@ -4,6 +4,26 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+## v0.3.1 (2026-11-06)
+
+### fix: the web interface on small screens and in the measure form
+- **Results table.** The expanded details of a row (the certificate, the hop table, the attempts) sat
+  inside the table's sideways scroll, so on a phone or at 1024 px their text ran off the edge and was
+  cut. They now stay as wide as the screen however far the table scrolls (a container query,
+  `100cqw`) and wrap. The table itself shows fewer columns on narrow screens (region goes under the
+  node name, provider and tested IP, and the finer timings, appear as the screen widens; the details
+  carry what is dropped), so the status badge is no longer clipped.
+- **Measure form.** The "Nodes" control was squeezed into the last column of a four-column grid, its
+  label cut to "All online noc" with a greyed-out "Choose" button beside it, and with TCP or HTTP's
+  extra fields it wrapped onto a row of its own. The options are now a 12-column grid with the Nodes
+  control given half the width, and "Choose" only appears once you pick "Selected".
+- Admin labels no longer say "echo requests" for limits that now cover TCP, HTTP and traceroute.
+- The installer follows the width of the terminal (a box that does not fit is printed without a
+  frame, a long spinner line is cut to one row, a long subtitle goes on its own line); it used to force
+  at least 60 columns and wrapped on anything narrower.
+- Checked with a browser sweep at 1440, 1024, 768 and 390 px, light and dark, for every kind, the
+  admin tabs and the nodes page: no element sticks out of the screen and the console is clean.
+
 ## v0.3.0 (2026-11-06)
 
 TCP, HTTP and traceroute measurements in the interface, a guided installer, and the fix for installing

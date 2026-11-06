@@ -30,6 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
 import { flag, place } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import { KIND_INFO, KINDS, type Kind } from "./kinds";
 
@@ -47,14 +48,16 @@ function Choice<T extends string>({
   value,
   onChange,
   options,
+  className,
 }: {
   label: string;
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: string }[];
+  className?: string;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("min-w-0 space-y-1.5", className)}>
       <Label>{label}</Label>
       <Select
         value={value}
@@ -177,8 +180,9 @@ export function MeasureForm({
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
             <Choice
+              className="lg:col-span-3"
               label="Name resolution"
               value={dnsMode}
               onChange={setDnsMode}
@@ -188,6 +192,7 @@ export function MeasureForm({
               ]}
             />
             <Choice
+              className="lg:col-span-3"
               label="IP version"
               value={family}
               onChange={setFamily}
@@ -199,6 +204,7 @@ export function MeasureForm({
             />
             {(kind === "ping" || kind === "tcp") && (
               <Choice
+                className="lg:col-span-3"
                 label={kind === "ping" ? "Echo requests per node" : "Connections per node"}
                 value={count}
                 onChange={setCount}
@@ -206,7 +212,7 @@ export function MeasureForm({
               />
             )}
             {(kind === "tcp" || kind === "http") && (
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5 lg:col-span-3">
                 <Label htmlFor="port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>
                 <Input
                   id="port"
@@ -222,12 +228,12 @@ export function MeasureForm({
               </div>
             )}
             {kind === "http" && (
-              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
+              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-3">
                 <Checkbox checked={follow} onCheckedChange={(checked) => setFollow(checked === true)} />
                 Follow redirects
               </label>
             )}
-            <div className="min-w-0 space-y-1.5">
+            <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-6">
               <Label>Nodes</Label>
               <div className="flex gap-2">
                 <Select
@@ -251,7 +257,15 @@ export function MeasureForm({
                   </SelectContent>
                 </Select>
                 <Dialog open={picking} onOpenChange={setPicking}>
-                  <DialogTrigger render={<Button type="button" variant="outline" disabled={scope !== "selected"} />}>
+                  <DialogTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={scope === "selected" ? undefined : "hidden"}
+                      />
+                    }
+                  >
                     Choose
                   </DialogTrigger>
                   <DialogContent>

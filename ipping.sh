@@ -68,9 +68,12 @@ ui_init() {
   if [ "$UI_TTY" -eq 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then UI_COLOR=1; fi
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) UI_UNICODE=1 ;; esac
   if [ "$UI_TTY" -eq 0 ]; then UI_UNICODE=0; fi
-  UI_WIDTH="${COLUMNS:-}"
-  case "$UI_WIDTH" in '' | *[!0-9]*) UI_WIDTH="$(tput cols 2>/dev/null || echo 80)" ;; esac
-  if [ "$UI_WIDTH" -lt 60 ]; then UI_WIDTH=60; fi
+  # UI_COLS is how wide the terminal really is; UI_WIDTH what the layout uses (never wider than 100).
+  UI_COLS="${COLUMNS:-}"
+  case "$UI_COLS" in '' | *[!0-9]*) UI_COLS="$(tput cols 2>/dev/null || echo 80)" ;; esac
+  case "$UI_COLS" in '' | *[!0-9]*) UI_COLS=80 ;; esac
+  if [ "$UI_COLS" -lt 24 ]; then UI_COLS=24; fi
+  UI_WIDTH=$UI_COLS
   if [ "$UI_WIDTH" -gt 100 ]; then UI_WIDTH=100; fi
   if [ "$UI_COLOR" -eq 1 ]; then
     C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'; C_GREEN=$'\033[32m'
@@ -99,7 +102,11 @@ ui_rule() {
 
 banner() { # banner TITLE [SUBTITLE]
   printf '\n%s%s%s' "$C_BOLD" "$1" "$C_RESET"
-  if [ -n "${2:-}" ]; then printf '  %s%s%s' "$C_DIM" "$2" "$C_RESET"; fi
+  if [ -n "${2:-}" ]; then
+    # Beside the title if it fits, on its own line if not (a wrapped line would split a word).
+    if [ $((${#1} + ${#2} + 2)) -lt "$UI_COLS" ]; then printf '  '; else printf '\n'; fi
+    printf '%s%s%s' "$C_DIM" "$2" "$C_RESET"
+  fi
   printf '\n'
   ui_rule
 }
@@ -140,7 +147,8 @@ ui_spin_start() {
     i=0
     n=${#UI_SPIN[@]}
     while :; do
-      printf '\r  %s%s%s %s' "$C_CYAN" "${UI_SPIN[i % n]}" "$C_RESET" "$1"
+      # Cut to one line: a wrapped spinner line leaves its first row behind when it is cleared.
+      printf '\r\033[K  %s%s%s %s' "$C_CYAN" "${UI_SPIN[i % n]}" "$C_RESET" "${1:0:$((UI_COLS - 6))}"
       i=$((i + 1))
       sleep 0.1
     done
@@ -191,6 +199,12 @@ box() {
   shift
   w=$((${#title} + 2))
   for line in "$@"; do if [ "${#line}" -gt "$w" ]; then w=${#line}; fi; done
+  if [ $((w + 4)) -gt "$UI_COLS" ]; then
+    # Too wide for this terminal: a frame would wrap into a mess, so print the same lines plainly.
+    printf '\n%s%s%s\n' "${C_BOLD}${color}" "$title" "$C_RESET"
+    for line in "$@"; do printf '  %s\n' "$line"; done
+    return 0
+  fi
   for ((i = 0; i < w + 2; i++)); do bar+="$S_H"; done
   for ((i = 0; i < w - ${#title} - 1; i++)); do tbar+="$S_H"; done
   printf '\n%s%s%s %s%s%s%s %s%s%s\n' "$color" "$S_TL" "$S_H" "$C_BOLD" "$title" "$C_RESET" "$color" "$tbar" "$S_TR" "$C_RESET"
