@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-06: what the strength labels have meant in practice
+- The tooltip on the location panel no longer says the labels are uncalibrated: it quotes what they
+  meant when checked against real measurements (see the backend's README), with the caveat that a
+  deployment's nodes may be spread differently.
+
 ### 2026-11-06: a retried task says so
 - A task that was sent again because the backend instance holding it stopped shows "retried" next to
   its status, with an explanation on hover; the admin page can set how many times that may happen.
