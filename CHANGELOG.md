@@ -4,6 +4,20 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-07: a look of its own (1 of 4): the sheet, the type, the frame
+- The interface looked like every shadcn site. It now has an identity: a **chart sheet**. Warm paper
+  on a faint dot grid and blue-black ink in light mode, deep water and pale ink in dark mode, and one
+  vermilion "signal" colour for what is live or selected. Type is Bricolage Grotesque for text and
+  numbers and IBM Plex Mono for labels, axes and units, set in small caps with wide tracking.
+- Corners are nearly square; buttons are ink that turns signal on hover; badges are stamps; tabs are a
+  ruled underline; tables have ruled mono headers; switches are square. Everything is a **Panel**: a
+  hairline box with a ruled caps header and a registration tick in each corner.
+- A new mark (a station and the rings of its ping), a header with numbered sections and a live
+  "16/16 live" count of connected nodes, and a footer with the one caveat that matters.
+- Chart colours are the validated categorical order (blue, orange, aqua, yellow), checked against both
+  surfaces with the palette validator; the one warning (orange, aqua and yellow are under 3:1 on
+  paper) is covered by visible labels and tables, as the method requires.
+
 ## v0.3.2 (2026-11-07)
 
 ### fix: dialogs and admin pages that overflowed or hid their buttons

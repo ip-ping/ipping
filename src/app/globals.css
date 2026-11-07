@@ -7,9 +7,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-data), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-heading: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-3: var(--viz-3);
+  --color-viz-4: var(--viz-4);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,72 +58,100 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* "Chart paper": warm paper, blue-black ink, one vermilion signal. */
+  --background: #f1eee5;
+  --foreground: #12161b;
+  --card: #f8f6ef;
+  --card-foreground: #12161b;
+  --popover: #fbfaf5;
+  --popover-foreground: #12161b;
+  --primary: #12161b;
+  --primary-foreground: #f6f3ea;
+  --secondary: #e6e2d5;
+  --secondary-foreground: #12161b;
+  --muted: #e9e5d9;
+  --muted-foreground: #565b63;
+  --accent: #e3dece;
+  --accent-foreground: #12161b;
+  --destructive: #b92d17;
+  --border: rgb(18 22 27 / 0.17);
+  --input: rgb(18 22 27 / 0.26);
+  --ring: #2a78d6;
+  --radius: 0.25rem;
+
+  --signal: #e2431a;
+  --signal-soft: rgb(226 67 26 / 0.14);
+  --ink-faint: rgb(18 22 27 / 0.07);
+  --grid-dot: rgb(18 22 27 / 0.11);
+  --land: rgb(18 22 27 / 0.36);
+  --land-edge: rgb(18 22 27 / 0.5);
+  --ocean: rgb(42 120 214 / 0.045);
+  --graticule: rgb(18 22 27 / 0.1);
+  --surface: #f8f6ef;
+
+  /* Chart series: the validated categorical order. One series is slot 1; phases take 1 to 4. */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --good: #0a8a0a;
+  --warning: #b87800;
+  --critical: #c4321b;
+
+  --chart-1: var(--viz-1);
+  --chart-2: var(--viz-2);
+  --chart-3: var(--viz-3);
+  --chart-4: var(--viz-4);
+  --chart-5: #6250d6;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* "Night chart": deep water, pale ink, the same signal. */
+  --background: #080d13;
+  --foreground: #e6ebef;
+  --card: #0e151d;
+  --card-foreground: #e6ebef;
+  --popover: #111a24;
+  --popover-foreground: #e6ebef;
+  --primary: #e6ebef;
+  --primary-foreground: #0a1016;
+  --secondary: #16202b;
+  --secondary-foreground: #e6ebef;
+  --muted: #131c26;
+  --muted-foreground: #8d9aa9;
+  --accent: #1a2531;
+  --accent-foreground: #e6ebef;
+  --destructive: #ff7a63;
+  --border: rgb(160 190 225 / 0.17);
+  --input: rgb(160 190 225 / 0.26);
+  --ring: #3987e5;
+
+  --signal: #ff6a3d;
+  --signal-soft: rgb(255 106 61 / 0.16);
+  --ink-faint: rgb(200 220 240 / 0.06);
+  --grid-dot: rgb(150 190 230 / 0.1);
+  --land: rgb(160 195 235 / 0.34);
+  --land-edge: rgb(160 195 235 / 0.5);
+  --ocean: rgb(57 135 229 / 0.05);
+  --graticule: rgb(160 190 225 / 0.11);
+  --surface: #0e151d;
+
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --good: #2dc26b;
+  --warning: #e0a020;
+  --critical: #ff7a63;
+  --chart-5: #9085e9;
 }
 
 @layer base {
@@ -123,8 +160,80 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* A faint dot grid, like the sheet a chart is plotted on. */
+    background-image: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0);
+    background-size: 22px 22px;
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
+    font-feature-settings: "ss01", "cv11";
   }
+  ::selection {
+    background: var(--signal);
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* The small caps-and-numbers voice of the instrument: labels, units, axes. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .figure {
+    font-family: var(--font-display), sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Motion: slow pulses that say "live", off for people who asked for less. */
+@keyframes ring-out {
+  0% { transform: scale(0.4); opacity: 0.55; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+@keyframes sample-ring {
+  0% { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(4.5); opacity: 0; }
+}
+@keyframes scan {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(360px); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.ring-out {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-out 3.6s ease-out infinite;
+}
+.sample-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sample-ring 1.1s ease-out 1 forwards;
+}
+.scan-line {
+  animation: scan 14s linear infinite;
+}
+.live-dot {
+  animation: blink 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-out, .sample-ring, .scan-line, .live-dot {
+    animation: none;
+  }
+  .ring-out { opacity: 0.25; transform: scale(1.6); }
+  .sample-ring { opacity: 0; }
 }
