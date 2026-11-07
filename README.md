@@ -67,6 +67,8 @@ frame with registration ticks in its corners.
 * **A second opinion that is checked.** With a GeoIP / ASN database set up on the backend, the location panel
   names the network and says whether the database's place is ruled out by the measurements (a node heard from
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
+* **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
+  when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
 * **Anycast shows.** When two nodes got round trips too fast for any single place, the map joins them with a
   dashed line and says how far apart they are against how far their round trips allow.
 * **Take it with you.** Export a result as text to paste, a CSV (cells that a spreadsheet could read as a

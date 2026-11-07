@@ -11,6 +11,7 @@ import { AuditTab } from "./audit-tab";
 import { NodesTab } from "./nodes-tab";
 import { SettingsTab } from "./settings-tab";
 import { TokensTab } from "./tokens-tab";
+import { WatchesTab } from "./watches-tab";
 
 export function Dashboard({ username, onSignOut }: { username: string; onSignOut: () => void }) {
   const { data: status } = useApiData<Schemas["ServiceStatus"]>("/admin/status", 5000);
@@ -54,12 +55,16 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
       <Tabs defaultValue="nodes">
         <TabsList>
           <TabsTrigger value="nodes">Nodes</TabsTrigger>
+          <TabsTrigger value="watches">Watches</TabsTrigger>
           <TabsTrigger value="tokens">Enrollment</TabsTrigger>
           <TabsTrigger value="settings">Limits &amp; safety</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
         <TabsContent value="nodes" className="pt-4">
           <NodesTab />
+        </TabsContent>
+        <TabsContent value="watches" className="pt-4">
+          <WatchesTab />
         </TabsContent>
         <TabsContent value="tokens" className="pt-4">
           <TokensTab />

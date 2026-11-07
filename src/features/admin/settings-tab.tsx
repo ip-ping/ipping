@@ -33,6 +33,9 @@ const LIMITS: { key: NumericKey; label: string; help: string; min?: number }[] =
   { key: "max_redirects", label: "Redirects an HTTP check may follow", help: "0 turns following off. Your blocklist applies to the first address only; each redirect is checked by the node for public addresses and allowed ports.", min: 0 },
   { key: "task_retries", label: "Times a task is sent again", help: "When the service instance holding a task stops before the node produced anything. 0 turns it off; partial results are never discarded.", min: 0 },
   { key: "traceroute_max_hops", label: "Most hops in a traceroute", help: "Between 5 and 30.", min: 5 },
+  { key: "max_watches", label: "Most watches", help: "Scheduled checks. 0 turns them off.", min: 0 },
+  { key: "min_watch_interval_s", label: "Shortest watch interval (seconds)", help: "At least 30.", min: 30 },
+  { key: "watch_history_days", label: "Keep a watch's run history (days)", help: "" },
 ];
 
 const KINDS: { value: string; label: string; help: string }[] = [
@@ -74,6 +77,7 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
     event.preventDefault();
     const changes: Partial<Settings> = {};
     for (const { key } of LIMITS) if (draft[key] !== data[key]) changes[key] = draft[key];
+    if (draft.allow_private_webhooks !== data.allow_private_webhooks) changes.allow_private_webhooks = draft.allow_private_webhooks;
     const list = deny.split("\n").map((l) => l.trim()).filter(Boolean);
     if (JSON.stringify(list) !== JSON.stringify(data.target_denylist ?? [])) changes.target_denylist = list;
     const portList = ports.split(/[\s,]+/).filter(Boolean).map(Number);
@@ -175,6 +179,31 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
                 port added here also has to be allowed on the nodes.
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Watch alerts</CardTitle>
+            <CardDescription>
+              An alert address is a place this server connects to. By default it must be a public address, like a
+              target.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <label className="flex cursor-pointer items-start gap-3 text-sm">
+              <Checkbox
+                checked={draft.allow_private_webhooks ?? false}
+                onCheckedChange={(checked) => setDraft({ ...draft, allow_private_webhooks: checked === true })}
+              />
+              <span>
+                <span className="font-medium">Allow alerts to private addresses</span>
+                <span className="block text-xs text-muted-foreground">
+                  For a webhook or an ntfy server on your own network. Anyone who can sign in as administrator can then
+                  make this server send a request to your internal network, so leave it off unless you need it.
+                </span>
+              </span>
+            </label>
           </CardContent>
         </Card>
 

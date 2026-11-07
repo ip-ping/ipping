@@ -10,6 +10,20 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: watches in the admin
+- A **Watches** tab: add a check (any kind, as in the measure form), how often it runs, when a run counts as bad
+  (fewer than N% of nodes got a good answer) and after how many bad runs to alert, and an optional alert address
+  (a webhook or an ntfy topic). Each watch shows its state as a word (ok, degraded, down, alerting, paused, can't
+  run), an **uptime strip** of its last 48 runs (a bar per run: tall and green when ok, half-height and amber when
+  degraded, a short red stub when down, a dashed outline when the check itself could not run, so the state is in
+  the shape, the colour and the legend and tooltip words, never the colour alone), when it last ran and how many
+  nodes answered, an open alert, and the last alert that was not delivered. Actions: run now, history (a table of
+  runs, each linking to its measurement), test alert, edit, pause and delete.
+- The settings gain the watch limits and the switch that allows alerts to private addresses, with a plain
+  statement of what it risks.
+- Tried end to end in a browser with a webhook on this machine: three bad runs of a vanished DNS name sent one
+  alert, the test alert arrived, and the strip and history showed the runs. Contracts pinned to backend 7a5b794.
+
 ### 2026-11-07: a GeoIP database as a second opinion, in the interface
 - When the backend has a GeoIP / ASN database, the location panel names the network (`AS13335 Cloudflare, Inc.`)
   and sets what the database says against what the nodes measured: **the measurements rule that out** (naming

@@ -227,6 +227,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/watches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Watches */
+        get: operations["list_watches_api_v1_admin_watches_get"];
+        put?: never;
+        /** Create Watch */
+        post: operations["create_watch_api_v1_admin_watches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/watches/{watch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Watch */
+        get: operations["read_watch_api_v1_admin_watches__watch_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Watch */
+        delete: operations["delete_watch_api_v1_admin_watches__watch_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Watch */
+        patch: operations["update_watch_api_v1_admin_watches__watch_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/watches/{watch_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Now */
+        post: operations["run_now_api_v1_admin_watches__watch_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/watches/{watch_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs */
+        get: operations["runs_api_v1_admin_watches__watch_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/watches/{watch_id}/test-alert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Alert */
+        post: operations["test_alert_api_v1_admin_watches__watch_id__test_alert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -1140,8 +1228,18 @@ export interface components {
             /** Rtt Ms */
             rtt_ms: number;
         };
+        /** RunNowOut */
+        RunNowOut: {
+            /** Measurement Id */
+            measurement_id: string | null;
+        };
         /** RuntimeSettings */
         RuntimeSettings: {
+            /**
+             * Allow Private Webhooks
+             * @default false
+             */
+            allow_private_webhooks: boolean;
             /** Allowed Ports */
             allowed_ports?: number[];
             /**
@@ -1187,6 +1285,11 @@ export interface components {
              */
             max_redirects: number;
             /**
+             * Max Watches
+             * @default 20
+             */
+            max_watches: number;
+            /**
              * Measurement Deadline S
              * @default 30
              */
@@ -1201,6 +1304,11 @@ export interface components {
              * @default true
              */
             measurements_enabled: boolean;
+            /**
+             * Min Watch Interval S
+             * @default 60
+             */
+            min_watch_interval_s: number;
             /**
              * Sample Retention Days
              * @default 7
@@ -1218,12 +1326,19 @@ export interface components {
              * @default 30
              */
             traceroute_max_hops: number;
+            /**
+             * Watch History Days
+             * @default 30
+             */
+            watch_history_days: number;
         };
         /**
          * RuntimeSettingsUpdate
          * @description Every field optional: only the ones that are sent change.
          */
         RuntimeSettingsUpdate: {
+            /** Allow Private Webhooks */
+            allow_private_webhooks?: boolean | null;
             /** Allowed Ports */
             allowed_ports?: number[] | null;
             /** Creations Per Minute Per Ip */
@@ -1244,12 +1359,16 @@ export interface components {
             max_probes_per_measurement?: number | null;
             /** Max Redirects */
             max_redirects?: number | null;
+            /** Max Watches */
+            max_watches?: number | null;
             /** Measurement Deadline S */
             measurement_deadline_s?: number | null;
             /** Measurement Retention Days */
             measurement_retention_days?: number | null;
             /** Measurements Enabled */
             measurements_enabled?: boolean | null;
+            /** Min Watch Interval S */
+            min_watch_interval_s?: number | null;
             /** Sample Retention Days */
             sample_retention_days?: number | null;
             /** Target Denylist */
@@ -1258,6 +1377,8 @@ export interface components {
             task_retries?: number | null;
             /** Traceroute Max Hops */
             traceroute_max_hops?: number | null;
+            /** Watch History Days */
+            watch_history_days?: number | null;
         };
         /** SampleOut */
         SampleOut: {
@@ -1400,6 +1521,13 @@ export interface components {
             /** Tested Ip */
             tested_ip?: string | null;
         };
+        /** TestAlertOut */
+        TestAlertOut: {
+            /** Error */
+            error?: string | null;
+            /** Ok */
+            ok: boolean;
+        };
         /** TlsInfo */
         TlsInfo: {
             /** Cipher */
@@ -1496,6 +1624,211 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WatchIn */
+        WatchIn: {
+            /**
+             * Alert After
+             * @description Bad runs in a row before an alert
+             * @default 2
+             */
+            alert_after: number;
+            /**
+             * Alert Format
+             * @default json
+             * @enum {string}
+             */
+            alert_format: "json" | "ntfy";
+            /** Alert Url */
+            alert_url?: string | null;
+            /** Count */
+            count?: number | null;
+            /**
+             * Dns Mode
+             * @default fixed
+             * @enum {string}
+             */
+            dns_mode: "fixed" | "regional";
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Family
+             * @default auto
+             * @enum {string}
+             */
+            family: "auto" | "4" | "6";
+            /**
+             * Follow Redirects
+             * @default false
+             */
+            follow_redirects: boolean;
+            /**
+             * Interval S
+             * @description Seconds between runs
+             * @default 300
+             */
+            interval_s: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ping" | "tcp" | "http" | "traceroute" | "dns";
+            /**
+             * Min Ok Pct
+             * @description Bad when fewer than this share of nodes get a good answer
+             * @default 80
+             */
+            min_ok_pct: number;
+            /** Name */
+            name: string;
+            /**
+             * Node Ids
+             * @description Omit for all nodes
+             */
+            node_ids?: string[] | null;
+            /** Port */
+            port?: number | null;
+            /** Record Type */
+            record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
+            /** Resolver */
+            resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
+            /**
+             * Target
+             * @description Anything a measurement accepts
+             */
+            target: string;
+        };
+        /** WatchOut */
+        WatchOut: {
+            /** Alert After */
+            alert_after: number;
+            /** Alert Format */
+            alert_format: string;
+            /** Alert Url */
+            alert_url: string | null;
+            /** Alerting */
+            alerting: boolean;
+            /** Bad Streak */
+            bad_streak: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * History
+             * @description The latest runs, oldest first
+             * @default []
+             */
+            history: components["schemas"]["WatchRunOut"][];
+            /** Id */
+            id: string;
+            /** Interval S */
+            interval_s: number;
+            /** Kind */
+            kind: string;
+            /** Last Alert At */
+            last_alert_at: string | null;
+            /** Last Alert Error */
+            last_alert_error: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Last Status */
+            last_status: ("ok" | "degraded" | "down" | "error") | null;
+            /** Min Ok Pct */
+            min_ok_pct: number;
+            /** Name */
+            name: string;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Node Ids */
+            node_ids: string[] | null;
+            /** Options */
+            options: {
+                [key: string]: unknown;
+            };
+            /** Target */
+            target: string;
+        };
+        /**
+         * WatchPatch
+         * @description Every field optional: only the ones that are sent change. The kind cannot change.
+         */
+        WatchPatch: {
+            /** Alert After */
+            alert_after?: number | null;
+            /** Alert Format */
+            alert_format?: ("json" | "ntfy") | null;
+            /**
+             * Alert Url
+             * @description Empty string clears it
+             */
+            alert_url?: string | null;
+            /**
+             * All Nodes
+             * @description true clears node_ids
+             */
+            all_nodes?: boolean | null;
+            /** Count */
+            count?: number | null;
+            /** Dns Mode */
+            dns_mode?: ("fixed" | "regional") | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Family */
+            family?: ("auto" | "4" | "6") | null;
+            /** Follow Redirects */
+            follow_redirects?: boolean | null;
+            /** Interval S */
+            interval_s?: number | null;
+            /** Min Ok Pct */
+            min_ok_pct?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Node Ids */
+            node_ids?: string[] | null;
+            /** Port */
+            port?: number | null;
+            /** Record Type */
+            record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
+            /** Resolver */
+            resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
+            /** Target */
+            target?: string | null;
+        };
+        /** WatchRunOut */
+        WatchRunOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Max Ms */
+            max_ms?: number | null;
+            /** Measurement Id */
+            measurement_id?: string | null;
+            /** Median Ms */
+            median_ms?: number | null;
+            /** Min Ms */
+            min_ms?: number | null;
+            /** Nodes Ok */
+            nodes_ok: number;
+            /** Nodes Total */
+            nodes_total: number;
+            /** Note */
+            note?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "degraded" | "down" | "error";
         };
     };
     responses: never;
@@ -1907,6 +2240,249 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ServiceStatus"];
+                };
+            };
+        };
+    };
+    list_watches_api_v1_admin_watches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchOut"][];
+                };
+            };
+        };
+    };
+    create_watch_api_v1_admin_watches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_watch_api_v1_admin_watches__watch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_watch_api_v1_admin_watches__watch_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_watch_api_v1_admin_watches__watch_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_now_api_v1_admin_watches__watch_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunNowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_v1_admin_watches__watch_id__runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_alert_api_v1_admin_watches__watch_id__test_alert_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestAlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
