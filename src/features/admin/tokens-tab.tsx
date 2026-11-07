@@ -18,7 +18,7 @@ import {
 import { api, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 
-import { SecretDialog } from "./secret-dialog";
+import { CopyBlock, SecretDialog } from "./secret-dialog";
 
 type Token = Schemas["TokenOut"];
 type Created = Schemas["TokenCreated"];
@@ -58,6 +58,10 @@ export function TokensTab() {
   };
 
   const origin = typeof window === "undefined" ? "" : window.location.origin;
+  // A plain-HTTP site on another host is refused by nodes unless they are told it is fine.
+  const plainHttp =
+    origin.startsWith("http://") && !/^http:\/\/(localhost|127\.|\[::1\])/.test(origin);
+  const token = created?.token ?? "";
 
   return (
     <div className="space-y-6">
@@ -83,8 +87,8 @@ export function TokensTab() {
         <TableHeader>
           <TableRow>
             <TableHead>Label</TableHead>
-            <TableHead>Created by</TableHead>
-            <TableHead>Expires</TableHead>
+            <TableHead className="hidden md:table-cell">Created by</TableHead>
+            <TableHead className="hidden sm:table-cell">Expires</TableHead>
             <TableHead>State</TableHead>
             <TableHead />
           </TableRow>
@@ -99,9 +103,14 @@ export function TokensTab() {
           )}
           {data?.map((token) => (
             <TableRow key={token.id}>
-              <TableCell>{token.label ?? <span className="text-muted-foreground">–</span>}</TableCell>
-              <TableCell className="text-muted-foreground">{token.created_by}</TableCell>
-              <TableCell className="text-muted-foreground">{new Date(token.expires_at).toLocaleString()}</TableCell>
+              <TableCell className="whitespace-normal">
+                {token.label ?? <span className="text-muted-foreground">–</span>}
+                <div className="text-xs text-muted-foreground sm:hidden">
+                  expires {new Date(token.expires_at).toLocaleString()}
+                </div>
+              </TableCell>
+              <TableCell className="hidden text-muted-foreground md:table-cell">{token.created_by}</TableCell>
+              <TableCell className="hidden text-muted-foreground sm:table-cell">{new Date(token.expires_at).toLocaleString()}</TableCell>
               <TableCell>
                 <Badge variant={token.state === "active" ? "default" : "outline"}>{token.state}</Badge>
               </TableCell>
@@ -124,15 +133,36 @@ export function TokensTab() {
         description="Copy it now; only a hash is stored, so it cannot be shown again."
         secret={created?.token ?? ""}
       >
-        <div className="space-y-2 text-sm">
-          <p className="text-muted-foreground">With the node binary on its host:</p>
-          <pre className="overflow-x-auto rounded-md border bg-muted p-3 text-xs">
-            {`ipping-node enroll --server ${origin} \\\n  --token ${created?.token ?? ""}`}
-          </pre>
-          <p className="text-muted-foreground">or with Docker, in the node&apos;s .env file:</p>
-          <pre className="overflow-x-auto rounded-md border bg-muted p-3 text-xs">
-            {`IPPING_NODE_SERVER=${origin}\nIPPING_NODE_ENROLL_TOKEN=${created?.token ?? ""}`}
-          </pre>
+        <div className="space-y-3 text-sm">
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground">
+              On the node&apos;s host, with the installer (see the ipping-node README for downloading it):
+            </p>
+            <CopyBlock
+              label="the install command"
+              text={`sudo bash ipping-node.sh install --server ${origin} --token ${token}${plainHttp ? " --allow-insecure" : ""}`}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground">or by hand with the node binary:</p>
+            <CopyBlock
+              label="the enroll command"
+              text={`ipping-node enroll --server ${origin} --token ${token}${plainHttp ? " --insecure" : ""}`}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground">or with Docker, in the node&apos;s .env file:</p>
+            <CopyBlock
+              label="the Docker settings"
+              text={`IPPING_NODE_SERVER=${origin}\nIPPING_NODE_ENROLL_TOKEN=${token}${plainHttp ? "\nIPPING_NODE_ALLOW_INSECURE=1" : ""}`}
+            />
+          </div>
+          {plainHttp && (
+            <p className="text-xs text-muted-foreground">
+              This site is plain HTTP, so the node&apos;s credential would travel unencrypted. Give the
+              site a domain for HTTPS, or only do this on a network you trust.
+            </p>
+          )}
         </div>
       </SecretDialog>
     </div>

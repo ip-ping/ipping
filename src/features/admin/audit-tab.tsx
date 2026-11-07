@@ -18,22 +18,23 @@ export function AuditTab() {
       <TableHeader>
         <TableRow>
           <TableHead>When</TableHead>
-          <TableHead>Who</TableHead>
+          <TableHead className="hidden md:table-cell">Who</TableHead>
           <TableHead>What</TableHead>
-          <TableHead>Subject</TableHead>
-          <TableHead>From</TableHead>
+          <TableHead className="hidden sm:table-cell">Subject</TableHead>
+          <TableHead className="hidden lg:table-cell">From</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {data?.map((event) => (
           <TableRow key={event.id}>
-            <TableCell className="whitespace-nowrap text-muted-foreground">
-              {new Date(event.at).toLocaleString()}
+            <TableCell className="text-muted-foreground">{new Date(event.at).toLocaleString()}</TableCell>
+            <TableCell className="hidden md:table-cell">{event.actor}</TableCell>
+            <TableCell className="font-mono text-xs whitespace-normal break-all">
+              {event.action}
+              <div className="font-sans text-muted-foreground md:hidden">{event.actor}</div>
             </TableCell>
-            <TableCell>{event.actor}</TableCell>
-            <TableCell className="font-mono text-xs">{event.action}</TableCell>
-            <TableCell className="font-mono text-xs text-muted-foreground">{event.subject ?? ""}</TableCell>
-            <TableCell className="font-mono text-xs text-muted-foreground">{event.source_ip ?? ""}</TableCell>
+            <TableCell className="hidden font-mono text-xs text-muted-foreground break-all whitespace-normal sm:table-cell">{event.subject ?? ""}</TableCell>
+            <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">{event.source_ip ?? ""}</TableCell>
           </TableRow>
         ))}
       </TableBody>

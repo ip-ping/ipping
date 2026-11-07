@@ -37,7 +37,7 @@ export function SecretDialog({
   };
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -56,5 +56,32 @@ export function SecretDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** A command or a few lines of settings to copy, wrapped inside the box instead of running off it. */
+export function CopyBlock({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="relative">
+      <pre className="rounded-md border bg-muted p-3 pr-11 font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {text}
+      </pre>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Copy ${label}`}
+        className="absolute top-1.5 right-1.5"
+        onClick={copy}
+      >
+        {copied ? <CheckIcon /> : <CopyIcon />}
+      </Button>
+    </div>
   );
 }

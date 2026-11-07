@@ -4,6 +4,27 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+## v0.3.2 (2026-11-07)
+
+### fix: dialogs and admin pages that overflowed or hid their buttons
+- **Enrollment dialog.** Its token box, the command boxes and the "I have saved it" button stuck out of
+  the dialog on the right (the dialog is a one-column grid whose column grew to fit the longest line).
+  Every dialog now has a column that can shrink (`minmax(0, 1fr)`) and scrolls if it is taller than the
+  screen. The enrollment dialog is wider, its commands wrap inside their boxes and each has a copy
+  button, and they are the ones to use now: the installer command first, then `ipping-node enroll`,
+  then the Docker settings, with `--allow-insecure` / `--insecure` / `IPPING_NODE_ALLOW_INSECURE=1`
+  added when the site is plain HTTP on another host (and a note about what that means).
+- **Admin on a phone.** The Nodes, Enrollment and Audit tables were wider than the screen, so the
+  Approve, Edit, Rotate key and Revoke buttons were out of sight to the right. On narrow screens each
+  node is now a block with its location, version, status, connection and its buttons under its name;
+  the token table keeps its Revoke button visible; the audit log folds "who" under the action. The
+  public Nodes page keeps its Status column. The four stat cards sit two by two instead of in a tall
+  stack (also on a measurement page). The empty-state text now points at the Enrollment tab instead
+  of a command.
+- Checked by opening every dialog (enrollment, edit node, revoke, rotated key, choose nodes) at 1440,
+  768 and 390 px and testing that nothing inside leaves the dialog, plus the admin tabs and the nodes
+  page in a browser; no console errors.
+
 ### 2026-11-07: README brought up to date
 - The README now describes what the application does today (the four kinds and what each result page
   shows, the estimated location, sharing, admin), a three-step quick start, the installer's options and

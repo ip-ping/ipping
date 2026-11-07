@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.3.1** (application), installing backend **v0.3.0**. Nodes of any earlier version
+Current release: **v0.3.2** (application), installing backend **v0.3.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute.
 
 ## What you can do with it
@@ -97,7 +97,7 @@ sudo bash ipping.sh install --mode docker
 sudo bash ipping.sh install --mode direct --domain ping.example.com
 
 # A specific release instead of the newest, a different port, several backend processes:
-sudo bash ipping.sh install --mode docker --version v0.3.1 --http-port 8088 --backend-workers 4
+sudo bash ipping.sh install --mode docker --version v0.3.2 --http-port 8088 --backend-workers 4
 
 sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
 ```
@@ -158,7 +158,7 @@ shipped to both architectures without emulation.
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
-| v0.3.1 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
+| v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
 
 Each repository is versioned on its own; the application release names the exact backend release it
 was tested with in `release.env` and `release-manifest.json`. Releases carry signed build-provenance
@@ -211,10 +211,10 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1 and v0.3.2 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
-- [x] Responsive results table and measure form (phones, tablets, dark mode)
+- [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
 - [ ] Per-node latency circles on the location map
 - [ ] Compare DNS answers across nodes
 - [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)

@@ -39,9 +39,9 @@ export default function NodesPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Node</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Provider</TableHead>
-            <TableHead>IP versions</TableHead>
+            <TableHead className="hidden md:table-cell">Location</TableHead>
+            <TableHead className="hidden lg:table-cell">Provider</TableHead>
+            <TableHead className="hidden sm:table-cell">Can run</TableHead>
             <TableHead className="text-right">Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -64,15 +64,20 @@ export default function NodesPage() {
           )}
           {nodes?.map((node) => (
             <TableRow key={node.id}>
-              <TableCell className="font-medium">{node.name}</TableCell>
-              <TableCell>
+              <TableCell className="font-medium">
+                {node.name}
+                <div className="text-xs font-normal text-muted-foreground md:hidden">
+                  {flag(node.country)} {place(node)}
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
                 {flag(node.country)} {place(node)}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground lg:table-cell">
                 {node.provider ?? "–"}
                 {node.asn ? ` (AS${node.asn})` : ""}
               </TableCell>
-              <TableCell className="space-x-1">
+              <TableCell className="hidden space-x-1 sm:table-cell">
                 {node.ipv4 && <Badge variant="secondary">IPv4</Badge>}
                 {node.ipv6 && <Badge variant="secondary">IPv6</Badge>}
                 {node.online && (

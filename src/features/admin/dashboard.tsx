@@ -38,7 +38,7 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat title="Nodes online" value={status ? `${status.nodes_online} / ${status.nodes_approved}` : "–"} />
         <Stat title="Awaiting approval" value={status?.nodes_pending ?? "–"} />
         <Stat title="Measurements running" value={status?.measurements_running ?? "–"} />

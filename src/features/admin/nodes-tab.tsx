@@ -168,44 +168,37 @@ export function NodesTab() {
         <TableHeader>
           <TableRow>
             <TableHead>Node</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Version</TableHead>
-            <TableHead>Connection</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="hidden md:table-cell">Location</TableHead>
+            <TableHead className="hidden lg:table-cell">Version</TableHead>
+            <TableHead className="hidden md:table-cell">Connection</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="hidden text-right md:table-cell">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data?.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                No nodes yet. Create an enrollment token and run <code>ipping-node enroll</code> on a host.
+                No nodes yet. Create an enrollment token (Enrollment tab) and install the node on a host.
               </TableCell>
             </TableRow>
           )}
-          {data?.map((node) => (
-            <TableRow key={node.id}>
-              <TableCell>
-                <div className="font-medium">{node.name}</div>
-                <div className="font-mono text-xs text-muted-foreground">{node.remote_addr ?? ""}</div>
-              </TableCell>
-              <TableCell>
-                {flag(node.country)} {place(node)}
-                {!node.location_verified && <div className="text-xs text-muted-foreground">unverified</div>}
-              </TableCell>
-              <TableCell className="text-muted-foreground">{node.version ?? "–"}</TableCell>
-              <TableCell>
+          {data?.map((node) => {
+            const connection = (
+              <>
                 <Badge variant={node.online ? "default" : "outline"}>{node.online ? "Online" : "Offline"}</Badge>
                 <div className="text-xs text-muted-foreground">
                   {node.online ? [node.ipv4 && "IPv4", node.ipv6 && "IPv6", ...(node.kinds ?? [])].filter(Boolean).join(" · ") : `seen ${ago(node.last_seen_at)}`}
                 </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant={node.status === "approved" ? "secondary" : node.status === "pending" ? "outline" : "destructive"}>
-                  {node.status === "pending" ? "Awaiting approval" : node.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="space-x-1 text-right whitespace-nowrap">
+              </>
+            );
+            const status = (
+              <Badge variant={node.status === "approved" ? "secondary" : node.status === "pending" ? "outline" : "destructive"}>
+                {node.status === "pending" ? "Awaiting approval" : node.status}
+              </Badge>
+            );
+            const actions = (
+              <>
                 {node.status === "pending" && (
                   <Button size="sm" onClick={() => act(`/admin/nodes/${node.id}/approve`, `${node.name} approved`)}>
                     Approve
@@ -224,9 +217,38 @@ export function NodesTab() {
                     </Button>
                   </>
                 )}
-              </TableCell>
-            </TableRow>
-          ))}
+              </>
+            );
+            return (
+              <TableRow key={node.id}>
+                <TableCell className="whitespace-normal">
+                  <div className="font-medium">{node.name}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{node.remote_addr ?? ""}</div>
+                  {/* On a narrow screen everything about the node, and its buttons, goes under its name. */}
+                  <div className="mt-2 space-y-2 md:hidden">
+                    <div className="text-sm">
+                      {flag(node.country)} {place(node)}
+                      {!node.location_verified && <span className="text-xs text-muted-foreground"> · unverified</span>}
+                      {node.version && <span className="text-xs text-muted-foreground"> · v{node.version}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {status}
+                      <span>{connection}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">{actions}</div>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {flag(node.country)} {place(node)}
+                  {!node.location_verified && <div className="text-xs text-muted-foreground">unverified</div>}
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground lg:table-cell">{node.version ?? "–"}</TableCell>
+                <TableCell className="hidden md:table-cell">{connection}</TableCell>
+                <TableCell className="hidden md:table-cell">{status}</TableCell>
+                <TableCell className="hidden space-x-1 text-right whitespace-nowrap md:table-cell">{actions}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 

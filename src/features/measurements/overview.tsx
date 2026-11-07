@@ -48,7 +48,7 @@ export function Overview({ measurement }: { measurement: Measurement }) {
         </div>
         <Progress value={tasks.length ? (done * 100) / tasks.length : 100} />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           title="Responding nodes"
           value={`${stats.nodes_responding} / ${stats.nodes_total}`}
