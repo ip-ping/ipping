@@ -2,6 +2,28 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.4.1 (2026-11-07)
+
+Installs backend v0.4.1, which fixes two defects found by installing v0.4.0 on a fresh Debian 13 and in a Docker
+stack: GeoIP databases downloaded after the server started were not noticed until a restart, and an alert that did
+not arrive was never tried again. No change to the interface.
+
+### What was verified on the released v0.4.0 (the files, not the repository)
+- Every release file of the three repositories: checksums match and all 12 attestations verify.
+- A fresh Debian 13, direct mode, from the `latest` installer: installed, migrated to 0008, node installed from the
+  released node installer and approved, reporting `ping tcp http dns traceroute`; ping, TCP, HTTP and traceroute
+  completed; DNS A through the node's own resolver, TXT through Cloudflare, NS through Quad9, SOA through Google,
+  CNAME through Cloudflare, MX through Google, and a real NXDOMAIN; refusals for an IP address, `.home.arpa`,
+  `.corp`, a single label and `localhost`; a watch that alerted a webhook exactly once across three bad runs; an
+  API key that worked from the released `ipping-cli.sh` and was refused (exit 2) once revoked; `ipping.sh
+  geoip-update` downloading and loading the real databases (126 MB and 9 MB) with the backend's own sandbox,
+  and the network of 1.1.1.1 (AS13335 Cloudflare) on a result; `doctor`: all checks passed.
+- An upgrade from v0.3.2 (backend 0.3.0) with `ipping.sh update`: migrations to 0008, a saved all-kinds setting
+  gained `dns` while other settings were kept, the old measurement still readable, the old 0.3.3 node still
+  pinged and DNS was refused for it with a clear message; then `ipping-node.sh update` to 0.4.0 and DNS worked.
+- The released Docker compose stack on a fresh project came up healthy, and `geoip-update` wrote the databases into
+  its volume from the read-only container (which is how the second defect was found).
+
 ## v0.4.0 (2026-11-07)
 
 ### feat: an interface of its own, with live SVG maps and graphs; DNS checks, watches, API keys and more
