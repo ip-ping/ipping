@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Panel } from "@/components/panel";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -135,8 +135,7 @@ export function MeasureForm({
   const KindIcon = KIND_ICON[kind];
 
   return (
-    <Card>
-      <CardContent>
+    <Panel label="Command" meta={<span className="normal-case tracking-normal">{info.label}</span>}>
         <form onSubmit={submit} className="space-y-5">
           <Tabs value={kind} onValueChange={(next) => next !== null && setKind(next as Kind)}>
             <TabsList>
@@ -337,7 +336,6 @@ export function MeasureForm({
             </Alert>
           )}
         </form>
-      </CardContent>
-    </Card>
+    </Panel>
   );
 }

@@ -4,6 +4,19 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-07: a look of its own (2 of 4): the live map and the home page
+- A **live world map**, drawn by hand as SVG (no map library): a dot-matrix land mass over a graticule,
+  one station per node that pulses while the node is connected, a thin scan line sweeping the sheet,
+  and a hover/focus tooltip for each station (name, place, what it can run). Stations are real
+  buttons, so the map works with the keyboard.
+- The map can also draw **latency rings**: a node that measured 12 ms is at most 1,200 km away (light
+  in fibre covers about 100 km per millisecond one way, 150 km at the very most), so each node gets a
+  geodesic circle of that radius that glides to its new size as samples arrive. The rings are drawn in
+  the map component; the measurement page uses them in the next step.
+- The home page is the map and the command attached to it, in one frame, under a short headline.
+- The mark now draws its rings around its dot (the arcs were off-centre and looked cropped), and the
+  scan line's trail is thinner and fainter.
+
 ### 2026-11-07: a look of its own (1 of 4): the sheet, the type, the frame
 - The interface looked like every shadcn site. It now has an identity: a **chart sheet**. Warm paper
   on a faint dot grid and blue-black ink in light mode, deep water and pale ink in dark mode, and one
