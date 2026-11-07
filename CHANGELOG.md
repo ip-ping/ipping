@@ -4,6 +4,14 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-07: README brought up to date
+- The README now describes what the application does today (the four kinds and what each result page
+  shows, the estimated location, sharing, admin), a three-step quick start, the installer's options and
+  requirements, what has been tested on fresh Debian 13 machines, a versions and compatibility table
+  (this release, the backend it installs, the migration head, which nodes can run what), the
+  development commands, and a roadmap that matches the releases (old notes such as "not run yet" and
+  v0.1.0 examples are gone).
+
 ## v0.3.1 (2026-11-06)
 
 ### fix: the web interface on small screens and in the measure form

@@ -1,10 +1,11 @@
 # ipping
 
-A self-hostable, distributed network diagnostics service: type an IP address, hostname or URL and
-see how it answers from every node, live.
+A self-hostable, distributed network diagnostics service. Type an IP address, hostname or URL and
+see how it answers from every node you run, live: **ping**, **TCP connect**, **HTTP request**
+(timings and TLS certificate) and **traceroute**, plus an estimate of where an address appears to be.
 
-This repository is the **web interface** (Next.js + shadcn/ui) and, as it matures, the
-**installer for the whole central application** (frontend + backend + database + reverse proxy).
+This repository is the **web interface** (Next.js + shadcn/ui) and the **installer for the whole
+central application** (frontend + backend + database + reverse proxy).
 
 | Repository | Role |
 |---|---|
@@ -18,6 +19,48 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                                           ^
                       nodes connect out over WebSocket, no inbound ports
 ```
+
+Current release: **v0.3.1** (application), installing backend **v0.3.0**. Nodes of any earlier version
+keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute.
+
+## What you can do with it
+
+| Kind | What one node measures | What the page shows |
+|---|---|---|
+| **Ping** | ICMP echo requests (1 to 10) | min / median / avg / max and loss per node, each echo |
+| **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
+| **HTTP** | one `GET` (headers only, body never read) | status, a bar of DNS / connect / TLS / first-byte time, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
+| **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address |
+
+* **Same IP for every node**, or let each node resolve the name itself (to see CDN / DNS differences).
+* **Estimated location** (ping and TCP): where the address appears to be, from the nodes' round
+  trips, with the evidence, alternatives and an honest "not enough evidence" or "inconclusive"
+  (anycast looks like that). How well it works on real data is in the
+  [backend README](https://github.com/ip-ping/ipping-backend#estimated-network-location-experimental).
+* **Live results** stream in as each node answers and resume after a dropped connection.
+* **Shareable**: a measurement is private to your browser session until you switch on the link.
+* **Admin**: approve nodes, enrollment tokens, which kinds are enabled, the allowed TCP/HTTP ports,
+  probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log.
+* Works on phones and in dark mode.
+
+## Quick start
+
+1. **Install the central application** on a server (Debian / Ubuntu or anything with Docker):
+
+   ```bash
+   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh -o ipping.sh && chmod +x ipping.sh && bash ipping.sh
+   ```
+
+   Open the address it prints, go to `/setup` and create the administrator with the setup token.
+2. **Install a node** on each measurement host. In *Admin > Enrollment* create a token, then on the
+   host run the node installer (see the [node README](https://github.com/ip-ping/ipping-node)):
+
+   ```bash
+   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping-node/releases/latest/download/ipping-node.sh -o ipping-node.sh && chmod +x ipping-node.sh && bash ipping-node.sh
+   ```
+
+   A site served over plain HTTP (no domain yet) needs `--allow-insecure` on nodes of other hosts.
+3. **Approve the node** in *Admin > Nodes*, then use the measure form on the home page.
 
 ## Install with the installer
 
@@ -33,10 +76,10 @@ domain for HTTPS, then a summary to confirm before anything is changed. Each ste
 output of the commands behind it goes to `/var/log/ipping-install.log` and is shown only if a step
 fails. At the end a box shows the address and the one-time setup token (`access` shows it again).
 On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a pipe or CI log, the
-same information is plain text.
+same information is plain text, and the layout follows the width of the terminal.
 
 Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
-`access`, `logs`, `backup`, `update`, `uninstall`.
+`access`, `logs`, `backup`, `restore FILE`, `update`, `uninstall`.
 
 An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
 settings it already saved instead of refusing, and nothing is marked "installed" until the
@@ -46,12 +89,15 @@ Or run it non-interactively:
 
 ```bash
 # Docker: the compose stack below, with generated secrets, health checks and backups.
-sudo bash ipping.sh install --mode docker --version v0.1.0
+sudo bash ipping.sh install --mode docker
 
 # Direct: systemd services, no Docker (Debian / Ubuntu). PostgreSQL comes from apt; Python (via
 # uv), Node.js and Caddy are downloaded as pinned releases and checked against their publishers'
 # checksums. The backend is installed from a hash-locked requirements file.
-sudo bash ipping.sh install --mode direct --version v0.1.0 --domain ping.example.com
+sudo bash ipping.sh install --mode direct --domain ping.example.com
+
+# A specific release instead of the newest, a different port, several backend processes:
+sudo bash ipping.sh install --mode docker --version v0.3.1 --http-port 8088 --backend-workers 4
 
 sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
 ```
@@ -67,7 +113,8 @@ LAN or behind another proxy) and nodes on other hosts need `--allow-insecure`; w
 obtains a certificate. `--version main` is the edge channel (Docker only: images tagged `latest`).
 
 * **Updates** back up the database first, run the migration as an explicit step, keep the previous
-  release on disk, and go back to it if the migration fails.
+  release on disk, and go back to it if the migration fails. Nodes reconnect by themselves within a
+  few seconds of the site coming back (node v0.3.1 or newer; before that it took about a minute).
 * **Reinstalling** after `uninstall` reuses the kept configuration and database; `--purge` removes
   them. Other databases and PostgreSQL itself are never touched.
 * **Scaling:** `--backend-workers 4` (Docker: `IPPING_BACKEND_WORKERS` in `.env`; direct: `IPPING_WORKERS`
@@ -75,6 +122,13 @@ obtains a certificate. `--version main` is the edge channel (Docker only: images
   serves any request or node and a crashed one is cleaned up after; see the backend README.
 * **Secrets** (database password, setup token) are generated and stay in a file only root (and the
   service) can read.
+* **Requirements:** Docker mode needs only Docker (the installer can install it). Direct mode needs
+  systemd and apt (Debian 13, Ubuntu 24.04 tested). Both need outbound HTTPS to GitHub, and ports 80
+  and 443 (or the ones you choose) free.
+
+Tested for real on fresh Debian 13 machines with systemd: Docker and direct installs from the
+published releases, an update from v0.2.0 (database migrations included), backup and restore,
+uninstall and purge, and an older node talking to the newer backend.
 
 ## Run the whole application with Docker
 
@@ -94,9 +148,22 @@ Then open the site, go to `/setup`, and create the administrator. `compose.yaml`
 | `migrate` | one-shot schema upgrade; the backend never changes the schema itself |
 | `postgres` | PostgreSQL 16 with a named volume; never published |
 
-Images are built by GitHub Actions on every push to `main` (`latest` and the commit SHA,
-`linux/amd64` + `linux/arm64`). The frontend build contains no platform-specific binaries, so it
-is compiled once and shipped to both architectures without emulation.
+The `compose.yaml` of a release pins that release's images; the one in the repository follows
+`latest`, which is whatever `main` built last. Images are built by GitHub Actions on every push to
+`main` (`latest` and the commit SHA, `linux/amd64` + `linux/arm64`) and with a version tag on
+releases. The frontend build contains no platform-specific binaries, so it is compiled once and
+shipped to both architectures without emulation.
+
+## Versions and compatibility
+
+| This release | Installs backend | Database | Nodes |
+|---|---|---|---|
+| v0.3.1 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
+
+Each repository is versioned on its own; the application release names the exact backend release it
+was tested with in `release.env` and `release-manifest.json`. Releases carry signed build-provenance
+attestations (`gh attestation verify`). Before 1.0 a minor bump may break things, a patch never
+should. Details: [RELEASING.md](RELEASING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## Run it for development
 
@@ -111,6 +178,14 @@ npm run dev              # http://localhost:3000, /api/* is proxied to BACKEND_U
 reverse proxy sends `/api/*` straight to the backend, so the frontend always talks to its own
 origin with relative `/api/v1/...` paths and no deployment hostname is baked into the build.
 
+```bash
+npm run lint             # ESLint
+npm run typecheck        # next typegen && tsc --noEmit
+npm run build            # production build
+bash tests/installer.sh  # the installer's own logic: no root, no network, nothing installed
+shellcheck -S style ipping.sh tests/installer.sh
+```
+
 ### Backend contract
 
 The frontend is built against a pinned backend API contract, not whatever the backend happens to
@@ -119,7 +194,7 @@ serve today: `contracts/openapi.json` is the backend's OpenAPI document at the c
 
 ```bash
 npm run api:sync                 # re-fetch the pinned contract
-scripts/sync-contracts.sh main   # move the pin to a newer backend ref, then commit the result
+scripts/sync-contracts.sh main   # move the pin to a newer backend ref (or a tag), then commit the result
 npm run api:types                # regenerate types from contracts/openapi.json
 ```
 
@@ -134,13 +209,15 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [x] Dockerfile and Docker Hub publishing
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
-- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore (tested in clean containers, see CHANGELOG)
-- [x] `release-manifest.json` and the release workflow (written and linted, not run yet: needs the first tags below)
-- [x] Release process: tags, dry runs, rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] First tagged release: v0.1.0 of all three repositories
+- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore, a guided interface, retry-safety, narrow-terminal layout
+- [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
-- [ ] Dark-mode and mobile polish for the map; per-node latency circles
+- [x] Responsive results table and measure form (phones, tablets, dark mode)
+- [ ] Per-node latency circles on the location map
+- [ ] Compare DNS answers across nodes
+- [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)
 
 ## Credits
 
