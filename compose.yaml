@@ -48,6 +48,9 @@ services:
       IPPING_WORKERS: ${IPPING_BACKEND_WORKERS:-1}
       # Only the proxy can reach this container, so its X-Forwarded-For can be trusted.
       FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      # The GeoIP databases that `ipping.sh geoip-update` downloads (optional: empty until then).
+      - geoip:/data/geoip
     read_only: true
     cap_drop: [ALL]
     security_opt:
@@ -86,5 +89,6 @@ services:
 
 volumes:
   postgres-data:
+  geoip:
   caddy-data:
   caddy-config:

@@ -10,6 +10,15 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: the installer sets up the GeoIP databases
+- `ipping.sh geoip-update`: downloads and checks the free DB-IP Lite city and ASN databases (optional; results
+  are exactly as before without them) and tells the backend where they are. In Docker mode it runs the backend
+  image's own `geoip-update` into a named volume the compose file now mounts at `/data/geoip`; directly on a
+  machine it runs it as the backend's user into `/var/lib/ipping-backend/geoip` and adds a systemd drop-in (the
+  unit the installer wrote is not touched) that names the directory. Safe to repeat monthly; the backend reads a
+  replaced file without a restart. ShellCheck clean on 0.10 and current; its behaviour on a real machine is
+  checked after the release, with the released files, on a fresh Debian 13.
+
 ### 2026-11-07: the UI checks are in the repository
 - The browser checks I had been running from a scratch folder are now `tests/ui/` (`npm run test:ui`): every page
   in light and dark at 390, 768, 1024 and 1440 px (no overflow, no sideways scrolling, a clean console), what

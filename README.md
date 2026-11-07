@@ -119,7 +119,7 @@ On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a
 same information is plain text, and the layout follows the width of the terminal.
 
 Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
-`access`, `logs`, `backup`, `restore FILE`, `update`, `uninstall`.
+`access`, `logs`, `backup`, `restore FILE`, `update`, `geoip-update`, `uninstall`.
 
 An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
 settings it already saved instead of refusing, and nothing is marked "installed" until the
@@ -139,7 +139,7 @@ sudo bash ipping.sh install --mode direct --domain ping.example.com
 # A specific release instead of the newest, a different port, several backend processes:
 sudo bash ipping.sh install --mode docker --version v0.4.0 --http-port 8088 --backend-workers 4
 
-sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
+sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | geoip-update | uninstall
 ```
 
 That link always serves the installer of the newest *tagged* release. The unreleased installer from
@@ -277,7 +277,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [x] Dockerfile and Docker Hub publishing
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
-- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore, a guided interface, retry-safety, narrow-terminal layout
+- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
 - [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2 and v0.4.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)

@@ -98,6 +98,10 @@ check "a bad --version is refused" 1 "$rc"
 case "$out" in *"is not a version"*) check "...with a message that says so" ok ok ;; *) check "...with a message that says so" ok "$out" ;; esac
 out="$(bash "$SCRIPT" --no-such-flag 2>&1)"; rc=$?
 check "an unknown flag is refused" 1 "$rc"
+out="$(bash "$SCRIPT" --help 2>&1)"
+case "$out" in *geoip-update*) check "--help lists geoip-update" ok ok ;; *) check "--help lists geoip-update" ok "$out" ;; esac
+check "the compose file gives the backend a volume for the databases" 1 "$(grep -c 'geoip:/data/geoip' compose.yaml)"
+check "...and declares it" 1 "$(grep -c '^  geoip:' compose.yaml)"
 
 echo
 if [ "$failures" -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi

@@ -1036,6 +1036,40 @@ cmd_backup() {
   BACKUP_FILE="$out"
 }
 
+# Download the free DB-IP Lite city and ASN databases for the location cross-check. Optional: without them
+# results are exactly as before. Safe to repeat (monthly); the backend reads a replaced file without a restart.
+cmd_geoip_update() {
+  need_root geoip-update
+  banner "ipping" "GeoIP databases"
+  local mode
+  mode="$(require_mode)"
+  note "Free databases from DB-IP (db-ip.com), licensed CC BY 4.0; results show the attribution."
+  if [ "$mode" = "docker" ]; then
+    run "Downloading and checking the databases" compose run --rm --no-deps backend geoip-update
+  else
+    need_systemd
+    local dir=/var/lib/ipping-backend/geoip dropin_dir=/etc/systemd/system/ipping-backend.service.d restart=0
+    install -d -m 0750 -o ipping-backend -g ipping-backend /var/lib/ipping-backend "$dir"
+    if [ ! -f "${dropin_dir}/geoip.conf" ]; then
+      # A drop-in, so the unit the installer wrote is left alone: it names the directory (and gives the
+      # sandboxed service somewhere it may read it).
+      install -d "$dropin_dir"
+      cat >"${dropin_dir}/geoip.conf" <<EOF
+[Service]
+Environment=IPPING_GEOIP_DIR=${dir}
+StateDirectory=ipping-backend
+EOF
+      run "Telling the backend where the databases are" systemctl daemon-reload
+      restart=1
+    fi
+    run "Downloading and checking the databases" runuser -u ipping-backend -- env "IPPING_GEOIP_DIR=${dir}" \
+      "${APP_DIR}/backend/current/venv/bin/ipping-backend" geoip-update
+    [ "$restart" -eq 0 ] || run "Restarting the backend so it reads them" systemctl restart ipping-backend
+  fi
+  ok "Done. Results now name the network of an address and check a database's place against the measurements."
+  note "Repeat it each month, for example with cron:  0 4 3 * *  root  bash $0 geoip-update"
+}
+
 stop_app_for_restore() {
   if [ "$1" = docker ]; then compose stop frontend backend proxy; else systemctl stop ipping-caddy ipping-backend ipping-frontend; fi
 }
@@ -1210,6 +1244,8 @@ Commands:
   doctor         Check the installation
   access         Show the address and the setup token
   backup         Dump the database to ${BACKUP_DIR}
+  geoip-update   Download the free DB-IP Lite databases (optional: names the network of an address and
+                 cross-checks a GeoIP place against the measurements); repeat monthly
   restore FILE   Replace the database with a backup
   uninstall      Remove it (data is kept unless --purge)
 
@@ -1375,7 +1411,7 @@ main() {
   SETUP_TOKEN="${IPPING_SETUP_TOKEN:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
-      install | update | start | stop | restart | status | logs | doctor | access | backup | uninstall) command="$1" ;;
+      install | update | start | stop | restart | status | logs | doctor | access | backup | geoip-update | uninstall) command="$1" ;;
       restore) command=restore; restore_file="${2:-}"; [ $# -gt 1 ] && shift ;;
       --mode) MODE="${2:?--mode needs a value}"; shift ;;
       --version)
@@ -1415,6 +1451,7 @@ main() {
     logs) cmd_logs ;;
     doctor) cmd_doctor ;;
     backup) ui_log_init /var/log/ipping-install.log; cmd_backup ;;
+    geoip-update) ui_log_init /var/log/ipping-install.log; cmd_geoip_update ;;
     restore) ui_log_init /var/log/ipping-install.log; cmd_restore "$restore_file" ;;
     uninstall) ui_log_init /var/log/ipping-install.log; cmd_uninstall ;;
   esac
