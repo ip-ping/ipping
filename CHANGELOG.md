@@ -10,6 +10,19 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: API keys and `ipping-cli`
+- An **API keys** tab in the admin: create a key (a name and its quotas per minute and per day), shown once with
+  ready-to-copy `curl` and client commands; edit the name and quotas; revoke. The table shows the start of each
+  key, its quotas, when it was last used and how many measurements it started in the last 24 hours.
+- **`ipping-cli`**: one POSIX shell script (curl only) to run ping, TCP, HTTP, traceroute or DNS from a terminal
+  and print the result as text, with options for the count, port, record type, resolver, countries and wait. The
+  key goes to curl on its standard input (never an argument), a readable key file and a non-HTTPS site are warned
+  about, and a refusal prints the server's reason and exits 2. Tried against the live stack for every kind
+  (a real key made in the browser), and `tests/cli.sh` runs 30 checks against a stand-in server, including that
+  no curl argument carries the key. ShellCheck clean on 0.10 and current.
+- Released with the application: `ipping-cli.sh` is a release file with its checksum and an attestation. CI runs
+  the client's tests and lints it. Contracts pinned to backend 477a9fa.
+
 ### 2026-11-07: watches in the admin
 - A **Watches** tab: add a check (any kind, as in the measure form), how often it runs, when a run counts as bad
   (fewer than N% of nodes got a good answer) and after how many bad runs to alert, and an optional alert address

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 
+import { ApiKeysTab } from "./api-keys-tab";
 import { AuditTab } from "./audit-tab";
 import { NodesTab } from "./nodes-tab";
 import { SettingsTab } from "./settings-tab";
@@ -56,6 +57,7 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
         <TabsList>
           <TabsTrigger value="nodes">Nodes</TabsTrigger>
           <TabsTrigger value="watches">Watches</TabsTrigger>
+          <TabsTrigger value="keys">API keys</TabsTrigger>
           <TabsTrigger value="tokens">Enrollment</TabsTrigger>
           <TabsTrigger value="settings">Limits &amp; safety</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
@@ -65,6 +67,9 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
         </TabsContent>
         <TabsContent value="watches" className="pt-4">
           <WatchesTab />
+        </TabsContent>
+        <TabsContent value="keys" className="pt-4">
+          <ApiKeysTab />
         </TabsContent>
         <TabsContent value="tokens" className="pt-4">
           <TokensTab />

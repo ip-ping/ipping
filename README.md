@@ -69,6 +69,8 @@ frame with registration ticks in its corners.
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
 * **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
   when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
+* **From a terminal.** An administrator can create API keys (with quotas) and scripts can use them; `ipping-cli`
+  runs any kind from a shell and prints the result as text.
 * **Anycast shows.** When two nodes got round trips too fast for any single place, the map joins them with a
   dashed line and says how far apart they are against how far their round trips allow.
 * **Take it with you.** Export a result as text to paste, a CSV (cells that a spreadsheet could read as a
@@ -191,6 +193,32 @@ The `compose.yaml` of a release pins that release's images; the one in the repos
 `main` (`latest` and the commit SHA, `linux/amd64` + `linux/arm64`) and with a version tag on
 releases. The frontend build contains no platform-specific binaries, so it is compiled once and
 shipped to both architectures without emulation.
+
+## From a terminal
+
+An administrator creates an **API key** on the admin page (API keys tab: a name and how many measurements a
+minute and a day it may start; the key is shown once and only a hash is kept). With a key, a script needs no
+browser: `ipping-cli` is one POSIX shell script that needs only `curl`.
+
+```sh
+curl -fsSLO https://github.com/ip-ping/ipping/releases/latest/download/ipping-cli.sh && chmod +x ipping-cli.sh
+export IPPING_SERVER=https://ipping.example.com IPPING_API_KEY=ipk_...      # or ~/.config/ipping/{server,key}
+
+./ipping-cli.sh ping 1.1.1.1
+./ipping-cli.sh -n 2 tcp example.com:443
+./ipping-cli.sh http https://example.com/
+./ipping-cli.sh traceroute example.com
+./ipping-cli.sh -t MX -r google dns example.com            # who has the new MX record?
+./ipping-cli.sh -c DE,NL ping example.com                  # only nodes in Germany and the Netherlands
+```
+
+It prints a report like `ping` or `traceroute` would (a line per node, the hops of a route, the answers of a
+DNS lookup) and exits 0; a refusal from the server (a bad key, a quota) is printed with its reason and exits 2.
+The key goes to `curl` on its standard input, never as an argument that a process list would show, a key file
+that other users can read is warned about, and an `http://` site gets a warning that the key travels
+unencrypted. Without the script, the same thing is one request:
+`curl -s -H "Authorization: Bearer $KEY" "$SERVER/api/v1/text?target=example.com&kind=ping"`.
+`tests/cli.sh` tests the script against a stand-in server (30 checks, run in CI).
 
 ## Versions and compatibility
 

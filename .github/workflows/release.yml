@@ -174,12 +174,13 @@ jobs:
         run: |
           set -eu
           cp ipping.sh compose.yaml dist/
+          cp scripts/ipping-cli.sh dist/ipping-cli.sh
           cp deploy/Caddyfile dist/Caddyfile
           # A release's compose file names the images of that release, not whatever main built last.
           sed -i -e "s#/ipping:latest}#/ipping:${VERSION}}#" -e "s#/ipping-backend:latest}#/ipping-backend:${BACKEND_TAG#v}}#" dist/compose.yaml
           if grep -n ':latest}' dist/compose.yaml; then echo "::error::compose.yaml still has an unpinned image"; exit 1; fi
           grep -n 'image:' dist/compose.yaml
-          (cd dist && sha256sum -- ipping.sh compose.yaml Caddyfile release-manifest.json ipping-frontend-*.tar.gz > SHA256SUMS)
+          (cd dist && sha256sum -- ipping.sh ipping-cli.sh compose.yaml Caddyfile release-manifest.json ipping-frontend-*.tar.gz > SHA256SUMS)
           cat dist/SHA256SUMS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -191,6 +192,7 @@ jobs:
         with:
           subject-path: |
             dist/ipping.sh
+            dist/ipping-cli.sh
             dist/compose.yaml
             dist/Caddyfile
             dist/release-manifest.json
