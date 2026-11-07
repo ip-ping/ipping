@@ -16,7 +16,7 @@ import { LocationPanel } from "@/features/location/location-panel";
 import { useLocation } from "@/features/location/use-location";
 import { KIND_INFO, kindOf } from "@/features/measurements/kinds";
 import { Charts } from "@/features/measurements/charts";
-import { useFocus } from "@/features/measurements/focus";
+import { useFocus } from "@/lib/use-focus";
 import { Instrument } from "@/features/measurements/instrument";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";

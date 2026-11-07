@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Panel } from "@/components/panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, errorMessage, type SessionInfo } from "@/lib/api/client";
@@ -28,12 +28,9 @@ export function LoginForm({ onSignedIn }: { onSignedIn: (session: SessionInfo) =
   };
 
   return (
-    <Card className="mx-auto max-w-sm">
-      <CardHeader>
-        <CardTitle>Administrator sign-in</CardTitle>
-        <CardDescription>Manage nodes, enrollment and limits.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Panel label="Administrator sign-in" className="mx-auto max-w-sm">
+      <p className="mb-4 text-sm text-muted-foreground">Manage nodes, enrollment and limits.</p>
+      <div>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="username">Username</Label>
@@ -52,7 +49,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn: (session: SessionInfo) =
             Sign in
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </Panel>
   );
 }

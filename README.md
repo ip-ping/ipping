@@ -20,17 +20,17 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.3.2** (application), installing backend **v0.3.0**. Nodes of any earlier version
+Current release: **v0.4.0** (application), installing backend **v0.3.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute.
 
 ## What you can do with it
 
 | Kind | What one node measures | What the page shows |
 |---|---|---|
-| **Ping** | ICMP echo requests (1 to 10) | min / median / avg / max and loss per node, each echo |
+| **Ping** | ICMP echo requests (1 to 10) | a range strip (a dot per reply, fastest to slowest, the median, lost probes), min / median / avg / max and loss per node |
 | **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
-| **HTTP** | one `GET` (headers only, body never read) | status, a bar of DNS / connect / TLS / first-byte time, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
-| **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address |
+| **HTTP** | one `GET` (headers only, body never read) | status, a **phase waterfall** of DNS / connect / TLS / first-byte time per node, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
+| **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address |
 
 * **Same IP for every node**, or let each node resolve the name itself (to see CDN / DNS differences).
 * **Estimated location** (ping and TCP): where the address appears to be, from the nodes' round
@@ -42,6 +42,31 @@ keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and trac
 * **Admin**: approve nodes, enrollment tokens, which kinds are enabled, the allowed TCP/HTTP ports,
   probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log.
 * Works on phones and in dark mode.
+
+## The interface
+
+The interface is built like a survey chart, not like a dashboard template: warm paper and ink in light
+mode, a deep "night chart" in dark mode, one vermilion signal colour for what is live or selected,
+Bricolage Grotesque for text and IBM Plex Mono for labels, axes and units. Everything sits in a ruled
+frame with registration ticks in its corners.
+
+* **Live map.** The world as dotted land over a graticule, drawn in SVG (no map library, nothing
+  fetched). Every node is a station that pulses while it is connected and sends a ring out for each
+  reply it reports. On a measurement each node also gets a **latency ring**: how far its fastest
+  round trip could have reached (about 100 km per millisecond, 150 as the physical limit); the target
+  is inside all of them, and its estimated location appears as a crosshair when the run ends.
+  Rings wider than 8,000 km and HTTP times (which include handshakes and server work) are not drawn,
+  because they say nothing about distance.
+* **Graphs that fit the measurement**, hand-drawn in SVG on one shared axis: a range strip for ping and
+  TCP, a phase waterfall for HTTP, a route ladder for traceroute, a sparkline per row in the table, and
+  big readout numerals that count up. They update as samples arrive: dots pop in, rows slide into place,
+  the axis glides to its new scale.
+* **One selection.** Point at a station, a chart row or a table row and the same node lights up in all
+  three; click a station to pin it (for traceroute that picks the route shown).
+* **Accessible by design.** Every chart row is focusable and reads out its numbers; tooltips repeat what the
+  table already says, and the table is always on the page; colours are the validated categorical order
+  and never the only cue (a legend, labels and marks carry the meaning); motion stops when the system
+  asks for reduced motion; it works from 390 px up and in dark mode.
 
 ## Quick start
 
@@ -97,7 +122,7 @@ sudo bash ipping.sh install --mode docker
 sudo bash ipping.sh install --mode direct --domain ping.example.com
 
 # A specific release instead of the newest, a different port, several backend processes:
-sudo bash ipping.sh install --mode docker --version v0.3.2 --http-port 8088 --backend-workers 4
+sudo bash ipping.sh install --mode docker --version v0.4.0 --http-port 8088 --backend-workers 4
 
 sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | uninstall
 ```
@@ -158,7 +183,7 @@ shipped to both architectures without emulation.
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
-| v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
+| v0.4.0, v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
 
 Each repository is versioned on its own; the application release names the exact backend release it
 was tested with in `release.env` and `release-manifest.json`. Releases carry signed build-provenance
@@ -211,18 +236,21 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1 and v0.3.2 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2 and v0.4.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
 - [x] Per-node latency circles on the live map, and live SVG graphs per kind (range strip, phase waterfall, route ladder)
+- [x] An interface of its own: chart-sheet design, live fleet map, nodes page with a roster, restyled admin
 - [ ] Compare DNS answers across nodes
 - [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)
 
 ## Credits
 
 The world outline in `src/lib/geo/world-path.ts` is generated from [Natural Earth](https://www.naturalearthdata.com)
-110m land (public domain) by `scripts/build-world-map.mjs`.
+110m land (public domain) by `scripts/build-world-map.mjs`. The typefaces, Bricolage Grotesque and
+IBM Plex Mono, are open source (SIL Open Font License); `next/font` downloads them at build time and the
+application serves them itself, so a visitor's browser never contacts a font host.
 
 ## License
 

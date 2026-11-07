@@ -19,7 +19,7 @@ import { flag, ms, pct, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { explainError, shortError } from "./errors";
-import type { Focus } from "./focus";
+import type { Focus } from "@/lib/use-focus";
 import { kindOf, type Kind } from "./kinds";
 import { CertificateBadge, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
 import { TaskStatus } from "./status";

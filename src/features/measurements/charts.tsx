@@ -10,7 +10,7 @@ import type { Measurement } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-import type { Focus } from "./focus";
+import type { Focus } from "@/lib/use-focus";
 import { kindOf } from "./kinds";
 import { hopsOf, stripRows, waterfallRows } from "./series";
 

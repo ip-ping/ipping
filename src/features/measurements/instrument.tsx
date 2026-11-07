@@ -10,7 +10,7 @@ import type { LocationEstimate } from "@/features/location/use-location";
 import type { Measurement } from "@/lib/api/client";
 import { pct } from "@/lib/format";
 
-import type { Focus } from "./focus";
+import type { Focus } from "@/lib/use-focus";
 import { KIND_INFO, kindOf } from "./kinds";
 import { mapNodes } from "./series";
 import { TERMINAL_TASK } from "./summary";

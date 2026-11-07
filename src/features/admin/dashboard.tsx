@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Panel } from "@/components/panel";
+import { Readouts } from "@/components/viz/readout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
@@ -11,40 +12,34 @@ import { NodesTab } from "./nodes-tab";
 import { SettingsTab } from "./settings-tab";
 import { TokensTab } from "./tokens-tab";
 
-function Stat({ title, value }: { title: string; value: number | string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold tabular-nums">{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function Dashboard({ username, onSignOut }: { username: string; onSignOut: () => void }) {
   const { data: status } = useApiData<Schemas["ServiceStatus"]>("/admin/status", 5000);
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
-          <p className="text-sm text-muted-foreground">Signed in as {username}</p>
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex items-end justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <p className="label">03 / control</p>
+          <h1 className="figure text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">Administration</h1>
+          <p className="truncate text-sm text-muted-foreground">Signed in as {username}</p>
         </div>
         <Button variant="outline" onClick={onSignOut}>
           Sign out
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat title="Nodes online" value={status ? `${status.nodes_online} / ${status.nodes_approved}` : "–"} />
-        <Stat title="Awaiting approval" value={status?.nodes_pending ?? "–"} />
-        <Stat title="Measurements running" value={status?.measurements_running ?? "–"} />
-        <Stat title="Live result streams" value={status?.live_streams ?? "–"} />
-      </div>
+      <Panel label="The service" meta={<span className="normal-case tracking-normal">refreshed every 5 s</span>} flush>
+        <Readouts
+          className="lg:grid-cols-4"
+          items={[
+            { label: "Nodes online", text: status ? `${status.nodes_online} / ${status.nodes_approved}` : "–", hint: "connected now" },
+            { label: "Awaiting approval", value: status?.nodes_pending ?? null, format: (n) => String(Math.round(n)), alert: (status?.nodes_pending ?? 0) > 0, hint: "enrolled, not yet approved" },
+            { label: "Measurements running", value: status?.measurements_running ?? null, format: (n) => String(Math.round(n)), hint: "in flight" },
+            { label: "Live result streams", value: status?.live_streams ?? null, format: (n) => String(Math.round(n)), hint: "browsers watching" },
+          ]}
+        />
+      </Panel>
 
+      <Panel label="Control">
       <Tabs defaultValue="nodes">
         <TabsList>
           <TabsTrigger value="nodes">Nodes</TabsTrigger>
@@ -65,6 +60,7 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
           <AuditTab />
         </TabsContent>
       </Tabs>
+      </Panel>
     </div>
   );
 }

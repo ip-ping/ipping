@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Panel } from "@/components/panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,15 +63,12 @@ export default function SetupPage() {
   };
 
   return (
-    <Card className="mx-auto max-w-md">
-      <CardHeader>
-        <CardTitle>Create the administrator</CardTitle>
-        <CardDescription>
-          One-time setup. The setup token is printed in the backend log on first start (or set as
-          IPPING_SETUP_TOKEN by the installer).
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Panel label="Create the administrator" meta="one-time setup" className="mx-auto max-w-md">
+      <p className="mb-4 text-sm text-muted-foreground">
+        The setup token is printed in the backend log on first start (or set as IPPING_SETUP_TOKEN by the
+        installer).
+      </p>
+      <div>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="token">Setup token</Label>
@@ -100,7 +97,7 @@ export default function SetupPage() {
             Create administrator
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </Panel>
   );
 }

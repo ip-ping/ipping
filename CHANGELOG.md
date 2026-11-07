@@ -2,7 +2,24 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.4.0 (2026-11-07)
+
+### feat: an interface of its own, with live SVG maps and graphs
+The interface looked like every other shadcn site. It is now a **chart sheet**: warm paper and ink,
+one vermilion signal colour, a live world map and a graph for each kind of measurement, all drawn in SVG
+with no map or chart library. Four steps, newest first:
+
+
+### 2026-11-07: a look of its own (4 of 4): the nodes page, the lists and the admin
+- **Nodes** is map-first: the fleet's map with a roster beside it (name, place, provider, address
+  families, what each node can run). Point at a station or a name and the other lights up; click to pin.
+  Four readout numerals under the map: online, countries, providers, IPv6.
+- **Recent in this browser** is a framed list with a small bar of how many nodes answered.
+- **Admin** under the same design: a service panel of readout numerals, one framed control panel with
+  the tabs, and the sign-in and first-run setup in frames. The tab row scrolls sideways instead of
+  pushing the page 14 px wider on a phone.
+- The HTTP waterfall no longer lets a bar run past its plot while the axis is still gliding to a new
+  scale, and the results table's median bar hides on phones so the status column stays in its frame.
 
 ### 2026-11-07: a look of its own (3 of 4): live graphs on the measurement page
 - The measurement page is now an instrument. At the top, **the reading**: the live map (a station per node
