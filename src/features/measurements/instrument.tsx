@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { NetworkMap, type MapConflict, type MapPlace } from "@/components/viz/network-map";
+import { NetworkMap, type MapClaim, type MapConflict, type MapPlace } from "@/components/viz/network-map";
 import { Readouts, type ReadoutItem } from "@/components/viz/readout";
 import { Panel } from "@/components/panel";
 import { Progress } from "@/components/ui/progress";
@@ -124,6 +124,18 @@ export function Instrument({
     label: a.place.name,
   }));
   const items = useMemo(() => readouts(measurement), [measurement]);
+  // what a GeoIP database claims, drawn so the claim can be seen against the rings
+  const claim = useMemo<MapClaim | null>(() => {
+    const g = estimate?.geoip;
+    return g?.place
+      ? {
+          lat: g.place.latitude,
+          lon: g.place.longitude,
+          label: `${g.source.split(" ")[0]}: ${g.place.name}${g.verdict === "ruled_out" ? " (ruled out)" : ""}`,
+          ruledOut: g.verdict === "ruled_out",
+        }
+      : null;
+  }, [estimate]);
   // Two nodes that measured the target as being in two places at once: what an anycast address looks like.
   const conflictPair = useMemo(
     () => (estimate && estimate.status === "inconclusive" ? findConflict(estimate.evidence.map((e) => ({ ...e }))) : null),
@@ -166,6 +178,7 @@ export function Instrument({
             onSelect={focus.pin}
             onHover={focus.setHover}
             conflict={conflict}
+            claim={claim}
             scan={running}
             label={`Map of ${nodes.length} nodes measuring ${measurement.target.host}${target ? `, with the estimated location near ${target.label}` : ""}`}
           />

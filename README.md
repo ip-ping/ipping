@@ -64,6 +64,9 @@ frame with registration ticks in its corners.
   the axis glides to its new scale.
 * **Choose who measures on the map.** Click stations (or shift-drag over a region) on the home page's
   map and only those nodes run the next measurement; a node that cannot run the chosen kind is drawn faint.
+* **A second opinion that is checked.** With a GeoIP / ASN database set up on the backend, the location panel
+  names the network and says whether the database's place is ruled out by the measurements (a node heard from
+  the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
 * **Anycast shows.** When two nodes got round trips too fast for any single place, the map joins them with a
   dashed line and says how far apart they are against how far their round trips allow.
 * **Take it with you.** Export a result as text to paste, a CSV (cells that a spreadsheet could read as a

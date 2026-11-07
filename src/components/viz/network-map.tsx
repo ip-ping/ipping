@@ -30,6 +30,9 @@ export type MapNode = {
 
 export type MapPlace = { lat: number; lon: number; label: string };
 
+/** A place someone else claims (a GeoIP database): a dashed diamond, struck through when the measurements rule it out. */
+export type MapClaim = MapPlace & { ruledOut: boolean };
+
 /** Two stations whose answers cannot both be true: drawn joined by a dashed line, their light limits shown. */
 export type MapConflict = { a: string; b: string; label: string };
 
@@ -69,6 +72,7 @@ export function NetworkMap({
   marked,
   onBox,
   conflict,
+  claim,
   scan = false,
   className,
   label,
@@ -89,6 +93,7 @@ export function NetworkMap({
   /** Shift-drag a rectangle: told which stations are inside it, and whether to add to the selection. */
   onBox?: (ids: string[], additive: boolean) => void;
   conflict?: MapConflict | null;
+  claim?: MapClaim | null;
   scan?: boolean;
   className?: string;
   label: string;
@@ -196,6 +201,8 @@ export function NetworkMap({
           </g>
         ))}
 
+        {claim && <Claim claim={claim} />}
+
         {target && <Target place={target} />}
 
         {box && (
@@ -233,6 +240,32 @@ export function NetworkMap({
 
       {activeNode && <Tooltip node={activeNode} />}
     </figure>
+  );
+}
+
+function Claim({ claim }: { claim: MapClaim }) {
+  const x = px(claim.lon);
+  const y = py(claim.lat);
+  const left = x > 300;
+  return (
+    <g transform={`translate(${x} ${y})`} pointerEvents="none" aria-hidden>
+      <path d="M0 -3.4L3.4 0L0 3.4L-3.4 0Z" fill="var(--card)" fillOpacity="0.6" stroke="var(--foreground)" strokeWidth="1.4" strokeDasharray="2 1.6" vectorEffect="non-scaling-stroke" />
+      {claim.ruledOut && <path d="M-5 5L5 -5" stroke="var(--signal)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />}
+      <text
+        x={left ? -5.5 : 5.5}
+        y="1"
+        textAnchor={left ? "end" : "start"}
+        fontFamily="var(--font-data), monospace"
+        fontSize="3"
+        fontWeight="600"
+        fill="var(--foreground)"
+        stroke="var(--card)"
+        strokeWidth="1.1"
+        paintOrder="stroke"
+      >
+        {claim.label}
+      </text>
+    </g>
   );
 }
 

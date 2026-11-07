@@ -27,7 +27,18 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
         </Button>
       </div>
 
-      <Panel label="The service" meta={<span className="normal-case tracking-normal">refreshed every 5 s</span>} flush>
+      <Panel
+        label="The service"
+        meta={
+          <>
+            {status?.geoip && (status.geoip.city || status.geoip.asn) && (
+              <span className="normal-case tracking-normal">{status.geoip.source} loaded</span>
+            )}
+            <span className="normal-case tracking-normal">refreshed every 5 s</span>
+          </>
+        }
+        flush
+      >
         <Readouts
           className="lg:grid-cols-4"
           items={[

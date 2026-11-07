@@ -91,6 +91,53 @@ function Limitations({ estimate }: { estimate: LocationEstimate }) {
   );
 }
 
+const km = (n: number) => `${n.toLocaleString()} km`;
+
+/**
+ * What a GeoIP database says, set against what the nodes measured. A database never moves the estimate;
+ * it can only be shown wrong (a place no node's round trip allows) or not contradicted.
+ */
+function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
+  const { geoip, asn } = estimate;
+  if (!geoip && !asn) return null;
+  const place = geoip?.place;
+  const where = place ? `${place.name}, ${place.country}` : null;
+  return (
+    <div className="space-y-2 border-l-2 border-foreground/30 pl-3 text-sm">
+      {asn && (
+        <p>
+          <span className="text-muted-foreground">Network: </span>
+          <span className="font-mono">AS{asn.number}</span> {asn.organization}
+        </p>
+      )}
+      {geoip && where && (
+        <p>
+          <span className="text-muted-foreground">{geoip.source} says </span>
+          <strong>{where}</strong>
+          {geoip.verdict === "ruled_out" && geoip.ruled_out_by ? (
+            <>
+              . <strong>The measurements rule that out:</strong> {geoip.ruled_out_by.node_name} heard from this address in{" "}
+              {ms(geoip.ruled_out_by.rtt_ms)} ms, so it is at most {km(geoip.ruled_out_by.max_distance_km)} from that node, but{" "}
+              {where} is {km(geoip.ruled_out_by.distance_km)} away. A database names one place for an address; an
+              anycast address answers from many.
+            </>
+          ) : geoip.verdict === "consistent" ? (
+            <>
+              {geoip.distance_to_estimate_km != null && (
+                <span className="text-muted-foreground"> ({km(geoip.distance_to_estimate_km)} from the estimate)</span>
+              )}
+              . No measurement contradicts that.
+            </>
+          ) : (
+            <>. No node with a verified position took part, so it could not be checked against the measurements.</>
+          )}
+        </p>
+      )}
+      {geoip?.attribution && <p className="text-xs text-muted-foreground">{geoip.attribution}</p>}
+    </div>
+  );
+}
+
 function Body({ estimate }: { estimate: LocationEstimate }) {
   if (estimate.status === "unavailable") {
     return <p className="text-sm text-muted-foreground">{estimate.summary}</p>;
@@ -111,6 +158,7 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
             ))}
           </AlertDescription>
         </Alert>
+        <GeoIpNote estimate={estimate} />
         <Evidence estimate={estimate} />
         <Limitations estimate={estimate} />
       </div>
@@ -161,6 +209,7 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
           </AlertDescription>
         </Alert>
       )}
+      <GeoIpNote estimate={estimate} />
       <Evidence estimate={estimate} />
       <Limitations estimate={estimate} />
     </div>

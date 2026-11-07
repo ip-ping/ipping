@@ -10,6 +10,16 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: a GeoIP database as a second opinion, in the interface
+- When the backend has a GeoIP / ASN database, the location panel names the network (`AS13335 Cloudflare, Inc.`)
+  and sets what the database says against what the nodes measured: **the measurements rule that out** (naming
+  the node whose round trip makes the place impossible, how far the place is and how far the round trip allows),
+  or *no measurement contradicts it* with its distance from the estimate, or *could not be checked* when no node
+  with a verified position took part. The place is drawn on the map as a dashed diamond (struck through and
+  labelled when ruled out) next to the rings, and the attribution DB-IP Lite asks for is shown. The estimate
+  itself never moves. The admin's service panel says when a database is loaded.
+- Contracts pinned to backend d178163.
+
 ### 2026-11-07: choose nodes on the map, anycast, export, compare with the last run
 - **Choose nodes on the map.** On the home page a click on a station chooses it (a square appears) and
   shift-drag over a region chooses everything inside (hold ctrl or cmd to add); the form's node list is

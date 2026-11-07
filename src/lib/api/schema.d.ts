@@ -535,6 +535,13 @@ export interface components {
             distance_km: number;
             place: components["schemas"]["PlaceOut"];
         };
+        /** AsnOut */
+        AsnOut: {
+            /** Number */
+            number: number;
+            /** Organization */
+            organization: string;
+        };
         /** AuditOut */
         AuditOut: {
             /** Action */
@@ -770,6 +777,40 @@ export interface components {
             /** Verified */
             verified: boolean;
         };
+        /**
+         * GeoIpOut
+         * @description What a GeoIP database says about the address, checked against the measurements.
+         *
+         *     It never changes the estimate. `ruled_out` means a node measured the address too close for the
+         *     database's place to be right; `consistent` only means no measurement contradicts it.
+         */
+        GeoIpOut: {
+            /** Attribution */
+            attribution?: string | null;
+            /**
+             * Distance To Estimate Km
+             * @description From the place the database names to the likely place
+             */
+            distance_to_estimate_km?: number | null;
+            place?: components["schemas"]["PlaceOut"] | null;
+            ruled_out_by?: components["schemas"]["RuledOutOut"] | null;
+            /** Source */
+            source: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "consistent" | "ruled_out" | "not_checked";
+        };
+        /** GeoIpStatus */
+        GeoIpStatus: {
+            /** Asn */
+            asn: boolean;
+            /** City */
+            city: boolean;
+            /** Source */
+            source?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -844,12 +885,16 @@ export interface components {
              * @default []
              */
             alternatives: components["schemas"]["AlternativeOut"][];
+            /** @description The network, if an ASN database is set up */
+            asn?: components["schemas"]["AsnOut"] | null;
             closest?: components["schemas"]["ClosestOut"] | null;
             /**
              * Evidence
              * @default []
              */
             evidence: components["schemas"]["EvidenceOut"][];
+            /** @description A configured GeoIP database's answer, checked against the nodes */
+            geoip?: components["schemas"]["GeoIpOut"] | null;
             likely?: components["schemas"]["PlaceOut"] | null;
             /**
              * Limitations
@@ -1076,6 +1121,25 @@ export interface components {
             /** Node Id */
             node_id: string;
         };
+        /** RuledOutOut */
+        RuledOutOut: {
+            /**
+             * Distance Km
+             * @description From that node to the place the database names
+             */
+            distance_km: number;
+            /**
+             * Max Distance Km
+             * @description The most a round trip that short allows (light)
+             */
+            max_distance_km: number;
+            /** Node Id */
+            node_id: string;
+            /** Node Name */
+            node_name: string;
+            /** Rtt Ms */
+            rtt_ms: number;
+        };
         /** RuntimeSettings */
         RuntimeSettings: {
             /** Allowed Ports */
@@ -1217,6 +1281,7 @@ export interface components {
         };
         /** ServiceStatus */
         ServiceStatus: {
+            geoip: components["schemas"]["GeoIpStatus"];
             /** Live Streams */
             live_streams: number;
             /** Measurements Running */
