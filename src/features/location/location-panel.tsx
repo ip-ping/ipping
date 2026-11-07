@@ -28,7 +28,7 @@ function StrengthBadge({ strength }: { strength: NonNullable<LocationEstimate["s
 
 function Details({ summary, children }: { summary: string; children: React.ReactNode }) {
   return (
-    <details className="group rounded-md border px-3 py-2 text-sm">
+    <details className="group min-w-0 rounded-md border px-3 py-2 text-sm">
       <summary className="cursor-pointer select-none text-muted-foreground group-open:mb-2 group-open:text-foreground">
         {summary}
       </summary>
@@ -41,26 +41,34 @@ function Evidence({ estimate }: { estimate: LocationEstimate }) {
   if (estimate.evidence.length === 0) return null;
   return (
     <Details summary={`Measurements used (${estimate.evidence.filter((e) => e.used).length} of ${estimate.evidence.length} nodes)`}>
+      <div className="overflow-x-auto">
       <table className="w-full text-left text-xs">
         <thead className="text-muted-foreground">
           <tr>
             <th className="py-1 font-medium">Node</th>
             <th className="py-1 text-right font-medium">Smallest RTT</th>
-            <th className="py-1 text-right font-medium">At most</th>
-            <th className="py-1 pl-3 font-medium">Position</th>
+            <th className="hidden py-1 text-right font-medium sm:table-cell">At most</th>
+            <th className="hidden py-1 pl-3 font-medium sm:table-cell">Position</th>
           </tr>
         </thead>
         <tbody>
           {estimate.evidence.map((e) => (
             <tr key={e.node_id} className={e.used ? "" : "text-muted-foreground"}>
-              <td className="py-1">{e.node_name}</td>
-              <td className="py-1 text-right tabular-nums">{ms(e.rtt_ms)} ms</td>
-              <td className="py-1 text-right tabular-nums">{Math.round(e.rtt_ms * 150).toLocaleString()} km</td>
-              <td className="py-1 pl-3">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</td>
+              <td className="py-1">
+                {e.node_name}
+                <div className="text-muted-foreground sm:hidden">
+                  within {Math.round(e.rtt_ms * 150).toLocaleString()} km · {e.verified ? "verified" : "not verified"}
+                  {e.used ? "" : " · not used"}
+                </div>
+              </td>
+              <td className="py-1 text-right align-top tabular-nums">{ms(e.rtt_ms)} ms</td>
+              <td className="hidden py-1 text-right tabular-nums sm:table-cell">{Math.round(e.rtt_ms * 150).toLocaleString()} km</td>
+              <td className="hidden py-1 pl-3 sm:table-cell">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
       <p className="mt-2 text-xs text-muted-foreground">
         “At most” is a physical limit: light cannot cover more distance than that in half the round-trip time.
       </p>
@@ -75,7 +83,10 @@ function Limitations({ estimate }: { estimate: LocationEstimate }) {
         {estimate.limitations.map((text) => (
           <li key={text}>{text}</li>
         ))}
-        <li>Model {estimate.model_version}. Experimental: not yet checked against real targets of known location.</li>
+        <li>
+          Model {estimate.model_version}, checked on real measurements to targets of known location (how
+          well it did, and where it does not, is in the backend README). Still experimental.
+        </li>
       </ul>
     </Details>
   );

@@ -21,6 +21,10 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
   public Nodes page keeps its Status column. The four stat cards sit two by two instead of in a tall
   stack (also on a measurement page). The empty-state text now points at the Enrollment tab instead
   of a command.
+- **Location panel on a phone.** The "Measurements used" table was wider than the screen and made the
+  *whole page* scroll sideways. On narrow screens it shows the node, its round trip and, under the
+  name, the distance limit and whether its position is verified. Its note no longer says the model is
+  "not yet checked against real targets": it says it was, and where to read how well.
 - Checked by opening every dialog (enrollment, edit node, revoke, rotated key, choose nodes) at 1440,
   768 and 390 px and testing that nothing inside leaves the dialog, plus the admin tabs and the nodes
   page in a browser; no console errors.
