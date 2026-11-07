@@ -10,6 +10,28 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: choose nodes on the map, anycast, export, compare with the last run
+- **Choose nodes on the map.** On the home page a click on a station chooses it (a square appears) and
+  shift-drag over a region chooses everything inside (hold ctrl or cmd to add); the form's node list is
+  the same selection, so "Selected (4)" and the squares always agree, and "Use all nodes" clears it. A node
+  that cannot run the chosen kind (an older node, for DNS) is drawn faint and cannot be picked. Fixed on the
+  way: hovering re-ordered the stations in the DOM so the active one was drawn last, which moved the element
+  between pointer-down and pointer-up and swallowed a quick click or tap; stations now keep their place.
+- **Anycast shows.** If the estimate is inconclusive, the pair of nodes whose round trips contradict each
+  other (further apart than light allows in the sum of their round trips, 150 km per millisecond) is joined
+  by a dashed line with the distance, their light limits are drawn, and a note says what it looks like.
+  Only nodes whose position was verified are accused.
+- **Export.** The results page can copy a plain-text report (like `ping` or `traceroute` would print), download
+  a CSV (one row per node, the columns of the kind) or the full JSON. In a CSV, text that comes from other
+  machines and starts with `=`, `+`, `-`, `@` is defused so a spreadsheet does not run it as a formula.
+- **Compare with the last run.** For the same kind, target and settings, the previous finished run in this
+  browser is found, each node's median is drawn as a dashed ghost on the strip with a line to the new one,
+  and the table shows how much each node moved (`+0.2`, `−1.9`). Status colours are not used for this: slower
+  is not always worse.
+- **Unit tests** (vitest, 45 tests, in CI): great-circle distance and rings across the date line, the
+  anycast detection, DNS answer grouping and colour slots, the chart series builders, CSV quoting and
+  injection, the text and JSON export, finding the previous run, and the axis scale.
+
 ### 2026-11-07: DNS checks
 - A fifth kind in the interface, **DNS**: a name, a record type (`A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT`,
   `SOA`) and a resolver: each node's own (what people near it get) or Cloudflare, Google or Quad9.

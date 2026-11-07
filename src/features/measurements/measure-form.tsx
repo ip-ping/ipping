@@ -32,6 +32,7 @@ import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client"
 import { flag, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+import { useSelection } from "./selection";
 import {
   DNS_RECORD_TYPES,
   DNS_RESOLVERS,
@@ -90,18 +91,16 @@ function Choice<T extends string>({
 
 export function MeasureForm({
   initialTarget = "",
-  initialKind = "ping",
   initialRecordType = "A",
   initialResolver = "system",
 }: {
   initialTarget?: string;
-  initialKind?: Kind;
   initialRecordType?: DnsRecordType;
   initialResolver?: DnsResolver;
 }) {
   const router = useRouter();
   const { nodes } = useNodes();
-  const [kind, setKind] = useState<Kind>(initialKind);
+  const { kind, setKind, scope, setScope, selected, setSelected } = useSelection();
   const info = KIND_INFO[kind];
   const online = nodes?.filter((n) => n.online) ?? [];
   // Older nodes only know ping; say so instead of failing after the click.
@@ -115,8 +114,6 @@ export function MeasureForm({
   const [count, setCount] = useState("4");
   const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
   const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
-  const [scope, setScope] = useState<"all" | "selected">("all");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | Error | null>(null);
@@ -284,7 +281,7 @@ export function MeasureForm({
                   onValueChange={(next) => {
                     if (next === null) return;
                     setScope(next as "all" | "selected");
-                    if (next === "selected") setPicking(true);
+                    if (next === "selected" && selected.size === 0) setPicking(true);
                   }}
                 >
                   <SelectTrigger className="w-full min-w-0">
@@ -319,14 +316,12 @@ export function MeasureForm({
                         <label key={node.id} className="flex cursor-pointer items-center gap-3 text-sm">
                           <Checkbox
                             checked={selected.has(node.id)}
-                            onCheckedChange={(checked) =>
-                              setSelected((current) => {
-                                const next = new Set(current);
-                                if (checked) next.add(node.id);
-                                else next.delete(node.id);
-                                return next;
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              const next = new Set(selected);
+                              if (checked) next.add(node.id);
+                              else next.delete(node.id);
+                              setSelected(next);
+                            }}
                           />
                           <span className="font-medium">{node.name}</span>
                           <span className="text-muted-foreground">

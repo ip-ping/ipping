@@ -3,7 +3,7 @@
 import { ArrowLeftIcon, CopyIcon, RotateCwIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,7 +17,9 @@ import { useLocation } from "@/features/location/use-location";
 import { DNS_RESOLVERS, KIND_INFO, kindOf } from "@/features/measurements/kinds";
 import { Charts } from "@/features/measurements/charts";
 import { useAnswerSlots } from "@/features/measurements/dns-groups";
+import { medians, usePreviousRun } from "@/features/measurements/previous";
 import { useFocus } from "@/lib/use-focus";
+import { ExportMenu } from "@/features/measurements/export-menu";
 import { Instrument } from "@/features/measurements/instrument";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";
@@ -36,6 +38,9 @@ export default function MeasurementPage() {
   const current = state.phase === "ready" ? state.measurement : null;
   const wantsLocation = current !== null && current.status !== "running" && ["ping", "tcp"].includes(kindOf(current));
   const { estimate, error: locationError } = useLocation(id, wantsLocation);
+  // the previous run of the same question (this browser's own), to show how each node moved
+  const previousRun = usePreviousRun(current);
+  const before = useMemo(() => medians(previousRun), [previousRun]);
 
   if (state.phase === "loading") {
     return (
@@ -140,6 +145,7 @@ export default function MeasurementPage() {
               <XIcon /> Cancel
             </Button>
           )}
+          {!running && <ExportMenu measurement={measurement} />}
           {!running && (
             <Button
               variant="outline"
@@ -174,8 +180,8 @@ export default function MeasurementPage() {
       )}
 
       <Instrument measurement={measurement} estimate={estimate} focus={focus} slots={slots} />
-      <Charts measurement={measurement} focus={focus} slots={slots} />
-      <ResultsTable measurement={measurement} focus={focus} />
+      <Charts measurement={measurement} focus={focus} slots={slots} previous={before} previousAt={previousRun?.created_at} />
+      <ResultsTable measurement={measurement} focus={focus} previous={before} />
       {(kind === "ping" || kind === "tcp") && (
         <LocationPanel estimate={estimate} error={locationError} finished={!running} />
       )}

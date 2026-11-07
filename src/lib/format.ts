@@ -18,3 +18,10 @@ export function flag(country: string | null | undefined): string {
 export function place(node: { city?: string | null; country?: string | null }): string {
   return [node.city, node.country].filter(Boolean).join(", ") || "Unknown location";
 }
+
+/** How far a value moved: `+1.2`, `−0.4`, or `±0` when it is the same to the precision shown. */
+export function delta(now: number, before: number): string {
+  const diff = now - before;
+  if (Math.abs(diff) < 0.05) return "±0";
+  return `${diff > 0 ? "+" : "−"}${ms(Math.abs(diff))}`;
+}

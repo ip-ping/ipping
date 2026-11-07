@@ -30,6 +30,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Unit tests
+        run: npm test
       - name: Generated API types match the pinned contract
         run: |
           npm run api:types

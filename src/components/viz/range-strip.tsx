@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { ms } from "@/lib/format";
+import { delta, ms } from "@/lib/format";
 import { useTween } from "@/lib/use-tween";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,8 @@ export type StripRow = {
   note?: string;
   /** What the node's dot wears, when the chart is coloured by something else (a DNS answer). */
   color?: string;
+  /** The node's median in the previous run of the same measurement, to compare with. */
+  previous?: number | null;
 };
 
 const ROW = 30;
@@ -102,6 +104,9 @@ export function RangeStrip({
           </>
         )}
         <Key glyph={<path d="M7 2L15 10M15 2L7 10" stroke="var(--critical)" strokeWidth="2" strokeLinecap="round" />}>lost</Key>
+        {rows.some((r) => r.previous != null) && (
+          <Key glyph={<circle cx="11" cy="6" r="3.5" fill="none" stroke="var(--foreground)" strokeWidth="1.6" strokeDasharray="2 2" />}>previous run</Key>
+        )}
       </Legend>
       <div ref={ref} className="relative w-full" role="group" aria-label={label}>
         {width > 0 && (
@@ -157,6 +162,12 @@ export function RangeStrip({
                           <circle key={p.seq} cx={x(p.ms)} cy={cy} r="3.5" fill="var(--card)" stroke={accent} strokeWidth="2" className="dot-in" />
                         ),
                       )}
+                      {row.previous != null && (
+                        <>
+                          {med != null && <line x1={x(row.previous)} x2={x(med)} y1={cy} y2={cy} stroke="var(--foreground)" strokeOpacity="0.45" strokeDasharray="2 2" />}
+                          <circle cx={x(row.previous)} cy={cy} r="4" fill="none" stroke="var(--foreground)" strokeOpacity="0.8" strokeWidth="1.6" strokeDasharray="2 2" />
+                        </>
+                      )}
                       {!single && med != null && <rect x={x(med) - 1} y={cy - 8} width="2" height="16" fill="var(--foreground)" />}
                       {Array.from({ length: Math.min(row.lost, 3) }, (_, k) => (
                         <path
@@ -203,6 +214,9 @@ export function RangeStrip({
               <div className="label normal-case tracking-normal">{tip.row.note ?? (tip.row.state === "failed" ? "No answer from this node" : "Waiting for this node")}</div>
             )}
             {tip.row.lost > 0 && <TipRow k="Lost" v={tip.row.lost} />}
+            {tip.row.previous != null && (
+              <TipRow k="Last time" v={`${ms(tip.row.previous)} ms${tip.med != null ? ` (${delta(tip.med, tip.row.previous)})` : ""}`} />
+            )}
           </ChartTip>
         )}
       </div>

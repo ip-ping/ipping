@@ -24,27 +24,37 @@ export function Charts({
   measurement,
   focus,
   slots,
+  previous,
+  previousAt,
 }: {
   measurement: Measurement;
   focus: Focus;
   slots: ReadonlyMap<string, number>;
+  /** Each node's median in the previous run of the same measurement. */
+  previous: ReadonlyMap<string, number>;
+  /** When that run was made. */
+  previousAt?: string | null;
 }) {
   const kind = kindOf(measurement);
   if (measurement.tasks.length === 0) return null;
-  if (kind === "dns") return <Dns measurement={measurement} focus={focus} slots={slots} />;
+  if (kind === "dns") return <Dns measurement={measurement} focus={focus} slots={slots} previous={previous} previousAt={previousAt} />;
   if (kind === "http") return <Waterfall measurement={measurement} focus={focus} />;
   if (kind === "traceroute") return <Route measurement={measurement} focus={focus} />;
-  return <Strip measurement={measurement} focus={focus} />;
+  return <Strip measurement={measurement} focus={focus} previous={previous} previousAt={previousAt} />;
 }
 
 function Dns({
   measurement,
   focus,
   slots,
+  previous,
+  previousAt,
 }: {
   measurement: Measurement;
   focus: Focus;
   slots: ReadonlyMap<string, number>;
+  previous: ReadonlyMap<string, number>;
+  previousAt?: string | null;
 }) {
   const { tasks } = measurement;
   const groups = useMemo(() => groupAnswers(tasks, slots), [tasks, slots]);
@@ -53,7 +63,7 @@ function Dns({
   return (
     <>
       <DnsAnswers groups={groups} total={tasks.length} waiting={waiting} focus={focus} />
-      <Strip measurement={measurement} focus={focus} colors={colors} />
+      <Strip measurement={measurement} focus={focus} colors={colors} previous={previous} previousAt={previousAt} />
     </>
   );
 }
@@ -62,15 +72,27 @@ function Strip({
   measurement,
   focus,
   colors,
+  previous,
+  previousAt,
 }: {
   measurement: Measurement;
   focus: Focus;
   colors?: ReadonlyMap<string, string>;
+  previous?: ReadonlyMap<string, number>;
+  previousAt?: string | null;
 }) {
-  const rows = useMemo(() => stripRows(measurement, colors), [measurement, colors]);
+  const rows = useMemo(() => stripRows(measurement, colors, previous), [measurement, colors, previous]);
   const unit = measurement.kind === "tcp" ? "connection time" : measurement.kind === "dns" ? "time to answer" : "round trip";
   return (
-    <Panel label={measurement.kind === "dns" ? "Time to answer, by node" : `Every ${unit}, by node`} meta={<span className="hidden sm:inline">{SEE_TABLE}</span>}>
+    <Panel label={measurement.kind === "dns" ? "Time to answer, by node" : `Every ${unit}, by node`} meta={
+        <>
+          {previousAt && previous && previous.size > 0 && (
+            <span>compared with {new Date(previousAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+          )}
+          <span className="hidden sm:inline">{SEE_TABLE}</span>
+        </>
+      }
+    >
       <RangeStrip rows={rows} single={measurement.kind === "dns"} activeId={focus.active} onActive={focus.setHover} label={`Each node's ${unit} in milliseconds`} />
     </Panel>
   );

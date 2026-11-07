@@ -24,9 +24,14 @@ export type MapNode = {
   note?: string;
   /** The station's fill, for a map that colours nodes by what they found (DNS answers). */
   color?: string;
+  /** Drawn faint and not clickable: a node that cannot take part (it cannot run the chosen kind). */
+  disabled?: boolean;
 };
 
 export type MapPlace = { lat: number; lon: number; label: string };
+
+/** Two stations whose answers cannot both be true: drawn joined by a dashed line, their light limits shown. */
+export type MapConflict = { a: string; b: string; label: string };
 
 // The map's own frame: the world (x 0..360, y 6..148) plus a margin for the axis labels.
 const VIEW = { x: -9, y: 0, w: 378, h: 152 };
@@ -40,6 +45,18 @@ export const MAX_RING_KM = 8000;
  * each node as a station that pulses while it is live, and, when `rings` is on, a ring around every node
  * showing how far its best round trip could reach. Where the rings overlap is where the target is.
  */
+/** Where a pointer event is in the map's own coordinates (longitude + 180, 90 - latitude). */
+function userPoint(e: React.PointerEvent<SVGSVGElement>): { x: number; y: number } | null {
+  const svg = e.currentTarget;
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+  const point = svg.createSVGPoint();
+  point.x = e.clientX;
+  point.y = e.clientY;
+  const at = point.matrixTransform(matrix.inverse());
+  return { x: at.x, y: at.y };
+}
+
 export function NetworkMap({
   nodes,
   rings = false,
@@ -49,6 +66,9 @@ export function NetworkMap({
   activeId = null,
   onSelect,
   onHover,
+  marked,
+  onBox,
+  conflict,
   scan = false,
   className,
   label,
@@ -64,12 +84,18 @@ export function NetworkMap({
   onSelect?: (id: string | null) => void;
   /** Told which station the pointer is on, so the rest of the page can light the same node. */
   onHover?: (id: string | null) => void;
+  /** Stations that are chosen (a square around each); a click then asks `onSelect` to toggle it. */
+  marked?: ReadonlySet<string>;
+  /** Shift-drag a rectangle: told which stations are inside it, and whether to add to the selection. */
+  onBox?: (ids: string[], additive: boolean) => void;
+  conflict?: MapConflict | null;
   scan?: boolean;
   className?: string;
   label: string;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [hover, setHover] = useState<string | null>(null);
+  const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const active = hover ?? activeId ?? selectedId;
   const activeNode = nodes.find((n) => n.id === active) ?? null;
   const ordered = useMemo(
@@ -83,11 +109,35 @@ export function NetworkMap({
         viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
         role="img"
         aria-label={label}
-        className="block h-auto w-full select-none"
+        className={cn("block h-auto w-full select-none", onBox && "touch-pan-y")}
         onPointerLeave={() => {
           setHover(null);
           onHover?.(null);
         }}
+        onPointerDown={(e) => {
+          if (!onBox || !e.shiftKey || e.button !== 0) return;
+          const at = userPoint(e);
+          if (!at) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setBox({ x0: at.x, y0: at.y, x1: at.x, y1: at.y });
+        }}
+        onPointerMove={(e) => {
+          if (!box) return;
+          const at = userPoint(e);
+          if (at) setBox({ ...box, x1: at.x, y1: at.y });
+        }}
+        onPointerUp={(e) => {
+          if (!box) return;
+          const [xa, xb] = [Math.min(box.x0, box.x1), Math.max(box.x0, box.x1)];
+          const [ya, yb] = [Math.min(box.y0, box.y1), Math.max(box.y0, box.y1)];
+          setBox(null);
+          if (xb - xa < 2 && yb - ya < 2) return; // a click, not a drag
+          const inside = nodes.filter(
+            (n) => !n.disabled && n.online !== false && px(n.lon) >= xa && px(n.lon) <= xb && py(n.lat) >= ya && py(n.lat) <= yb,
+          );
+          onBox?.(inside.map((n) => n.id), e.ctrlKey || e.metaKey);
+        }}
+        onPointerCancel={() => setBox(null)}
       >
         <defs>
           <pattern id={`dots${uid}`} width="2.3" height="2.3" patternUnits="userSpaceOnUse">
@@ -128,9 +178,16 @@ export function NetworkMap({
         {rings &&
           ordered.map((n) =>
             n.ms && n.ms * KM_PER_RTT_MS <= MAX_RING_KM ? (
-              <Ring key={n.id} node={n} emphasised={n.id === active} dimmed={active !== null && n.id !== active} />
+              <Ring
+                key={n.id}
+                node={n}
+                emphasised={n.id === active || n.id === conflict?.a || n.id === conflict?.b}
+                dimmed={active !== null && n.id !== active && n.id !== conflict?.a && n.id !== conflict?.b}
+              />
             ) : null,
           )}
+
+        {conflict && <ConflictLine nodes={nodes} conflict={conflict} />}
 
         {alternatives.map((a) => (
           <g key={`${a.label}${a.lat}`} transform={`translate(${px(a.lon)} ${py(a.lat)})`}>
@@ -141,13 +198,30 @@ export function NetworkMap({
 
         {target && <Target place={target} />}
 
-        {ordered.map((n, i) => (
+        {box && (
+          <rect
+            x={Math.min(box.x0, box.x1)}
+            y={Math.min(box.y0, box.y1)}
+            width={Math.abs(box.x1 - box.x0)}
+            height={Math.abs(box.y1 - box.y0)}
+            fill="var(--signal-soft)"
+            stroke="var(--signal)"
+            strokeWidth="1.2"
+            strokeDasharray="3 2"
+            vectorEffect="non-scaling-stroke"
+            pointerEvents="none"
+          />
+        )}
+
+        {/* in a stable order: re-ordering the DOM under the pointer would swallow a quick click or tap */}
+        {nodes.map((n, i) => (
           <Station
             key={n.id}
             node={n}
             index={i}
             active={n.id === active}
             selected={n.id === selectedId}
+            marked={marked?.has(n.id) ?? false}
             onHover={(id) => {
               setHover(id);
               onHover?.(id);
@@ -159,6 +233,34 @@ export function NetworkMap({
 
       {activeNode && <Tooltip node={activeNode} />}
     </figure>
+  );
+}
+
+function ConflictLine({ nodes, conflict }: { nodes: MapNode[]; conflict: MapConflict }) {
+  const a = nodes.find((n) => n.id === conflict.a);
+  const b = nodes.find((n) => n.id === conflict.b);
+  if (!a || !b) return null;
+  const [x1, y1, x2, y2] = [px(a.lon), py(a.lat), px(b.lon), py(b.lat)];
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  return (
+    <g aria-hidden pointerEvents="none">
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--signal)" strokeWidth="1.8" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+      <text
+        x={mx}
+        y={my - 1.8}
+        textAnchor="middle"
+        fontFamily="var(--font-data), monospace"
+        fontSize="3.1"
+        fontWeight="600"
+        fill="var(--foreground)"
+        stroke="var(--card)"
+        strokeWidth="1.1"
+        paintOrder="stroke"
+      >
+        {conflict.label}
+      </text>
+    </g>
   );
 }
 
@@ -250,6 +352,7 @@ function Station({
   index,
   active,
   selected,
+  marked,
   onHover,
   onSelect,
 }: {
@@ -257,6 +360,7 @@ function Station({
   index: number;
   active: boolean;
   selected: boolean;
+  marked: boolean;
   onHover: (id: string | null) => void;
   onSelect?: (id: string | null) => void;
 }) {
@@ -272,15 +376,16 @@ function Station({
       tabIndex={0}
       role="button"
       aria-label={`${node.name}${node.place ? `, ${node.place}` : ""}${live ? "" : ", offline"}`}
-      aria-pressed={selected}
-      className="cursor-pointer outline-none [&:focus-visible_.focus]:opacity-100"
+      aria-pressed={selected || marked}
+      aria-disabled={node.disabled || undefined}
+      className={cn("outline-none [&:focus-visible_.focus]:opacity-100", node.disabled ? "cursor-not-allowed opacity-35" : "cursor-pointer")}
       onPointerEnter={() => onHover(node.id)}
       onPointerLeave={() => onHover(null)}
       onFocus={() => onHover(node.id)}
       onBlur={() => onHover(null)}
-      onClick={() => onSelect?.(selected ? null : node.id)}
+      onClick={() => !node.disabled && onSelect?.(selected ? null : node.id)}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if ((e.key === "Enter" || e.key === " ") && !node.disabled) {
           e.preventDefault();
           onSelect?.(selected ? null : node.id);
         }
@@ -311,6 +416,9 @@ function Station({
         vectorEffect="non-scaling-stroke"
         opacity={0}
       />
+      {marked && (
+        <rect x="-3.4" y="-3.4" width="6.8" height="6.8" fill="var(--signal-soft)" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      )}
       {(active || selected) && (
         <circle r="3" fill="none" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       )}

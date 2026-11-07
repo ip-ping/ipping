@@ -62,6 +62,13 @@ frame with registration ticks in its corners.
   TCP, a phase waterfall for HTTP, a route ladder for traceroute, a sparkline per row in the table, and
   big readout numerals that count up. They update as samples arrive: dots pop in, rows slide into place,
   the axis glides to its new scale.
+* **Choose who measures on the map.** Click stations (or shift-drag over a region) on the home page's
+  map and only those nodes run the next measurement; a node that cannot run the chosen kind is drawn faint.
+* **Anycast shows.** When two nodes got round trips too fast for any single place, the map joins them with a
+  dashed line and says how far apart they are against how far their round trips allow.
+* **Take it with you.** Export a result as text to paste, a CSV (cells that a spreadsheet could read as a
+  formula are defused) or the full JSON, and see how each node moved since the previous run of the same
+  measurement (this browser's own).
 * **One selection.** Point at a station, a chart row or a table row and the same node lights up in all
   three; click a station to pin it (for traceroute that picks the route shown).
 * **Accessible by design.** Every chart row is focusable and reads out its numbers; tooltips repeat what the
@@ -206,6 +213,7 @@ origin with relative `/api/v1/...` paths and no deployment hostname is baked int
 
 ```bash
 npm run lint             # ESLint
+npm test                 # unit tests (geometry, answer grouping, series, export)
 npm run typecheck        # next typegen && tsc --noEmit
 npm run build            # production build
 bash tests/installer.sh  # the installer's own logic: no root, no network, nothing installed

@@ -2,13 +2,14 @@
 
 import { useMemo } from "react";
 
-import { NetworkMap, type MapPlace } from "@/components/viz/network-map";
+import { NetworkMap, type MapConflict, type MapPlace } from "@/components/viz/network-map";
 import { Readouts, type ReadoutItem } from "@/components/viz/readout";
 import { Panel } from "@/components/panel";
 import { Progress } from "@/components/ui/progress";
 import type { LocationEstimate } from "@/features/location/use-location";
 import type { Measurement } from "@/lib/api/client";
-import { pct } from "@/lib/format";
+import { findConflict } from "@/lib/geo/conflict";
+import { ms, pct } from "@/lib/format";
 
 import type { Focus } from "@/lib/use-focus";
 import { groupAnswers } from "./dns-groups";
@@ -123,6 +124,22 @@ export function Instrument({
     label: a.place.name,
   }));
   const items = useMemo(() => readouts(measurement), [measurement]);
+  // Two nodes that measured the target as being in two places at once: what an anycast address looks like.
+  const conflictPair = useMemo(
+    () => (estimate && estimate.status === "inconclusive" ? findConflict(estimate.evidence.map((e) => ({ ...e }))) : null),
+    [estimate],
+  );
+  const conflict = useMemo<MapConflict | null>(
+    () =>
+      conflictPair
+        ? {
+            a: conflictPair.a.node_id,
+            b: conflictPair.b.node_id,
+            label: `${Math.round(conflictPair.distanceKm).toLocaleString()} km apart`,
+          }
+        : null,
+    [conflictPair],
+  );
   const rings = kind !== "http" && kind !== "dns";
   const caption = kind === "dns" ? CAPTION.dns : rings ? CAPTION.rings : CAPTION.http;
 
@@ -148,6 +165,7 @@ export function Instrument({
             activeId={focus.hover}
             onSelect={focus.pin}
             onHover={focus.setHover}
+            conflict={conflict}
             scan={running}
             label={`Map of ${nodes.length} nodes measuring ${measurement.target.host}${target ? `, with the estimated location near ${target.label}` : ""}`}
           />
@@ -158,6 +176,15 @@ export function Instrument({
               {target && " The crosshair is the estimated location of the target."}
             </span>
           </p>
+          {conflictPair && (
+            <p className="mt-2 border-l-2 border-signal px-3 text-xs leading-relaxed">
+              <strong className="font-semibold">{conflictPair.a.node_name}</strong> ({ms(conflictPair.a.rtt_ms)} ms) and{" "}
+              <strong className="font-semibold">{conflictPair.b.node_name}</strong> ({ms(conflictPair.b.rtt_ms)} ms) are{" "}
+              {Math.round(conflictPair.distanceKm).toLocaleString()} km apart, but round trips that short allow at most{" "}
+              {Math.round(conflictPair.allowedKm).toLocaleString()} km between them. They cannot both be measuring one place:
+              this is what an <em>anycast</em> address looks like (the same address answered from several sites).
+            </p>
+          )}
         </div>
         <Readouts items={items} className="border-t lg:border-t-0 lg:border-l" />
       </div>

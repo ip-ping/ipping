@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Measurement, Task } from "@/lib/api/client";
-import { flag, ms, pct, place } from "@/lib/format";
+import { delta, flag, ms, pct, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { explainError, shortError } from "./errors";
@@ -36,7 +36,7 @@ const SHOW: Record<Show, string> = {
   xl: "hidden xl:table-cell",
 };
 
-type Context = { fastest: boolean; slowest: number; active: boolean };
+type Context = { fastest: boolean; slowest: number; active: boolean; before?: number };
 
 type Column = {
   head: string;
@@ -45,7 +45,7 @@ type Column = {
   cell: (task: Task, context: Context) => ReactNode;
 };
 
-const bar = (task: Task, { fastest, slowest }: Context) => {
+const bar = (task: Task, { fastest, slowest, before }: Context) => {
   const median = task.summary?.median_ms;
   return (
     <div className="flex items-center justify-end gap-2">
@@ -57,6 +57,11 @@ const bar = (task: Task, { fastest, slowest }: Context) => {
         />
       )}
       <span className={cn(fastest && "font-semibold")}>{ms(median)}</span>
+      {before != null && median != null && (
+        <span className="w-11 text-left text-[0.65rem] font-normal text-muted-foreground" title={`${ms(before)} ms last time`}>
+          {delta(median, before)}
+        </span>
+      )}
     </div>
   );
 };
@@ -163,7 +168,15 @@ const COLUMNS: Record<Kind, Column[]> = {
   ],
 };
 
-export function ResultsTable({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
+export function ResultsTable({
+  measurement,
+  focus,
+  previous,
+}: {
+  measurement: Measurement;
+  focus: Focus;
+  previous?: ReadonlyMap<string, number>;
+}) {
   const kind = kindOf(measurement);
   const columns = COLUMNS[kind];
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -204,7 +217,7 @@ export function ResultsTable({ measurement, focus }: { measurement: Measurement;
           {measurement.tasks.map((task) => {
             const expanded = open.has(task.id);
             const active = focus.active === task.node.id;
-            const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest, active };
+            const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest, active, before: previous?.get(task.node.id) };
             return (
               <Fragment key={task.id}>
                 <TableRow

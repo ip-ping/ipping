@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { FleetMap } from "@/features/fleet/fleet-map";
 import { DNS_RECORD_TYPES, DNS_RESOLVERS, KINDS } from "@/features/measurements/kinds";
 import { MeasureForm } from "@/features/measurements/measure-form";
+import { SelectionProvider } from "@/features/measurements/selection";
 import { RecentMeasurements } from "@/features/measurements/recent";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -20,17 +21,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </p>
       </div>
 
+      <SelectionProvider initialKind={KINDS.find((k) => k === kind) ?? "ping"}>
       <div className="space-y-0 [&>*+*]:-mt-px">
         <FleetMap />
         <Suspense>
           <MeasureForm
             initialTarget={typeof target === "string" ? target : ""}
-            initialKind={KINDS.find((k) => k === kind) ?? "ping"}
             initialRecordType={DNS_RECORD_TYPES.find((t) => t === record) ?? "A"}
             initialResolver={DNS_RESOLVERS.find((r) => r.value === resolver)?.value ?? "system"}
           />
         </Suspense>
       </div>
+      </SelectionProvider>
       <RecentMeasurements />
     </div>
   );

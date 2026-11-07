@@ -21,7 +21,11 @@ export function stateOf(task: Task): RowState {
 const where = (task: Task) => `${flag(task.node.country)} ${place(task.node)}`.trim();
 
 /** One row per node for the ping and TCP chart: every reply as a point, and the probes that never came back. */
-export function stripRows(measurement: Measurement, colors?: ReadonlyMap<string, string>): StripRow[] {
+export function stripRows(
+  measurement: Measurement,
+  colors?: ReadonlyMap<string, string>,
+  previous?: ReadonlyMap<string, number>,
+): StripRow[] {
   return measurement.tasks.map((task) => {
     const points = task.samples
       .filter((s) => s.rtt_ms != null)
@@ -37,6 +41,7 @@ export function stripRows(measurement: Measurement, colors?: ReadonlyMap<string,
       expected: measurement.options.count,
       note: task.error_message ?? undefined,
       color: colors?.get(task.node.id),
+      previous: previous?.get(task.node.id) ?? null,
     };
   });
 }
