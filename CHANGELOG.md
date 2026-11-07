@@ -4,11 +4,14 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.4.0 (2026-11-07)
 
-### feat: an interface of its own, with live SVG maps and graphs
-The interface looked like every other shadcn site. It is now a **chart sheet**: warm paper and ink,
-one vermilion signal colour, a live world map and a graph for each kind of measurement, all drawn in SVG
-with no map or chart library. Four steps, newest first:
-
+### feat: an interface of its own, with live SVG maps and graphs; DNS checks, watches, API keys and more
+The interface looked like every other shadcn site. It is now a **chart sheet**: warm paper and ink, one
+vermilion signal colour, a live world map and a graph for each kind of measurement, all drawn in SVG with no map
+or chart library. On top of it (newest first below): the installer sets up the GeoIP databases, the UI checks
+are in the repository, **API keys and `ipping-cli`**, **watches** in the admin, a **GeoIP database as a checked
+second opinion**, **choosing nodes on the map**, **anycast shown on the map**, **export** and **comparison with
+the last run**, **DNS checks** (answers grouped on the map), and the four steps of the new look. Installs backend
+v0.4.0 (database migration `0008`); DNS needs node v0.4.0.
 
 ### 2026-11-07: the installer sets up the GeoIP databases
 - `ipping.sh geoip-update`: downloads and checks the free DB-IP Lite city and ASN databases (optional; results

@@ -20,8 +20,8 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.4.0** (application), installing backend **v0.3.0**. Nodes of any earlier version
-keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute.
+Current release: **v0.4.0** (application), installing backend **v0.4.0**. Nodes of any earlier version
+keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, and **v0.4.0** for DNS.
 
 ## What you can do with it
 
@@ -224,7 +224,8 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
-| v0.4.0, v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute (the measure form says how many online nodes can run the chosen kind) |
+| v0.4.0 | v0.4.0 | migration `0008` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS (the measure form says how many online nodes can run the chosen kind) |
+| v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute |
 
 Each repository is versioned on its own; the application release names the exact backend release it
 was tested with in `release.env` and `release-manifest.json`. Releases carry signed build-provenance
