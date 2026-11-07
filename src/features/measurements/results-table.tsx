@@ -3,6 +3,8 @@
 import { ChevronRightIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
+import { Panel } from "@/components/panel";
+import { Sparkline } from "@/components/viz/sparkline";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -17,6 +19,7 @@ import { flag, ms, pct, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { explainError, shortError } from "./errors";
+import type { Focus } from "./focus";
 import { kindOf, type Kind } from "./kinds";
 import { CertificateBadge, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
 import { TaskStatus } from "./status";
@@ -32,22 +35,24 @@ const SHOW: Record<Show, string> = {
   xl: "hidden xl:table-cell",
 };
 
+type Context = { fastest: boolean; slowest: number; active: boolean };
+
 type Column = {
   head: string;
   align?: "right";
   show?: Show;
-  cell: (task: Task, context: { fastest: boolean; slowest: number }) => ReactNode;
+  cell: (task: Task, context: Context) => ReactNode;
 };
 
-const bar = (task: Task, { fastest, slowest }: { fastest: boolean; slowest: number }) => {
+const bar = (task: Task, { fastest, slowest }: Context) => {
   const median = task.summary?.median_ms;
   return (
     <div className="flex items-center justify-end gap-2">
       {slowest > 0 && median != null && (
         <span
           aria-hidden
-          className={cn("h-1.5 rounded-full", fastest ? "bg-primary" : "bg-muted-foreground/40")}
-          style={{ width: `${Math.max(4, (median / slowest) * 48)}px` }}
+          className={cn("hidden h-2 rounded-[1px] sm:inline-block", fastest ? "bg-signal" : "bg-foreground/25")}
+          style={{ width: `${Math.max(4, (median / slowest) * 56)}px` }}
         />
       )}
       <span className={cn(fastest && "font-semibold")}>{ms(median)}</span>
@@ -60,6 +65,16 @@ const latency = (loss: string): Column[] => [
   { head: "Median", align: "right", cell: bar },
   { head: "Avg", align: "right", show: "lg", cell: (t) => ms(t.summary?.avg_ms) },
   { head: "Max", align: "right", show: "md", cell: (t) => ms(t.summary?.max_ms) },
+  {
+    head: "Replies",
+    show: "lg",
+    cell: (t, { active }) => (
+      <Sparkline
+        values={[...t.samples].sort((a, b) => a.seq - b.seq).map((s) => (s.status === "ok" ? (s.rtt_ms ?? null) : null))}
+        active={active}
+      />
+    ),
+  },
   { head: loss, align: "right", cell: (t) => pct(t.summary?.loss_pct) },
 ];
 
@@ -81,8 +96,8 @@ const COLUMNS: Record<Kind, Column[]> = {
       },
     },
     { head: "Total", align: "right", show: "sm", cell: bar },
-    { head: "Connect", align: "right", show: "md", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
-    { head: "TLS", align: "right", show: "md", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
+    { head: "Connect", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
+    { head: "TLS", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
     { head: "First byte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
     { head: "Certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
   ],
@@ -112,7 +127,7 @@ const COLUMNS: Record<Kind, Column[]> = {
   ],
 };
 
-export function ResultsTable({ measurement }: { measurement: Measurement }) {
+export function ResultsTable({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
   const kind = kindOf(measurement);
   const columns = COLUMNS[kind];
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -128,6 +143,7 @@ export function ResultsTable({ measurement }: { measurement: Measurement }) {
   return (
     // The container lets a row's details be exactly as wide as what is visible, however far the
     // table itself scrolls sideways (see `100cqw` below).
+    <Panel label="Nodes" meta={<span>{measurement.tasks.length} of them</span>} flush>
     <div className="@container">
       <Table>
         <TableHeader>
@@ -151,12 +167,15 @@ export function ResultsTable({ measurement }: { measurement: Measurement }) {
         <TableBody>
           {measurement.tasks.map((task) => {
             const expanded = open.has(task.id);
-            const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest };
+            const active = focus.active === task.node.id;
+            const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest, active };
             return (
               <Fragment key={task.id}>
                 <TableRow
-                  className="cursor-pointer"
+                  className={cn("cursor-pointer", active && "bg-signal-soft hover:bg-signal-soft")}
                   onClick={() => toggle(task.id)}
+                  onPointerEnter={() => focus.setHover(task.node.id)}
+                  onPointerLeave={() => focus.setHover(null)}
                   aria-expanded={expanded}
                 >
                   <TableCell>
@@ -213,6 +232,7 @@ export function ResultsTable({ measurement }: { measurement: Measurement }) {
         </TableBody>
       </Table>
     </div>
+    </Panel>
   );
 }
 
@@ -260,7 +280,7 @@ function Attempts({ task, kind, expected }: { task: Task; kind: Kind; expected: 
               key={seq}
               title={sample?.status === "error" ? explainError(sample.error_code) : undefined}
               className={cn(
-                "rounded-md border px-2 py-1 font-mono text-xs tabular-nums",
+                "rounded-[2px] border px-2 py-1 font-mono text-xs tabular-nums",
                 !sample && "border-dashed text-muted-foreground",
                 sample?.status === "timeout" && "border-destructive/40 text-destructive",
                 sample?.status === "error" && "border-destructive text-destructive",

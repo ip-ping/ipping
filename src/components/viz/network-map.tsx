@@ -30,6 +30,8 @@ export type MapPlace = { lat: number; lon: number; label: string };
 const VIEW = { x: -9, y: 0, w: 378, h: 152 };
 const LAT_TOP = 6;
 const LAT_SPAN = 142;
+/** A ring wider than this covers most of the planet and rules nothing out, so it is not drawn. */
+export const MAX_RING_KM = 8000;
 
 /**
  * The world as a survey sheet, drawn in SVG with no library and nothing fetched: dotted land, a graticule,
@@ -42,7 +44,9 @@ export function NetworkMap({
   target,
   alternatives = [],
   selectedId = null,
+  activeId = null,
   onSelect,
+  onHover,
   scan = false,
   className,
   label,
@@ -51,15 +55,20 @@ export function NetworkMap({
   rings?: boolean;
   target?: MapPlace | null;
   alternatives?: MapPlace[];
+  /** The station that is pinned (a click). */
   selectedId?: string | null;
+  /** A station highlighted from outside, by pointing at its row in a chart or the table. */
+  activeId?: string | null;
   onSelect?: (id: string | null) => void;
+  /** Told which station the pointer is on, so the rest of the page can light the same node. */
+  onHover?: (id: string | null) => void;
   scan?: boolean;
   className?: string;
   label: string;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [hover, setHover] = useState<string | null>(null);
-  const active = hover ?? selectedId;
+  const active = hover ?? activeId ?? selectedId;
   const activeNode = nodes.find((n) => n.id === active) ?? null;
   const ordered = useMemo(
     () => [...nodes].sort((a, b) => Number(a.id === active) - Number(b.id === active)),
@@ -73,7 +82,10 @@ export function NetworkMap({
         role="img"
         aria-label={label}
         className="block h-auto w-full select-none"
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          onHover?.(null);
+        }}
       >
         <defs>
           <pattern id={`dots${uid}`} width="2.3" height="2.3" patternUnits="userSpaceOnUse">
@@ -113,7 +125,9 @@ export function NetworkMap({
         {/* how far each round trip could reach */}
         {rings &&
           ordered.map((n) =>
-            n.ms ? <Ring key={n.id} node={n} emphasised={n.id === active} dimmed={active !== null && n.id !== active} /> : null,
+            n.ms && n.ms * KM_PER_RTT_MS <= MAX_RING_KM ? (
+              <Ring key={n.id} node={n} emphasised={n.id === active} dimmed={active !== null && n.id !== active} />
+            ) : null,
           )}
 
         {alternatives.map((a) => (
@@ -132,7 +146,10 @@ export function NetworkMap({
             index={i}
             active={n.id === active}
             selected={n.id === selectedId}
-            onHover={setHover}
+            onHover={(id) => {
+              setHover(id);
+              onHover?.(id);
+            }}
             onSelect={onSelect}
           />
         ))}
@@ -254,6 +271,7 @@ function Station({
       aria-pressed={selected}
       className="cursor-pointer outline-none [&:focus-visible_.focus]:opacity-100"
       onPointerEnter={() => onHover(node.id)}
+      onPointerLeave={() => onHover(null)}
       onFocus={() => onHover(node.id)}
       onBlur={() => onHover(null)}
       onClick={() => onSelect?.(selected ? null : node.id)}

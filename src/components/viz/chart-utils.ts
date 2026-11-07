@@ -30,10 +30,4 @@ export function niceScale(max: number, target = 5): { max: number; ticks: number
   return { max: top, ticks };
 }
 
-export const fmtMs = (ms: number | null | undefined) =>
-  ms == null ? "–" : ms >= 100 ? String(Math.round(ms)) : ms >= 10 ? ms.toFixed(1) : ms.toFixed(2);
-
 export const truncate = (text: string, chars: number) => (text.length > chars ? `${text.slice(0, Math.max(1, chars - 1))}…` : text);
-
-/** Text for the tooltip of a chart: values lead, the label follows. */
-export const SERIES_TEXT = "fill-foreground";

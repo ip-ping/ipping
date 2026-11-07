@@ -44,10 +44,10 @@ export function CertificateBadge({ tls }: { tls: Tls | null | undefined }) {
 }
 
 const PHASES = [
-  { key: "dns_us", label: "DNS", color: "bg-chart-1" },
-  { key: "connect_us", label: "Connect", color: "bg-chart-2" },
-  { key: "tls_us", label: "TLS", color: "bg-chart-3" },
-  { key: "ttfb_us", label: "First byte", color: "bg-chart-4" },
+  { key: "dns_us", label: "DNS", color: "bg-viz-1" },
+  { key: "connect_us", label: "Connect", color: "bg-viz-2" },
+  { key: "tls_us", label: "TLS", color: "bg-viz-3" },
+  { key: "ttfb_us", label: "First byte", color: "bg-viz-4" },
 ] as const;
 
 function Timings({ http }: { http: Http }) {
@@ -56,7 +56,7 @@ function Timings({ http }: { http: Http }) {
   if (sum <= 0) return null;
   return (
     <div className="space-y-1.5">
-      <div className="flex h-2 overflow-hidden rounded-full bg-muted" role="img" aria-label="Time spent in each phase">
+      <div className="flex h-2.5 gap-0.5 overflow-hidden bg-muted" role="img" aria-label="Time spent in each phase">
         {parts.map((p) => (
           <div key={p.key} className={p.color} style={{ width: `${(p.value / sum) * 100}%` }} />
         ))}
@@ -66,7 +66,7 @@ function Timings({ http }: { http: Http }) {
           .filter((p) => p.value > 0 || p.key === "dns_us")
           .map((p) => (
             <span key={p.key} className="inline-flex items-center gap-1.5">
-              <span className={cn("size-2 rounded-full", p.color)} />
+              <span className={cn("size-2", p.color)} />
               {p.label} <span className="tabular-nums text-foreground">{ms(us(p.value))} ms</span>
             </span>
           ))}
@@ -145,7 +145,7 @@ export function HttpDetailView({ task }: { task: Task }) {
 
 function TlsView({ tls }: { tls: Tls }) {
   return (
-    <div className="space-y-1.5 rounded-md border bg-background/60 p-3">
+    <div className="space-y-1.5 border bg-background/60 p-3">
       <div className="flex flex-wrap items-center gap-2 font-medium">
         {tls.verified ? <CheckCircle2Icon className="size-4 text-primary" /> : <LockOpenIcon className="size-4 text-destructive" />}
         Certificate <CertificateBadge tls={tls} />

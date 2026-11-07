@@ -4,11 +4,10 @@ import { InfoIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Panel } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { WorldMap } from "@/features/location/world-map";
-import { useLocation, type LocationEstimate } from "@/features/location/use-location";
+import type { LocationEstimate } from "@/features/location/use-location";
 import { ms } from "@/lib/format";
 
 const STRENGTH_HELP =
@@ -28,7 +27,7 @@ function StrengthBadge({ strength }: { strength: NonNullable<LocationEstimate["s
 
 function Details({ summary, children }: { summary: string; children: React.ReactNode }) {
   return (
-    <details className="group min-w-0 rounded-md border px-3 py-2 text-sm">
+    <details className="group min-w-0 border px-3 py-2 text-sm">
       <summary className="cursor-pointer select-none text-muted-foreground group-open:mb-2 group-open:text-foreground">
         {summary}
       </summary>
@@ -112,7 +111,6 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
             ))}
           </AlertDescription>
         </Alert>
-        {estimate.evidence.length > 0 && <WorldMap estimate={estimate} />}
         <Evidence estimate={estimate} />
         <Limitations estimate={estimate} />
       </div>
@@ -123,7 +121,7 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="text-2xl font-semibold tracking-tight">
+        <div className="figure text-3xl font-semibold tracking-[-0.02em]">
           {likely?.name}, {likely?.country}
         </div>
         {estimate.strength && <StrengthBadge strength={estimate.strength} />}
@@ -163,33 +161,35 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
           </AlertDescription>
         </Alert>
       )}
-      <WorldMap estimate={estimate} />
       <Evidence estimate={estimate} />
       <Limitations estimate={estimate} />
     </div>
   );
 }
 
-export function LocationPanel({ measurementId, finished }: { measurementId: string; finished: boolean }) {
-  const { estimate, error } = useLocation(measurementId, finished);
+/**
+ * The words of the location estimate: the place, how strong the evidence is, what else fits, and the
+ * measurements behind it. The map above already shows where it is, with a ring per node.
+ */
+export function LocationPanel({
+  estimate,
+  error,
+  finished,
+}: {
+  estimate: LocationEstimate | null;
+  error: string | null;
+  finished: boolean;
+}) {
   if (!finished) return null;
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <CardTitle>Estimated network location</CardTitle>
-          <Badge variant="outline">Experimental</Badge>
-        </div>
-        <CardDescription>
-          Where this address’s network appears to be, worked out from the round-trip times above and the nodes’
-          positions. It is not a person or a business.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        {!estimate && !error && <Skeleton className="h-40 w-full" />}
-        {estimate && <Body estimate={estimate} />}
-      </CardContent>
-    </Card>
+    <Panel label="Estimated network location" meta={<Badge variant="outline">Experimental</Badge>}>
+      <p className="mb-4 max-w-prose text-sm text-muted-foreground">
+        Where this address’s network appears to be, worked out from the round-trip times above and the nodes’
+        positions. It is not a person or a business.
+      </p>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {!estimate && !error && <Skeleton className="h-40 w-full" />}
+      {estimate && <Body estimate={estimate} />}
+    </Panel>
   );
 }

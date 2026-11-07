@@ -13,8 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { LocationPanel } from "@/features/location/location-panel";
+import { useLocation } from "@/features/location/use-location";
 import { KIND_INFO, kindOf } from "@/features/measurements/kinds";
-import { Overview } from "@/features/measurements/overview";
+import { Charts } from "@/features/measurements/charts";
+import { useFocus } from "@/features/measurements/focus";
+import { Instrument } from "@/features/measurements/instrument";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";
 import { useMeasurement } from "@/features/measurements/use-measurement";
@@ -24,6 +27,11 @@ export default function MeasurementPage() {
   const { id } = useParams<{ id: string }>();
   const state = useMeasurement(id);
   const [shared, setShared] = useState<boolean | null>(null);
+  const focus = useFocus();
+  // The estimated place is worked out once the measurement is over, and only ping and TCP time a round trip.
+  const current = state.phase === "ready" ? state.measurement : null;
+  const wantsLocation = current !== null && current.status !== "running" && ["ping", "tcp"].includes(kindOf(current));
+  const { estimate, error: locationError } = useLocation(id, wantsLocation);
 
   if (state.phase === "loading") {
     return (
@@ -77,7 +85,7 @@ export default function MeasurementPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -86,8 +94,9 @@ export default function MeasurementPage() {
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="font-mono text-2xl font-semibold tracking-tight break-all">{target.host}</h1>
+        <div className="min-w-0 space-y-2">
+          <p className="label">{KIND_INFO[kind].label} measurement</p>
+          <h1 className="figure text-3xl font-semibold tracking-[-0.03em] [overflow-wrap:anywhere] sm:text-5xl">{target.host}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MeasurementStatus status={measurement.status} />
             {running && !live && <Badge variant="outline">Reconnecting…</Badge>}
@@ -147,9 +156,12 @@ export default function MeasurementPage() {
         </Alert>
       )}
 
-      <Overview measurement={measurement} />
-      <ResultsTable measurement={measurement} />
-      {(kind === "ping" || kind === "tcp") && <LocationPanel measurementId={id} finished={!running} />}
+      <Instrument measurement={measurement} estimate={estimate} focus={focus} />
+      <Charts measurement={measurement} focus={focus} />
+      <ResultsTable measurement={measurement} focus={focus} />
+      {(kind === "ping" || kind === "tcp") && (
+        <LocationPanel estimate={estimate} error={locationError} finished={!running} />
+      )}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">
         <Switch id="share" checked={isShared} onCheckedChange={share} />

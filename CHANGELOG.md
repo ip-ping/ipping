@@ -4,6 +4,32 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-07: a look of its own (3 of 4): live graphs on the measurement page
+- The measurement page is now an instrument. At the top, **the reading**: the live map (a station per node
+  that sends a pulse out for every reply, a **latency ring** per node that glides as its best round trip
+  improves, and the estimated place as a crosshair once the run is over) beside four big readout numerals
+  that count up to their values, and a progress rail.
+- Then **a graph that fits what was measured**, hand-drawn in SVG with no chart library, sharing one time
+  axis, a key, hover tooltips and keyboard focus:
+  - ping and TCP: a **range strip**, one row per node, a dot per reply, a bar from fastest to slowest, a
+    tick at the median and a cross for every lost probe; rows slide into place, fastest first;
+  - HTTP: a **phase waterfall**: DNS, connect, TLS and first byte laid end to end per node, so the slow
+    phase stands out;
+  - traceroute: a **route ladder**: one rung per router, placed by how long it took to answer, joined by a
+    line that steps up where the route gets slow, dashed across silent routers, a ringed destination, with
+    a chip row to choose the node.
+- **One shared selection.** Point at a station, a chart row or a table row and the same node lights up in
+  all three (and in the table's new sparkline column). Clicking a station pins it; for traceroute that
+  chooses the route shown.
+- Rings only appear where they mean something: ping, TCP and a traceroute that reached the target (an HTTP
+  time includes handshakes and server work, so it says nothing about distance), and not when wider than
+  8,000 km, which rules almost nothing out.
+- The location panel lost its small map (the big one shows the estimate now) and keeps the words, the
+  evidence and the limitations. Colours are the validated chart series colours; every graph has a table
+  beside it with the same numbers, and the motion stops for people who ask for less.
+- Checked with real measurements of every kind at 390, 640, 768, 1024 and 1280 px, light and dark: no
+  page or table overflow, no console errors, keyboard focus works.
+
 ### 2026-11-07: a look of its own (2 of 4): the live map and the home page
 - A **live world map**, drawn by hand as SVG (no map library): a dot-matrix land mass over a graticule,
   one station per node that pulses while the node is connected, a thin scan line sweeping the sheet,

@@ -210,6 +210,10 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(360px); }
 }
+@keyframes dot-in {
+  0% { transform: scale(0.2); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.25; }
@@ -227,11 +231,16 @@
 .scan-line {
   animation: scan 14s linear infinite;
 }
+.dot-in {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
 .live-dot {
   animation: blink 1.8s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ring-out, .sample-ring, .scan-line, .live-dot {
+  .ring-out, .sample-ring, .scan-line, .live-dot, .dot-in {
     animation: none;
   }
   .ring-out { opacity: 0.25; transform: scale(1.6); }
