@@ -21,7 +21,7 @@ export function stateOf(task: Task): RowState {
 const where = (task: Task) => `${flag(task.node.country)} ${place(task.node)}`.trim();
 
 /** One row per node for the ping and TCP chart: every reply as a point, and the probes that never came back. */
-export function stripRows(measurement: Measurement): StripRow[] {
+export function stripRows(measurement: Measurement, colors?: ReadonlyMap<string, string>): StripRow[] {
   return measurement.tasks.map((task) => {
     const points = task.samples
       .filter((s) => s.rtt_ms != null)
@@ -36,6 +36,7 @@ export function stripRows(measurement: Measurement): StripRow[] {
       sent: task.samples.length,
       expected: measurement.options.count,
       note: task.error_message ?? undefined,
+      color: colors?.get(task.node.id),
     };
   });
 }
@@ -94,16 +95,20 @@ export function hopsOf(task: Task | undefined): Hop[] {
  * for ping, TCP and a traceroute that reached the target; an HTTP time includes handshakes and server work,
  * so it is not.
  */
-export function mapNodes(measurement: Measurement): MapNode[] {
+export function mapNodes(measurement: Measurement, colors?: ReadonlyMap<string, string>): MapNode[] {
   const kind = kindOf(measurement);
   return measurement.tasks.flatMap((task): MapNode[] => {
     const { latitude, longitude } = task.node;
     if (latitude == null || longitude == null) return [];
     const state = stateOf(task);
-    const best = kind !== "http" && task.summary?.reached !== false ? (task.summary?.min_ms ?? null) : null;
+    const best =
+      kind !== "http" && kind !== "dns" && task.summary?.reached !== false ? (task.summary?.min_ms ?? null) : null;
     const summary = task.summary;
     let note: string | undefined;
-    if (kind === "http") {
+    if (kind === "dns") {
+      const dns = task.samples[0]?.dns;
+      note = dns ? `${dns.rcode}${dns.answers?.[0] ? ` · ${dns.answers[0].data}` : ""}` : undefined;
+    } else if (kind === "http") {
       const sample = task.samples[0];
       note = sample?.http?.status_code != null ? `HTTP ${sample.http.status_code}, ${ms(sample.http.total_us != null ? sample.http.total_us / 1000 : null)} ms` : undefined;
     } else if (kind === "traceroute") {
@@ -122,6 +127,7 @@ export function mapNodes(measurement: Measurement): MapNode[] {
         ms: best,
         pulses: task.samples.length,
         note,
+        color: colors?.get(task.node.id),
       },
     ];
   });

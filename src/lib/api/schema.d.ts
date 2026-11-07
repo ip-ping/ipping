@@ -609,11 +609,11 @@ export interface components {
             follow_redirects: boolean;
             /**
              * Kind
-             * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way.
+             * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way. dns: ask each node's resolver (or a public one) about a name and compare the answers.
              * @default ping
              * @enum {string}
              */
-            kind: "ping" | "tcp" | "http" | "traceroute";
+            kind: "ping" | "tcp" | "http" | "traceroute" | "dns";
             /**
              * Node Ids
              * @description Limit to these nodes; omit for all eligible
@@ -624,6 +624,16 @@ export interface components {
              * @description Destination port of a tcp check. For tcp it can also be given as host:port or in a URL. An http check takes its port from the URL.
              */
             port?: number | null;
+            /**
+             * Record Type
+             * @description dns only: the record type to ask for (default A)
+             */
+            record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
+            /**
+             * Resolver
+             * @description dns only: system asks each node's own resolvers (what people near the node get); the others ask that public resolver from every node (default system)
+             */
+            resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
             /**
              * Target
              * @description IP address, hostname or URL
@@ -639,6 +649,65 @@ export interface components {
              * @default 60
              */
             ttl_minutes: number;
+        };
+        /**
+         * DnsAnswerRecord
+         * @description One record of a DNS answer, as text.
+         */
+        DnsAnswerRecord: {
+            /** Data */
+            data: string;
+            /** Name */
+            name: string;
+            /** Ttl */
+            ttl: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA";
+        };
+        /**
+         * DnsDetail
+         * @description What one DNS question found.
+         *
+         *     `resolver` is `system` (the node's own resolvers; their addresses are never reported) or the
+         *     public resolver that was asked. A response code other than NOERROR (`NXDOMAIN` is the usual
+         *     one) is still an answer. `redacted` counts answers from the node's own resolver that were
+         *     private addresses: they are left out, so a result never discloses someone's internal DNS.
+         */
+        DnsDetail: {
+            /** Answers */
+            answers?: components["schemas"]["DnsAnswerRecord"][];
+            /**
+             * Authoritative
+             * @default false
+             */
+            authoritative: boolean;
+            /** Rcode */
+            rcode: string;
+            /**
+             * Record Type
+             * @enum {string}
+             */
+            record_type: "A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA";
+            /**
+             * Redacted
+             * @default 0
+             */
+            redacted: number;
+            /** Resolver */
+            resolver: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Via Tcp
+             * @default false
+             */
+            via_tcp: boolean;
         };
         /** EnrollRequest */
         EnrollRequest: {
@@ -838,6 +907,10 @@ export interface components {
             path?: string | null;
             /** Port */
             port?: number | null;
+            /** Record Type */
+            record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
+            /** Resolver */
+            resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
             /** Scheme */
             scheme?: ("http" | "https") | null;
             /** Timeout Ms */
@@ -1124,6 +1197,8 @@ export interface components {
         };
         /** SampleOut */
         SampleOut: {
+            /** @description dns: what the question found */
+            dns?: components["schemas"]["DnsDetail"] | null;
             /** Error Code */
             error_code?: string | null;
             /** @description traceroute: the router at this hop */

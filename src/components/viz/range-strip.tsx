@@ -24,6 +24,8 @@ export type StripRow = {
   sent: number;
   expected: number;
   note?: string;
+  /** What the node's dot wears, when the chart is coloured by something else (a DNS answer). */
+  color?: string;
 };
 
 const ROW = 30;
@@ -48,7 +50,10 @@ export function RangeStrip({
   onActive,
   label,
   className,
+  single = false,
 }: {
+  /** One reply per node (a DNS answer): no range, no median, just where each reply landed. */
+  single?: boolean;
   rows: StripRow[];
   activeId: string | null;
   onActive: (id: string | null) => void;
@@ -89,9 +94,13 @@ export function RangeStrip({
   return (
     <div className={cn("w-full", className)}>
       <Legend>
-        <Key glyph={<circle cx="11" cy="6" r="4" fill="var(--viz-1)" stroke="var(--card)" strokeWidth="2" />}>one reply</Key>
-        <Key glyph={<rect x="1" y="3" width="20" height="6" rx="3" fill="var(--viz-1)" opacity="0.3" />}>fastest to slowest</Key>
-        <Key glyph={<rect x="10" y="-1" width="2" height="14" fill="var(--foreground)" />}>median</Key>
+        <Key glyph={<circle cx="11" cy="6" r="4" fill="var(--viz-1)" stroke="var(--card)" strokeWidth="2" />}>{single ? "an answer, coloured like the map" : "one reply"}</Key>
+        {!single && (
+          <>
+            <Key glyph={<rect x="1" y="3" width="20" height="6" rx="3" fill="var(--viz-1)" opacity="0.3" />}>fastest to slowest</Key>
+            <Key glyph={<rect x="10" y="-1" width="2" height="14" fill="var(--foreground)" />}>median</Key>
+          </>
+        )}
         <Key glyph={<path d="M7 2L15 10M15 2L7 10" stroke="var(--critical)" strokeWidth="2" strokeLinecap="round" />}>lost</Key>
       </Legend>
       <div ref={ref} className="relative w-full" role="group" aria-label={label}>
@@ -102,7 +111,7 @@ export function RangeStrip({
               const y = TOP + i * ROW;
               const cy = ROW / 2;
               const isActive = row.id === activeId;
-              const accent = isActive ? "var(--signal)" : "var(--viz-1)";
+              const accent = isActive ? "var(--signal)" : (row.color && row.color !== "none" ? row.color : "var(--viz-1)");
               const summary =
                 med == null
                   ? `${row.name}: ${row.state === "failed" ? "no answer" : "waiting"}`
@@ -130,25 +139,25 @@ export function RangeStrip({
                     <>
                       <line x1={x0} x2={x1} y1={cy} y2={cy} stroke="var(--foreground)" strokeOpacity="0.25" strokeDasharray="2 4" />
                       <text x={x0 + 8} y={cy + 4} fontSize="11" fontFamily="var(--font-data), monospace" fill="var(--muted-foreground)">
-                        {row.state === "failed" ? "no answer" : "waiting for the node…"}
+                        {row.state === "failed" || row.state === "done" || row.lost > 0 ? "no answer" : "waiting for the node…"}
                       </text>
                       {row.state === "running" && <circle cx={x0 - 0} cy={cy} r="3" fill="var(--signal)" className="live-dot" />}
                     </>
                   ) : (
                     <>
                       <line x1={x0} x2={x1} y1={cy} y2={cy} stroke="var(--graticule)" />
-                      {min != null && hi != null && (
+                      {!single && min != null && hi != null && (
                         <rect x={x(min) - 3} y={cy - 3} width={Math.max(6, x(hi) - x(min) + 6)} height="6" rx="3" fill={accent} opacity="0.3" />
                       )}
                       {row.points.map((p) =>
                         p.ok ? (
-                          <circle key={p.seq} cx={x(p.ms)} cy={cy} r="4" fill={accent} stroke="var(--card)" strokeWidth="2" className="dot-in" />
+                          <circle key={p.seq} cx={x(p.ms)} cy={cy} r={single ? 5 : 4} fill={accent} stroke="var(--card)" strokeWidth="2" className="dot-in" />
                         ) : (
                           // an answer that was a refusal: it has a time, but it is not a success
                           <circle key={p.seq} cx={x(p.ms)} cy={cy} r="3.5" fill="var(--card)" stroke={accent} strokeWidth="2" className="dot-in" />
                         ),
                       )}
-                      {med != null && <rect x={x(med) - 1} y={cy - 8} width="2" height="16" fill="var(--foreground)" />}
+                      {!single && med != null && <rect x={x(med) - 1} y={cy - 8} width="2" height="16" fill="var(--foreground)" />}
                       {Array.from({ length: Math.min(row.lost, 3) }, (_, k) => (
                         <path
                           key={k}

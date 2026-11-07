@@ -10,6 +10,21 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: DNS checks
+- A fifth kind in the interface, **DNS**: a name, a record type (`A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT`,
+  `SOA`) and a resolver: each node's own (what people near it get) or Cloudflare, Google or Quad9.
+- **Do the answers agree?** The map colours every station by the answer its node got (the first four
+  distinct answers get the series colours in the order they appear and keep them; later ones share
+  grey; a node with no answer is hollow), and a panel lists each distinct answer with the nodes that
+  got it. TTLs are shown as a range and never split an answer, because caching makes them differ. A
+  record that was changed recently shows up as two answers, which is the point.
+- Per node: the response code (`NXDOMAIN` is an answer, not a failure), time to answer, TTL, and in the
+  row's details every record with its name, type, TTL and value, plus whether it was authoritative or
+  came over TCP. Answers from a node's own resolver that were private addresses are never shown; the
+  details say how many were left out.
+- Contracts pinned to backend 312e3c4 (DNS kind, migration `0006`). The measure form, "Run again" link
+  and the admin kind toggles know about DNS.
+
 ### 2026-11-07: a look of its own (4 of 4): the nodes page, the lists and the admin
 - **Nodes** is map-first: the fleet's map with a roster beside it (name, place, provider, address
   families, what each node can run). Point at a station or a name and the other lights up; click to pin.

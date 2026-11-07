@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 import { explainError, shortError } from "./errors";
 import type { Focus } from "@/lib/use-focus";
 import { kindOf, type Kind } from "./kinds";
-import { CertificateBadge, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
+import { describeAnswer } from "./dns-groups";
+import { CertificateBadge, DnsDetailView, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
 import { TaskStatus } from "./status";
 
 /** Below this width the column is hidden; the row's details carry what the table drops. */
@@ -101,6 +102,41 @@ const COLUMNS: Record<Kind, Column[]> = {
     { head: "First byte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
     { head: "Certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
   ],
+  dns: [
+    {
+      head: "Answer",
+      cell: (t) => {
+        const answer = describeAnswer(t);
+        if (!answer) return <span className="text-muted-foreground">asking…</span>;
+        const shown = answer.lines.slice(0, 2).join(", ");
+        const more = answer.lines.length - 2;
+        return (
+          <span className={cn("font-mono text-xs [overflow-wrap:anywhere]", answer.rcode === null && "text-muted-foreground")}>
+            {shown}
+            {more > 0 && <span className="text-muted-foreground"> +{more}</span>}
+          </span>
+        );
+      },
+    },
+    {
+      head: "Code",
+      show: "sm",
+      cell: (t) => {
+        const rcode = t.samples[0]?.dns?.rcode;
+        return rcode ? <Badge variant={rcode === "NOERROR" ? "default" : "secondary"}>{rcode}</Badge> : <span className="text-muted-foreground">–</span>;
+      },
+    },
+    { head: "Time", align: "right", cell: bar },
+    {
+      head: "TTL",
+      align: "right",
+      show: "md",
+      cell: (t) => {
+        const ttls = (t.samples[0]?.dns?.answers ?? []).map((a) => a.ttl);
+        return ttls.length ? Math.min(...ttls) : "–";
+      },
+    },
+  ],
   traceroute: [
     {
       head: "Destination",
@@ -138,7 +174,7 @@ export function ResultsTable({ measurement, focus }: { measurement: Measurement;
       if (!next.delete(id)) next.add(id);
       return next;
     });
-  const width = 6 + columns.length;
+  const width = (kind === "dns" ? 5 : 6) + columns.length;
 
   return (
     // The container lets a row's details be exactly as wide as what is visible, however far the
@@ -152,7 +188,7 @@ export function ResultsTable({ measurement, focus }: { measurement: Measurement;
             <TableHead>Node</TableHead>
             <TableHead className={SHOW.md}>Region</TableHead>
             <TableHead className={SHOW.xl}>Provider / ASN</TableHead>
-            <TableHead className={SHOW.lg}>Tested IP</TableHead>
+            {kind !== "dns" && <TableHead className={SHOW.lg}>Tested IP</TableHead>}
             {columns.map((c) => (
               <TableHead
                 key={c.head}
@@ -196,7 +232,9 @@ export function ResultsTable({ measurement, focus }: { measurement: Measurement;
                     {task.node.provider ?? "–"}
                     {task.node.asn ? ` · AS${task.node.asn}` : ""}
                   </TableCell>
-                  <TableCell className={cn("font-mono text-xs", SHOW.lg)}>{task.tested_ip ?? "–"}</TableCell>
+                  {kind !== "dns" && (
+                    <TableCell className={cn("font-mono text-xs", SHOW.lg)}>{task.tested_ip ?? "–"}</TableCell>
+                  )}
                   {columns.map((c) => (
                     <TableCell
                       key={c.head}
@@ -241,6 +279,8 @@ function TaskDetail({ task, kind, expected }: { task: Task; kind: Kind; expected
     <>
       {kind === "http" ? (
         <HttpDetailView task={task} />
+      ) : kind === "dns" ? (
+        <DnsDetailView task={task} />
       ) : kind === "traceroute" ? (
         <RouteDetailView task={task} />
       ) : (

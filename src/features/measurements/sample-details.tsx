@@ -214,3 +214,72 @@ export function RouteDetailView({ task }: { task: Task }) {
     </div>
   );
 }
+
+function Flag({ children }: { children: React.ReactNode }) {
+  return <Badge variant="outline">{children}</Badge>;
+}
+
+/** One node's DNS answer in full: the response code, the flags and every record. */
+export function DnsDetailView({ task }: { task: Task }) {
+  const sample = task.samples[0];
+  const dns = sample?.dns;
+  if (!sample) return <p className="text-muted-foreground">Waiting for the node…</p>;
+  if (sample.status === "timeout")
+    return <p className="py-1 text-sm text-muted-foreground">The resolver did not answer in time.</p>;
+  if (!dns)
+    return (
+      <p className="py-1 text-sm text-muted-foreground">
+        {task.error_message ?? "This node did not report an answer."}
+      </p>
+    );
+  const answers = dns.answers ?? [];
+  return (
+    <div className="space-y-3 py-1 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={dns.rcode === "NOERROR" ? "default" : "secondary"}>{dns.rcode}</Badge>
+        <span className="text-muted-foreground">
+          {dns.record_type} from {dns.resolver === "system" ? "this node's own resolver" : dns.resolver}
+        </span>
+        {dns.authoritative && <Flag>authoritative</Flag>}
+        {dns.via_tcp && <Flag>over TCP</Flag>}
+        {dns.truncated && <Flag>incomplete</Flag>}
+      </div>
+      {answers.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full max-w-3xl text-left">
+            <thead className="text-xs text-muted-foreground">
+              <tr>
+                <th className="py-1 pr-3 font-normal">Name</th>
+                <th className="py-1 pr-3 font-normal">Type</th>
+                <th className="py-1 pr-3 text-right font-normal">TTL</th>
+                <th className="py-1 font-normal">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {answers.map((a, i) => (
+                <tr key={`${i}-${a.type}-${a.data}`} className="align-top">
+                  <td className="py-0.5 pr-3 font-mono text-xs [overflow-wrap:anywhere]">{a.name}</td>
+                  <td className="py-0.5 pr-3 font-mono text-xs">{a.type}</td>
+                  <td className="py-0.5 pr-3 text-right tabular-nums">{a.ttl}</td>
+                  <td className="py-0.5 font-mono text-xs [overflow-wrap:anywhere]">{a.data}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-muted-foreground">
+          {dns.rcode === "NOERROR"
+            ? `The name exists but has no ${dns.record_type} records.`
+            : "The resolver returned no records."}
+        </p>
+      )}
+      {(dns.redacted ?? 0) > 0 && (
+        <p className="text-muted-foreground">
+          {dns.redacted} answer{dns.redacted === 1 ? " was a private address" : "s were private addresses"} from this
+          node&apos;s own resolver and {dns.redacted === 1 ? "is" : "are"} not shown.
+        </p>
+      )}
+    </div>
+  );
+}

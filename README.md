@@ -30,6 +30,7 @@ keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and trac
 | **Ping** | ICMP echo requests (1 to 10) | a range strip (a dot per reply, fastest to slowest, the median, lost probes), min / median / avg / max and loss per node |
 | **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
 | **HTTP** | one `GET` (headers only, body never read) | status, a **phase waterfall** of DNS / connect / TLS / first-byte time per node, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
+| **DNS** | one question to one resolver: a node's own, or Cloudflare, Google or Quad9 | whether the nodes **agree**: stations on the map coloured by the answer they got, every distinct answer with the nodes that got it, response code, TTL and every record. A name that does not exist can be checked. Answers that are private addresses from a node's own resolver are never shown |
 | **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address |
 
 * **Same IP for every node**, or let each node resolve the name itself (to see CDN / DNS differences).
@@ -242,7 +243,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
 - [x] Per-node latency circles on the live map, and live SVG graphs per kind (range strip, phase waterfall, route ladder)
 - [x] An interface of its own: chart-sheet design, live fleet map, nodes page with a roster, restyled admin
-- [ ] Compare DNS answers across nodes
+- [x] Compare DNS answers across nodes (A, AAAA, CNAME, MX, NS, TXT, SOA; the node's own resolver or a public one)
 - [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)
 
 ## Credits

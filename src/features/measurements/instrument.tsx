@@ -11,6 +11,7 @@ import type { Measurement } from "@/lib/api/client";
 import { pct } from "@/lib/format";
 
 import type { Focus } from "@/lib/use-focus";
+import { groupAnswers } from "./dns-groups";
 import { KIND_INFO, kindOf } from "./kinds";
 import { mapNodes } from "./series";
 import { TERMINAL_TASK } from "./summary";
@@ -20,6 +21,10 @@ const CAPTION = {
   rings: {
     lead: "Each ring is how far that node's fastest round trip could have reached: about 100 km per millisecond, and never more than 150, which light itself cannot beat.",
     more: " Hover a station to see that limit. The target is inside all of the rings. Rings wider than 8,000 km rule almost nothing out and are left off.",
+  },
+  dns: {
+    lead: "Each station is coloured by the answer its node got, and the key is below the map. A hollow grey station got no answer.",
+    more: " There are no rings: how long an answer took depends on the resolver's cache, so it says little about distance.",
   },
   http: {
     lead: "An HTTP time includes the name lookup, the handshakes and the server's own work, so it says nothing about distance: there are no rings for it.",
@@ -39,8 +44,17 @@ function readouts(measurement: Measurement): ReadoutItem[] {
   const reached = tasks.filter((t) => t.summary?.reached).length;
   const finished = tasks.filter((t) => t.summary?.reached != null).length;
 
+  const distinct = kind === "dns" ? groupAnswers(tasks, new Map()).filter((g) => g.answered).length : 0;
   const fourth: ReadoutItem =
-    kind === "traceroute"
+    kind === "dns"
+      ? {
+          label: "Distinct answers",
+          value: distinct,
+          format: (n) => String(Math.round(n)),
+          alert: distinct > 1,
+          hint: distinct > 1 ? "the nodes disagree" : distinct === 1 ? "all agree" : "none yet",
+        }
+      : kind === "traceroute"
       ? { label: "Destination reached", text: finished ? `${reached} / ${finished}` : "–", hint: "Silent hops are normal." }
       : kind === "http"
         ? { label: "Answered", text: sent ? `${received} / ${sent}` : "–", hint: "Any status counts." }
@@ -80,16 +94,26 @@ export function Instrument({
   measurement,
   estimate,
   focus,
+  slots,
 }: {
   measurement: Measurement;
   estimate: LocationEstimate | null;
   focus: Focus;
+  /** The colour of each distinct DNS answer (see `useAnswerSlots`). */
+  slots: ReadonlyMap<string, number>;
 }) {
   const kind = kindOf(measurement);
   const running = measurement.status === "running";
   const { tasks } = measurement;
   const done = tasks.filter((t) => TERMINAL_TASK.has(t.status)).length;
-  const nodes = useMemo(() => mapNodes(measurement), [measurement]);
+  const colors = useMemo(
+    () =>
+      kind === "dns"
+        ? new Map(groupAnswers(tasks, slots).flatMap((g) => g.nodeIds.map((id) => [id, g.color] as const)))
+        : undefined,
+    [kind, tasks, slots],
+  );
+  const nodes = useMemo(() => mapNodes(measurement, colors), [measurement, colors]);
   const target: MapPlace | null = estimate?.likely
     ? { lat: estimate.likely.latitude, lon: estimate.likely.longitude, label: estimate.likely.name }
     : null;
@@ -99,7 +123,8 @@ export function Instrument({
     label: a.place.name,
   }));
   const items = useMemo(() => readouts(measurement), [measurement]);
-  const rings = kind !== "http";
+  const rings = kind !== "http" && kind !== "dns";
+  const caption = kind === "dns" ? CAPTION.dns : rings ? CAPTION.rings : CAPTION.http;
 
   return (
     <Panel
@@ -127,9 +152,9 @@ export function Instrument({
             label={`Map of ${nodes.length} nodes measuring ${measurement.target.host}${target ? `, with the estimated location near ${target.label}` : ""}`}
           />
           <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">
-            {(rings ? CAPTION.rings : CAPTION.http).lead}
+            {caption.lead}
             <span className="hidden sm:inline">
-              {(rings ? CAPTION.rings : CAPTION.http).more}
+              {caption.more}
               {target && " The crosshair is the estimated location of the target."}
             </span>
           </p>

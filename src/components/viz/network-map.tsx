@@ -22,6 +22,8 @@ export type MapNode = {
   pulses?: number;
   /** One more line for the tooltip. */
   note?: string;
+  /** The station's fill, for a map that colours nodes by what they found (DNS answers). */
+  color?: string;
 };
 
 export type MapPlace = { lat: number; lon: number; label: string };
@@ -261,7 +263,9 @@ function Station({
   const live = node.online !== false;
   const running = node.state === "running";
   const failed = node.state === "failed";
-  const fill = !live ? "none" : failed ? "var(--critical)" : running ? "var(--signal)" : "var(--foreground)";
+  const painted = node.color !== undefined;
+  const hollow = !live || node.color === "none";
+  const fill = hollow ? "none" : failed ? "var(--critical)" : running ? "var(--signal)" : (node.color ?? "var(--foreground)");
   return (
     <g
       transform={`translate(${px(node.lon)} ${py(node.lat)})`}
@@ -311,11 +315,11 @@ function Station({
         <circle r="3" fill="none" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       )}
       <circle
-        r={active ? 1.5 : 1.2}
+        r={(painted ? 2.1 : 1.2) + (active ? 0.3 : 0)}
         fill={fill}
-        stroke={live ? "var(--card)" : "var(--foreground)"}
-        strokeOpacity={live ? 1 : 0.5}
-        strokeWidth={live ? 0.5 : 0.45}
+        stroke={hollow ? "var(--foreground)" : "var(--card)"}
+        strokeOpacity={hollow ? 0.5 : 1}
+        strokeWidth={hollow ? 0.45 : painted ? 0.6 : 0.5}
       />
     </g>
   );

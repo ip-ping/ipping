@@ -14,20 +14,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { LocationPanel } from "@/features/location/location-panel";
 import { useLocation } from "@/features/location/use-location";
-import { KIND_INFO, kindOf } from "@/features/measurements/kinds";
+import { DNS_RESOLVERS, KIND_INFO, kindOf } from "@/features/measurements/kinds";
 import { Charts } from "@/features/measurements/charts";
+import { useAnswerSlots } from "@/features/measurements/dns-groups";
 import { useFocus } from "@/lib/use-focus";
 import { Instrument } from "@/features/measurements/instrument";
 import { ResultsTable } from "@/features/measurements/results-table";
 import { MeasurementStatus } from "@/features/measurements/status";
 import { useMeasurement } from "@/features/measurements/use-measurement";
-import { api, errorMessage } from "@/lib/api/client";
+import { api, errorMessage, type Measurement } from "@/lib/api/client";
+
+const NO_TASKS: Measurement["tasks"] = [];
 
 export default function MeasurementPage() {
   const { id } = useParams<{ id: string }>();
   const state = useMeasurement(id);
   const [shared, setShared] = useState<boolean | null>(null);
   const focus = useFocus();
+  const slots = useAnswerSlots(state.phase === "ready" ? state.measurement.tasks : NO_TASKS);
   // The estimated place is worked out once the measurement is over, and only ping and TCP time a round trip.
   const current = state.phase === "ready" ? state.measurement : null;
   const wantsLocation = current !== null && current.status !== "running" && ["ping", "tcp"].includes(kindOf(current));
@@ -107,7 +111,14 @@ export default function MeasurementPage() {
                 every node tests <span className="font-mono">{target.ip}</span>
               </span>
             )}
-            {measurement.dns_mode === "regional" && <span>each node resolves the name itself</span>}
+            {measurement.dns_mode === "regional" && kind !== "dns" && <span>each node resolves the name itself</span>}
+            {kind === "dns" && (
+              <span>
+                <span className="font-mono">{options.record_type ?? "A"}</span> records, asked of{" "}
+                {DNS_RESOLVERS.find((r) => r.value === options.resolver)?.label.replace("Each node's own resolver", "each node's own resolver") ??
+                  "each node's own resolver"}
+              </span>
+            )}
             {(kind === "ping" || kind === "tcp") && (
               <span>
                 · {options.count} {KIND_INFO[kind].unit.many} per node
@@ -132,7 +143,13 @@ export default function MeasurementPage() {
           {!running && (
             <Button
               variant="outline"
-              render={<Link href={`/?kind=${kind}&target=${encodeURIComponent(rerun)}`} />}
+              render={
+                <Link
+                  href={`/?kind=${kind}&target=${encodeURIComponent(rerun)}${
+                    kind === "dns" ? `&record=${options.record_type ?? "A"}&resolver=${options.resolver ?? "system"}` : ""
+                  }`}
+                />
+              }
             >
               <RotateCwIcon /> Run again
             </Button>
@@ -156,8 +173,8 @@ export default function MeasurementPage() {
         </Alert>
       )}
 
-      <Instrument measurement={measurement} estimate={estimate} focus={focus} />
-      <Charts measurement={measurement} focus={focus} />
+      <Instrument measurement={measurement} estimate={estimate} focus={focus} slots={slots} />
+      <Charts measurement={measurement} focus={focus} slots={slots} />
       <ResultsTable measurement={measurement} focus={focus} />
       {(kind === "ping" || kind === "tcp") && (
         <LocationPanel estimate={estimate} error={locationError} finished={!running} />

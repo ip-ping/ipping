@@ -1,6 +1,6 @@
 "use client";
 
-import { ActivityIcon, Loader2Icon, NetworkIcon, PlugIcon, GlobeIcon } from "lucide-react";
+import { ActivityIcon, Loader2Icon, NetworkIcon, PlugIcon, GlobeIcon, SearchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -32,7 +32,15 @@ import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client"
 import { flag, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { KIND_INFO, KINDS, type Kind } from "./kinds";
+import {
+  DNS_RECORD_TYPES,
+  DNS_RESOLVERS,
+  KIND_INFO,
+  KINDS,
+  type DnsRecordType,
+  type DnsResolver,
+  type Kind,
+} from "./kinds";
 
 type Request = Schemas["CreateMeasurementRequest"];
 
@@ -41,6 +49,7 @@ const KIND_ICON: Record<Kind, typeof ActivityIcon> = {
   tcp: PlugIcon,
   http: GlobeIcon,
   traceroute: NetworkIcon,
+  dns: SearchIcon,
 };
 
 function Choice<T extends string>({
@@ -82,9 +91,13 @@ function Choice<T extends string>({
 export function MeasureForm({
   initialTarget = "",
   initialKind = "ping",
+  initialRecordType = "A",
+  initialResolver = "system",
 }: {
   initialTarget?: string;
   initialKind?: Kind;
+  initialRecordType?: DnsRecordType;
+  initialResolver?: DnsResolver;
 }) {
   const router = useRouter();
   const { nodes } = useNodes();
@@ -100,6 +113,8 @@ export function MeasureForm({
   const [dnsMode, setDnsMode] = useState<Request["dns_mode"]>("fixed");
   const [family, setFamily] = useState<Request["family"]>("auto");
   const [count, setCount] = useState("4");
+  const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
+  const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
   const [scope, setScope] = useState<"all" | "selected">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [picking, setPicking] = useState(false);
@@ -119,6 +134,10 @@ export function MeasureForm({
         follow_redirects: kind === "http" && follow,
         node_ids: scope === "selected" ? [...selected] : null,
       };
+      if (kind === "dns") {
+        body.record_type = recordType;
+        body.resolver = resolver;
+      }
       if (kind === "ping" || kind === "tcp") body.count = Number(count);
       if ((kind === "tcp" || kind === "http") && port.trim()) body.port = Number(port);
       const created = await api<Measurement>("POST", "/measurements", body);
@@ -147,7 +166,7 @@ export function MeasureForm({
             </TabsList>
           </Tabs>
           <div className="space-y-1.5">
-            <Label htmlFor="target">IP address, hostname or URL</Label>
+            <Label htmlFor="target">{kind === "dns" ? "Domain name" : "IP address, hostname or URL"}</Label>
             <div className="flex gap-2">
               <Input
                 id="target"
@@ -180,27 +199,48 @@ export function MeasureForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
-            <Choice
-              className="lg:col-span-3"
-              label="Name resolution"
-              value={dnsMode}
-              onChange={setDnsMode}
-              options={[
-                { value: "fixed", label: "Same IP for every node" },
-                { value: "regional", label: "Each node resolves it" },
-              ]}
-            />
-            <Choice
-              className="lg:col-span-3"
-              label="IP version"
-              value={family}
-              onChange={setFamily}
-              options={[
-                { value: "auto", label: "Automatic" },
-                { value: "4", label: "IPv4" },
-                { value: "6", label: "IPv6" },
-              ]}
-            />
+            {kind === "dns" ? (
+              <>
+                <Choice
+                  className="lg:col-span-3"
+                  label="Record type"
+                  value={recordType}
+                  onChange={setRecordType}
+                  options={DNS_RECORD_TYPES.map((t) => ({ value: t, label: t }))}
+                />
+                <Choice
+                  className="lg:col-span-3"
+                  label="Resolver"
+                  value={resolver}
+                  onChange={setResolver}
+                  options={DNS_RESOLVERS}
+                />
+              </>
+            ) : (
+              <>
+                <Choice
+                  className="lg:col-span-3"
+                  label="Name resolution"
+                  value={dnsMode}
+                  onChange={setDnsMode}
+                  options={[
+                    { value: "fixed", label: "Same IP for every node" },
+                    { value: "regional", label: "Each node resolves it" },
+                  ]}
+                />
+                <Choice
+                  className="lg:col-span-3"
+                  label="IP version"
+                  value={family}
+                  onChange={setFamily}
+                  options={[
+                    { value: "auto", label: "Automatic" },
+                    { value: "4", label: "IPv4" },
+                    { value: "6", label: "IPv6" },
+                  ]}
+                />
+              </>
+            )}
             {(kind === "ping" || kind === "tcp") && (
               <Choice
                 className="lg:col-span-3"

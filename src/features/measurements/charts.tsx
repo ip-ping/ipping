@@ -12,25 +12,66 @@ import { useState } from "react";
 
 import type { Focus } from "@/lib/use-focus";
 import { kindOf } from "./kinds";
+import { DnsAnswers } from "./dns-answers";
+import { groupAnswers } from "./dns-groups";
+import { TERMINAL_TASK } from "./summary";
 import { hopsOf, stripRows, waterfallRows } from "./series";
 
 const SEE_TABLE = "Every number is in the table below.";
 
 /** The chart that fits what was measured: round trips, where an HTTP request spent its time, or the route. */
-export function Charts({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
+export function Charts({
+  measurement,
+  focus,
+  slots,
+}: {
+  measurement: Measurement;
+  focus: Focus;
+  slots: ReadonlyMap<string, number>;
+}) {
   const kind = kindOf(measurement);
   if (measurement.tasks.length === 0) return null;
+  if (kind === "dns") return <Dns measurement={measurement} focus={focus} slots={slots} />;
   if (kind === "http") return <Waterfall measurement={measurement} focus={focus} />;
   if (kind === "traceroute") return <Route measurement={measurement} focus={focus} />;
   return <Strip measurement={measurement} focus={focus} />;
 }
 
-function Strip({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
-  const rows = useMemo(() => stripRows(measurement), [measurement]);
-  const unit = measurement.kind === "tcp" ? "connection time" : "round trip";
+function Dns({
+  measurement,
+  focus,
+  slots,
+}: {
+  measurement: Measurement;
+  focus: Focus;
+  slots: ReadonlyMap<string, number>;
+}) {
+  const { tasks } = measurement;
+  const groups = useMemo(() => groupAnswers(tasks, slots), [tasks, slots]);
+  const waiting = tasks.filter((t) => !TERMINAL_TASK.has(t.status) && t.samples.length === 0).length;
+  const colors = useMemo(() => new Map(groups.flatMap((g) => g.nodeIds.map((id) => [id, g.color] as const))), [groups]);
   return (
-    <Panel label={`Every ${unit}, by node`} meta={<span className="hidden sm:inline">{SEE_TABLE}</span>}>
-      <RangeStrip rows={rows} activeId={focus.active} onActive={focus.setHover} label={`Each node's ${unit}s in milliseconds`} />
+    <>
+      <DnsAnswers groups={groups} total={tasks.length} waiting={waiting} focus={focus} />
+      <Strip measurement={measurement} focus={focus} colors={colors} />
+    </>
+  );
+}
+
+function Strip({
+  measurement,
+  focus,
+  colors,
+}: {
+  measurement: Measurement;
+  focus: Focus;
+  colors?: ReadonlyMap<string, string>;
+}) {
+  const rows = useMemo(() => stripRows(measurement, colors), [measurement, colors]);
+  const unit = measurement.kind === "tcp" ? "connection time" : measurement.kind === "dns" ? "time to answer" : "round trip";
+  return (
+    <Panel label={measurement.kind === "dns" ? "Time to answer, by node" : `Every ${unit}, by node`} meta={<span className="hidden sm:inline">{SEE_TABLE}</span>}>
+      <RangeStrip rows={rows} single={measurement.kind === "dns"} activeId={focus.active} onActive={focus.setHover} label={`Each node's ${unit} in milliseconds`} />
     </Panel>
   );
 }

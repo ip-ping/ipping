@@ -40,6 +40,7 @@ const KINDS: { value: string; label: string; help: string }[] = [
   { value: "tcp", label: "TCP", help: "Connect to an allowed port." },
   { value: "http", label: "HTTP", help: "One request, with timings and the certificate." },
   { value: "traceroute", label: "Traceroute", help: "Routers on the way (Linux nodes)." },
+  { value: "dns", label: "DNS", help: "Ask resolvers about a name and compare the answers." },
 ];
 
 export function SettingsTab() {
