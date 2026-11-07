@@ -10,6 +10,22 @@ one vermilion signal colour, a live world map and a graph for each kind of measu
 with no map or chart library. Four steps, newest first:
 
 
+### 2026-11-07: the UI checks are in the repository
+- The browser checks I had been running from a scratch folder are now `tests/ui/` (`npm run test:ui`): every page
+  in light and dark at 390, 768, 1024 and 1440 px (no overflow, no sideways scrolling, a clean console), what
+  each kind of measurement shows and that hovering or focusing a row lights the same node on the map, the chart
+  and the table, choosing nodes by click and shift-drag, comparing and exporting, the administration tabs and
+  every dialog at three widths, a watch that alerts a webhook exactly once, an API key that works from
+  `ipping-cli` and is refused once revoked, and the location panel at phone width. They clean up after
+  themselves and can be run repeatedly.
+- `scripts/dev-fleet.py` is the simulated fleet (16 nodes answering all five kinds; names starting `nx-` and
+  `split-` give DNS something to disagree about) that the checks, and anyone developing the interface, run
+  against. `.github/workflows/ui.yml` runs the lot on a runner against the backend release this frontend is
+  pinned to: by hand and on pull requests (not on every push to main, since it needs the pinned backend image).
+- Bugs these checks had already caught and that are fixed: hover re-ordered the map's stations under the pointer
+  and swallowed a quick click or tap; the first API call of a fresh browser has no cookie yet (the scripts
+  warm up); a measurement belongs to the browser session that made it.
+
 ### 2026-11-07: API keys and `ipping-cli`
 - An **API keys** tab in the admin: create a key (a name and its quotas per minute and per day), shown once with
   ready-to-copy `curl` and client commands; edit the name and quotas; revoke. The table shows the start of each

@@ -1,0 +1,79 @@
+# The browser checks of tests/ui against a real stack: the backend release this frontend is pinned to, PostgreSQL,
+# the simulated fleet and this frontend, built here. Run by hand, and on pull requests.
+name: UI checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui:
+    name: Browser checks against a live stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: pw
+          POSTGRES_DB: ipping
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start the backend this frontend is pinned to
+        run: |
+          set -eu
+          . ./release.env
+          docker run -d --name backend --network host \
+            -e IPPING_DATABASE_URL=postgresql://postgres:pw@127.0.0.1:5432/ipping \
+            -e IPPING_SETUP_TOKEN=e2e-token -e IPPING_COOKIE_SECURE=false \
+            -e IPPING_HOST=0.0.0.0 -e IPPING_PORT=18010 \
+            --entrypoint sh "tonyliuzj/ipping-backend:${BACKEND_TAG#v}" \
+            -c 'ipping-backend migrate && exec ipping-backend serve'
+          curl -fsS --retry 40 --retry-connrefused --retry-delay 2 http://127.0.0.1:18010/api/v1/health/ready
+      - name: Start the simulated fleet
+        run: |
+          set -eu
+          pip install --quiet websockets
+          IPPING_BACKEND=http://127.0.0.1:18010 python3 scripts/dev-fleet.py >fleet.log 2>&1 &
+          for _ in $(seq 1 90); do grep -q "fleet ready" fleet.log && break; sleep 2; done
+          grep "fleet ready" fleet.log
+      - run: npm ci
+      - name: Build and start the frontend
+        run: |
+          set -eu
+          BACKEND_URL=http://127.0.0.1:18010 npm run build
+          npx next start -p 13100 >frontend.log 2>&1 &
+          curl -fsS --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:13100/ >/dev/null
+      - run: npx playwright install --with-deps chromium
+      - name: Run the checks
+        run: npm run test:ui
+        env:
+          BASE_URL: http://127.0.0.1:13100
+          WEBHOOK_HOST: 127.0.0.1
+          SHOTS: ${{ github.workspace }}/ui-shots
+      - name: Keep the screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-checks
+          path: |
+            ui-shots
+            fleet.log
+            frontend.log
+          if-no-files-found: ignore

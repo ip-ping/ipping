@@ -247,6 +247,7 @@ origin with relative `/api/v1/...` paths and no deployment hostname is baked int
 ```bash
 npm run lint             # ESLint
 npm test                 # unit tests (geometry, answer grouping, series, export)
+npm run test:ui          # browser checks against a live stack, see tests/ui/README.md
 npm run typecheck        # next typegen && tsc --noEmit
 npm run build            # production build
 bash tests/installer.sh  # the installer's own logic: no root, no network, nothing installed

@@ -1,0 +1,32 @@
+# UI checks
+
+Checks that need a real browser and a real stack: every page at the widths people use (nothing sticks out of
+the window, nothing scrolls sideways, the console is clean), what each kind of measurement shows, choosing
+nodes on the map, comparing and exporting, the administration pages and dialogs, and the administrator's
+tools end to end (a watch that alerts a webhook once, an API key that works from `ipping-cli` and stops when
+revoked). They exist because overflow bugs and dead clicks do not show up in a type check.
+
+The logic that does not need a browser (geometry, answer grouping, series, export) is covered by `npm test`.
+
+## What they need
+
+* a backend with `IPPING_SETUP_TOKEN=e2e-token` (any 0.4 or newer; the release this frontend is pinned to is in
+  `release.env`) on PostgreSQL;
+* this frontend, built with `BACKEND_URL` pointing at that backend, and started (`npx next start -p 13100`);
+* the simulated fleet: `pip install websockets` and `python3 scripts/dev-fleet.py` (16 nodes that answer ping, TCP,
+  HTTP, traceroute and DNS; names starting `nx-` and `split-` give DNS something to disagree about);
+* Chromium for Playwright: `npx playwright install chromium`.
+
+## Running them
+
+```sh
+BASE_URL=http://127.0.0.1:13100 npm run test:ui              # all of them
+npm run test:ui -- admin map-selection                       # some, by name (the file name without its number)
+SHOTS=/tmp/ipping-shots npm run test:ui                      # also keep screenshots
+```
+
+`WEBHOOK_HOST` is how the backend reaches the machine the checks run on (default `host.docker.internal`, which
+is right for a backend in Docker on a laptop; use `127.0.0.1` when the backend runs on the same host). The
+checks create and remove their own watches and API keys and leave the stack as they found it.
+
+The workflow `.github/workflows/ui.yml` does all of this on a runner (manually and on pull requests).

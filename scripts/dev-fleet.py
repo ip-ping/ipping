@@ -1,0 +1,161 @@
+"""A pretend fleet for developing and testing the interface: 16 nodes around the world speaking node
+protocol v1, answering ping / tcp / http / traceroute / dns with physically plausible numbers.
+NOT FOR PRODUCTION: it enrols itself with a fixed setup token and a fixed administrator password.
+
+    IPPING_SETUP_TOKEN=e2e-token ipping-backend serve        # a backend with that setup token
+    python3 scripts/dev-fleet.py                              # needs: pip install websockets
+
+Environment: IPPING_BACKEND (default http://127.0.0.1:18010), FLEET_CREDS (where node credentials are kept
+between runs, default /tmp/fleet-creds.json).
+
+Names the simulation treats specially, to give the interface something to show: a DNS name that starts with
+"nx-" does not exist; one that starts with "split-" is mid-change (nodes in Asia still hold the old record, and
+one node's own resolver times out); 1.1.1.1 and 8.8.8.x behave like anycast (every node is a few ms away).
+"""
+import asyncio, datetime, hashlib, http.cookiejar, json, math, random, sys, urllib.request, urllib.error
+from websockets.asyncio.client import connect
+
+import os
+B = os.environ.get("IPPING_BACKEND", "http://127.0.0.1:18010").rstrip("/"); WS = B.replace("http", "ws", 1) + "/api/v1/nodes/connect"
+CREDS = os.environ.get("FLEET_CREDS", "/tmp/fleet-creds.json")
+NODES = [
+    ("Amsterdam", "NL", 52.37, 4.90, "Hetzner"), ("Frankfurt", "DE", 50.11, 8.68, "OVH"), ("London", "GB", 51.51, -0.13, "DigitalOcean"),
+    ("Madrid", "ES", 40.42, -3.70, "Contabo"), ("Stockholm", "SE", 59.33, 18.07, "Bahnhof"), ("New York", "US", 40.71, -74.0, "Vultr"),
+    ("Chicago", "US", 41.88, -87.63, "Linode"), ("Dallas", "US", 32.78, -96.80, "Vultr"), ("Los Angeles", "US", 34.05, -118.24, "Linode"),
+    ("Sao Paulo", "BR", -23.55, -46.63, "Vultr"), ("Johannesburg", "ZA", -26.2, 28.05, "Afrihost"), ("Mumbai", "IN", 19.08, 72.88, "Vultr"),
+    ("Singapore", "SG", 1.35, 103.82, "DigitalOcean"), ("Tokyo", "JP", 35.68, 139.69, "Vultr"), ("Sydney", "AU", -33.87, 151.21, "Vultr"),
+    ("Dubai", "AE", 25.2, 55.27, "Equinix"),
+]
+TARGETS = [("New York", 40.71, -74.0), ("Frankfurt", 50.11, 8.68), ("Singapore", 1.35, 103.82), ("Sydney", -33.87, 151.21), ("Sao Paulo", -23.55, -46.63), ("Tokyo", 35.68, 139.69)]
+jar = http.cookiejar.CookieJar(); op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)); csrf = ""
+def call(m, p, b=None, anon=False):
+    r = urllib.request.Request(B + p, method=m, data=None if b is None else json.dumps(b).encode(), headers={"Content-Type": "application/json", "X-CSRF-Token": csrf})
+    with op.open(r, timeout=20) as x: raw = x.read(); return json.loads(raw) if raw else None
+def km(a, b):
+    p1, p2 = math.radians(a[0]), math.radians(b[0]); h = math.sin((p2-p1)/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(math.radians(b[1]-a[1])/2)**2
+    return 12742 * math.asin(math.sqrt(h))
+def target_for(frame):
+    t = frame["target"]; key = t.get("ip") or t.get("hostname") or ""
+    if key.startswith("1.1.1.") or key.startswith("8.8.8."): return None  # anycast
+    i = int(hashlib.sha1(key.encode()).hexdigest(), 16) % len(TARGETS); return TARGETS[i]
+def rtt_ms(pos, tgt, rnd):
+    if tgt is None: return 1.2 + rnd.uniform(0, 3.5)
+    return 8 + 1.7 * km(pos, (tgt[1], tgt[2])) / 100 + rnd.uniform(0, 4)
+def public_ip(rnd): return f"{rnd.choice([4, 62, 80, 129, 154, 195, 212])}.{rnd.randint(1,250)}.{rnd.randint(1,250)}.{rnd.randint(1,250)}"
+now = lambda d=0: (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=d)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+async def run_task(ws, pos, f, rnd):
+    ids = {"task_id": f["task_id"], "attempt_id": f["attempt_id"]}
+    send = lambda o: ws.send(json.dumps(o))
+    await send({"type": "task_ack", **ids})
+    tgt = target_for(f); kind = f["kind"]; o = f["options"]; ip = f["target"].get("ip") or "93.184.216.34"
+    if kind in ("ping", "tcp"):
+        port = f["target"].get("port")
+        for seq in range(o["count"]):
+            await asyncio.sleep(0.45)
+            r = rtt_ms(pos, tgt, rnd) + (rnd.uniform(0, 6) if rnd.random() < 0.2 else 0)
+            if rnd.random() < 0.04: await send({"type": "sample", **ids, "seq": seq, "status": "timeout"}); continue
+            if kind == "tcp" and port == 25: await send({"type": "sample", **ids, "seq": seq, "status": "error", "rtt_us": int(r*1000), "error_code": "connection_refused"}); continue
+            await send({"type": "sample", **ids, "seq": seq, "status": "ok", "rtt_us": int(r * 1000)})
+    elif kind == "dns":
+        await asyncio.sleep(rnd.uniform(0.2, 0.9))
+        name = f["target"]["hostname"]; qtype = o["record_type"]; res = o.get("resolver_ip") or "system"
+        # a name that starts with "nx-" does not exist; one that starts with "split-" is mid-change: the
+        # nodes in Asia still hold the old record, one in Europe is stale too, a node in Africa times out
+        region = {"Tokyo": 1, "Singapore": 1, "Mumbai": 1, "Sydney": 1, "Dubai": 1, "Madrid": 2}.get(NAME[id(rnd)], 0)
+        if name.startswith("split-") and NAME[id(rnd)] == "Johannesburg" and res == "system":
+            await send({"type": "sample", **ids, "seq": 0, "status": "timeout"}); await send({"type": "task_result", **ids, "status": "completed"}); return
+        recs = []
+        base = int(hashlib.sha1(name.encode()).hexdigest()[:6], 16)
+        if name.startswith("nx-"): rcode = "NXDOMAIN"
+        else:
+            rcode = "NOERROR"; stale = name.startswith("split-") and region > 0 and (res == "system" or region == 2)
+            ttl = rnd.choice([30, 60, 300, 3600]) if res == "system" else 300
+            if qtype == "A": recs = [{"name": name, "type": "A", "ttl": ttl, "data": f"93.184.{216 + (1 if stale else 0)}.{34 + (base % 5)}"}]
+            elif qtype == "AAAA": recs = [{"name": name, "type": "AAAA", "ttl": ttl, "data": "2606:2800:220:1:248:1893:25c8:1946"}]
+            elif qtype == "MX": recs = [{"name": name, "type": "MX", "ttl": 3600, "data": "10 mail." + name}, {"name": name, "type": "MX", "ttl": 3600, "data": "20 backup." + name}]
+            elif qtype == "TXT": recs = [{"name": name, "type": "TXT", "ttl": 300, "data": "v=spf1 include:_spf.example.net -all"}]
+            elif qtype == "NS": recs = [{"name": name, "type": "NS", "ttl": 86400, "data": "ns1.example.net"}, {"name": name, "type": "NS", "ttl": 86400, "data": "ns2.example.net"}]
+            elif qtype == "CNAME": recs = [{"name": "www." + name, "type": "CNAME", "ttl": ttl, "data": "edge." + name}]
+            else: recs = [{"name": name, "type": "SOA", "ttl": 300, "data": "ns1.example.net hostmaster.example.net 2026110701 7200 900 1209600 300"}]
+            if res == "system" and rnd.random() < 0.15: recs.append({"name": name, "type": "A", "ttl": 60, "data": "10.1.2.3"}) if qtype == "A" else None
+        r = rnd.uniform(4, 40) if res == "system" else rnd.uniform(12, 90)
+        redacted = 0
+        if res == "system":
+            kept = [x for x in recs if x["data"] != "10.1.2.3"]; redacted = len(recs) - len(kept); recs = kept
+        detail = {"resolver": "system" if res == "system" else res, "record_type": qtype, "rcode": rcode, "authoritative": False, "via_tcp": False, "truncated": False, "answers": recs, "redacted": redacted}
+        await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": int(r * 1000), "detail": detail})
+        await send({"type": "task_result", **ids, "status": "completed", "resolved_ips": [x["data"] for x in recs if x["type"] == "A"]})
+        return
+    elif kind == "http":
+        await asyncio.sleep(0.8)
+        r = rtt_ms(pos, tgt, rnd); dns = int(rnd.uniform(2, 30) * 1000) if "hostname" in f["target"] else 0
+        connect = int(r * 1000); tls = int(r * 2.1 * 1000); ttfb = int((r + rnd.uniform(15, 90)) * 1000); total = dns + connect + tls + ttfb
+        host = f["target"].get("server_name") or f["target"].get("hostname") or ip
+        detail = {"status_code": rnd.choice([200, 200, 200, 301]), "http_version": "HTTP/1.1", "server": "nginx", "content_type": "text/html; charset=utf-8",
+                  "dns_us": dns, "connect_us": connect, "tls_us": tls, "ttfb_us": ttfb, "total_us": total, "final_scheme": o.get("scheme", "https"), "final_host": host, "final_path": o.get("path", "/"),
+                  "tls": {"version": "TLSv1.3", "cipher": "TLS13_AES_256_GCM_SHA384", "subject": f"CN={host}", "issuer": "C=US, O=Let's Encrypt, CN=R11", "not_before": now(-40), "not_after": now(rnd.choice([6, 49, 71])), "verified": True}, "redirects": []}
+        await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": total, "detail": detail})
+    else:
+        total_r = rtt_ms(pos, tgt, rnd); hops = 5 + int((km(pos, (tgt[1], tgt[2])) if tgt else 300) / 1800) + rnd.randint(0, 2)
+        for ttl in range(1, hops + 1):
+            await asyncio.sleep(0.22)
+            frac = ttl / hops; last = ttl == hops
+            rt = [max(0.05, total_r * frac * rnd.uniform(0.85, 1.05) if ttl > 1 else rnd.uniform(0.1, 0.9)) for _ in range(3)]
+            if not last and ttl > 2 and rnd.random() < 0.14: await send({"type": "sample", **ids, "seq": ttl - 1, "status": "timeout", "detail": {"ttl": ttl, "private": False, "rtts_us": [], "reached": False}}); continue
+            d = {"ttl": ttl, "private": ttl == 1, "rtts_us": sorted(int(x * 1000) for x in rt), "reached": last}
+            if ttl > 1: d["ip"] = ip if last else public_ip(rnd)
+            await send({"type": "sample", **ids, "seq": ttl - 1, "status": "ok", "rtt_us": min(d["rtts_us"]), "detail": d})
+    await send({"type": "task_result", **ids, "status": "completed", "tested_ip": ip})
+
+NAME = {}
+async def run_node(name, cc, lat, lon, credential):
+    rnd = random.Random(name); NAME[id(rnd)] = name
+    async with connect(WS, additional_headers={"Authorization": f"Bearer {credential}"}) as ws:
+        async def beat():
+            while True:
+                await asyncio.sleep(8); await ws.send(json.dumps({"type": "ping"}))
+        asyncio.create_task(beat())
+        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.3.3", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns"], "ipv4": True, "ipv6": True}}))
+        async for raw in ws:
+            f = json.loads(raw)
+            if f["type"] == "task": asyncio.create_task(run_task(ws, (lat, lon), f, rnd))
+
+async def keep(name, cc, lat, lon, credential):
+    # one node losing its credential (a rotated key in a test) must not take the others down
+    while True:
+        try:
+            await run_node(name, cc, lat, lon, credential)
+        except Exception as err:
+            code = getattr(getattr(err, "rcvd", None), "code", None)
+            if code == 4403:
+                print(name, "credential rotated; leaving it offline", flush=True); return
+            await asyncio.sleep(3)
+
+async def main():
+    global csrf
+    csrf = call("GET", "/api/v1/session")["csrf_token"]
+    try: csrf = call("POST", "/api/v1/setup", {"setup_token": "e2e-token", "username": "admin", "password": "correct horse battery"})["csrf_token"]
+    except urllib.error.HTTPError: csrf = call("POST", "/api/v1/admin/login", {"username": "admin", "password": "correct horse battery"})["csrf_token"]
+    existing = {n["name"]: n for n in call("GET", "/api/v1/admin/nodes")}
+    creds = json.load(open(CREDS)) if os.path.exists(CREDS) else {}
+    for i, (name, cc, lat, lon, prov) in enumerate(NODES):
+        if name in existing or name in creds: continue
+        tok = call("POST", "/api/v1/admin/enrollment-tokens", {"label": name})["token"]
+        r = None
+        body = {"token": tok, "name": name, "version": "0.3.3", "country": cc, "city": name, "latitude": lat, "longitude": lon, "provider": prov}
+        r = urllib.request.Request(B + "/api/v1/nodes/enroll", method="POST", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+        while True:
+            try:
+                with urllib.request.urlopen(r) as x: e = json.loads(x.read())
+                break
+            except urllib.error.HTTPError as err:
+                if err.code != 429: raise
+                print("rate limited, waiting a minute", flush=True); await asyncio.sleep(62)
+        call("POST", f"/api/v1/admin/nodes/{e['node_id']}/approve")
+        if i % 3 != 2: call("PATCH", f"/api/v1/admin/nodes/{e['node_id']}", {"location_verified": True})
+        creds[name] = e["credential"]
+    json.dump(creds, open(CREDS, "w"))
+    print("fleet ready:", len(creds), "nodes", flush=True)
+    await asyncio.gather(*(keep(n, cc, lat, lon, creds[n]) for n, cc, lat, lon, _ in NODES if n in creds))
+asyncio.run(main())
