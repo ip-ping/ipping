@@ -12,6 +12,7 @@ import { findConflict } from "@/lib/geo/conflict";
 import { ms, pct } from "@/lib/format";
 
 import type { Focus } from "@/lib/use-focus";
+import { certificatesOf } from "./certs";
 import { groupAnswers } from "./dns-groups";
 import { KIND_INFO, kindOf } from "./kinds";
 import { mapNodes } from "./series";
@@ -26,6 +27,10 @@ const CAPTION = {
   dns: {
     lead: "Each station is coloured by the answer its node got, and the key is below the map. A hollow grey station got no answer.",
     more: " There are no rings: how long an answer took depends on the resolver's cache, so it says little about distance.",
+  },
+  tls: {
+    lead: "Each station is coloured by the certificate its node was shown; one colour means they all saw the same one. A hollow grey station got no certificate.",
+    more: " There are no rings: a handshake takes several round trips plus the server's own work, so it says little about distance.",
   },
   http: {
     lead: "An HTTP time includes the name lookup, the handshakes and the server's own work, so it says nothing about distance: there are no rings for it.",
@@ -45,9 +50,19 @@ function readouts(measurement: Measurement): ReadoutItem[] {
   const reached = tasks.filter((t) => t.summary?.reached).length;
   const finished = tasks.filter((t) => t.summary?.reached != null).length;
 
-  const distinct = kind === "dns" ? groupAnswers(tasks, new Map()).filter((g) => g.answered).length : 0;
+  const certs = kind === "tls" ? certificatesOf(tasks) : [];
+  const trusted = certs.filter((g) => g.verified).reduce((n, g) => n + g.nodeIds.length, 0);
+  const shown = certs.reduce((n, g) => n + g.nodeIds.length, 0);
+  const distinct = kind === "dns" ?  groupAnswers(tasks, new Map()).filter((g) => g.answered).length : 0;
   const fourth: ReadoutItem =
-    kind === "dns"
+    kind === "tls"
+      ? {
+          label: "Trusted",
+          text: shown ? `${trusted} / ${shown}` : "–",
+          alert: shown > 0 && trusted < shown,
+          hint: shown === 0 ? "none yet" : trusted < shown ? "some nodes do not trust it" : "by every node that got one",
+        }
+      : kind === "dns"
       ? {
           label: "Distinct answers",
           value: distinct,
@@ -71,13 +86,13 @@ function readouts(measurement: Measurement): ReadoutItem[] {
   return [
     { label: "Responding", text: `${stats.nodes_responding} / ${stats.nodes_total}`, hint: stats.nodes_failed ? `${stats.nodes_failed} could not complete` : "nodes" },
     {
-      label: kind === "http" ? "Fastest response" : kind === "traceroute" ? "Closest" : "Fastest",
+      label: kind === "http" ? "Fastest response" : kind === "tls" ? "Fastest handshake" : kind === "traceroute" ? "Closest" : "Fastest",
       value: stats.fastest_median_ms,
       unit: "ms",
       hint: nameOf(stats.fastest_task_id) ?? "median per node",
     },
     {
-      label: kind === "http" ? "Slowest response" : kind === "traceroute" ? "Farthest" : "Slowest",
+      label: kind === "http" ? "Slowest response" : kind === "tls" ? "Slowest handshake" : kind === "traceroute" ? "Farthest" : "Slowest",
       value: stats.slowest_median_ms,
       unit: "ms",
       hint: nameOf(stats.slowest_task_id) ?? "median per node",
@@ -111,7 +126,9 @@ export function Instrument({
     () =>
       kind === "dns"
         ? new Map(groupAnswers(tasks, slots).flatMap((g) => g.nodeIds.map((id) => [id, g.color] as const)))
-        : undefined,
+        : kind === "tls"
+          ? new Map(certificatesOf(tasks).flatMap((g) => g.nodeIds.map((id) => [id, g.color] as const)))
+          : undefined,
     [kind, tasks, slots],
   );
   const nodes = useMemo(() => mapNodes(measurement, colors), [measurement, colors]);
@@ -152,8 +169,8 @@ export function Instrument({
         : null,
     [conflictPair],
   );
-  const rings = kind !== "http" && kind !== "dns";
-  const caption = kind === "dns" ? CAPTION.dns : rings ? CAPTION.rings : CAPTION.http;
+  const rings = kind !== "http" && kind !== "dns" && kind !== "tls";
+  const caption = kind === "dns" ? CAPTION.dns : kind === "tls" ? CAPTION.tls : rings ? CAPTION.rings : CAPTION.http;
 
   return (
     <Panel

@@ -1,6 +1,6 @@
 "use client";
 
-import { ActivityIcon, Loader2Icon, NetworkIcon, PlugIcon, GlobeIcon, SearchIcon } from "lucide-react";
+import { ActivityIcon, Loader2Icon, NetworkIcon, PlugIcon, GlobeIcon, SearchIcon, ShieldCheckIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -51,6 +51,7 @@ const KIND_ICON: Record<Kind, typeof ActivityIcon> = {
   http: GlobeIcon,
   traceroute: NetworkIcon,
   dns: SearchIcon,
+  tls: ShieldCheckIcon,
 };
 
 function Choice<T extends string>({
@@ -138,7 +139,7 @@ export function MeasureForm({
       }
       if (kind === "ping" || kind === "tcp") body.count = Number(count);
       if (kind === "traceroute" && rounds !== "1") body.count = Number(rounds);
-      if ((kind === "tcp" || kind === "http") && port.trim()) body.port = Number(port);
+      if ((kind === "tcp" || kind === "http" || kind === "tls") && port.trim()) body.port = Number(port);
       const created = await api<Measurement>("POST", "/measurements", body);
       router.push(`/measurements/${created.id}`);
     } catch (e) {
@@ -258,7 +259,7 @@ export function MeasureForm({
                 options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: n === 1 ? "1 (just trace)" : String(n) }))}
               />
             )}
-            {(kind === "tcp" || kind === "http") && (
+            {(kind === "tcp" || kind === "http" || kind === "tls") && (
               <div className="min-w-0 space-y-1.5 lg:col-span-3">
                 <Label htmlFor="port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>
                 <Input
@@ -269,7 +270,7 @@ export function MeasureForm({
                   inputMode="numeric"
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
-                  placeholder={kind === "tcp" ? "443, or host:port above" : "from the URL"}
+                  placeholder={kind === "tcp" ? "443, or host:port above" : kind === "tls" ? "443, or host:port above" : "from the URL"}
                   className="h-9"
                 />
               </div>

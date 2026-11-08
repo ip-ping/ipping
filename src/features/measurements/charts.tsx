@@ -12,6 +12,7 @@ import { useState } from "react";
 
 import type { Focus } from "@/lib/use-focus";
 import { kindOf } from "./kinds";
+import { CertificatePanel } from "./certificate-panel";
 import { DnsAnswers } from "./dns-answers";
 import { groupAnswers } from "./dns-groups";
 import { TERMINAL_TASK } from "./summary";
@@ -42,6 +43,7 @@ export function Charts({
   const kind = kindOf(measurement);
   if (measurement.tasks.length === 0) return null;
   if (kind === "dns") return <Dns measurement={measurement} focus={focus} slots={slots} previous={previous} previousAt={previousAt} />;
+  if (kind === "tls") return <CertificatePanel measurement={measurement} focus={focus} />;
   if (kind === "http") return <Waterfall measurement={measurement} focus={focus} />;
   if (kind === "traceroute") return <Route measurement={measurement} focus={focus} />;
   return <Strip measurement={measurement} focus={focus} previous={previous} previousAt={previousAt} />;

@@ -5,6 +5,7 @@
 #   ipping-cli tcp example.com:443
 #   ipping-cli http https://example.com/
 #   ipping-cli traceroute example.com
+#   ipping-cli tls example.com
 #   ipping-cli -t MX dns example.com
 #
 # It needs the address of an ipping site and an API key (an administrator creates one on the admin page):
@@ -20,14 +21,14 @@ usage() {
   cat <<'USAGE'
 Usage: ipping-cli [options] KIND TARGET
 
-  KIND    ping | tcp | http | traceroute (or trace) | dns
-  TARGET  an address, a host name or, for http, a URL; for tcp host:port; for dns a domain name
+  KIND    ping | tcp | http | traceroute (or trace) | dns | tls (a certificate check)
+  TARGET  an address, a host name or, for http, a URL; for tcp and tls host:port; for dns a domain name
 
 Options:
   -s URL     the ipping site (default: $IPPING_SERVER or ~/.config/ipping/server)
   -k KEY     the API key (default: $IPPING_API_KEY or the first line of ~/.config/ipping/key)
-  -n N       probes per node (ping, tcp)
-  -p PORT    port (tcp, http)
+  -n N       probes per node (ping, tcp), or rounds (traceroute: repeat it like mtr)
+  -p PORT    port (tcp, http, tls; tls defaults to 443)
   -t TYPE    record type (dns): A AAAA CNAME MX NS TXT SOA
   -r NAME    resolver (dns): system cloudflare google quad9
   -c CC,CC   only nodes in these countries (ISO 3166 codes)
@@ -79,8 +80,8 @@ kind="$1"
 target="$2"
 case "$kind" in
   trace) kind="traceroute" ;;
-  ping | tcp | http | traceroute | dns) ;;
-  *) die "unknown kind '$kind' (ping, tcp, http, traceroute, dns)" ;;
+  ping | tcp | http | traceroute | dns | tls) ;;
+  *) die "unknown kind '$kind' (ping, tcp, http, traceroute, dns, tls)" ;;
 esac
 
 if [ -z "$server" ] && [ -r "$config_dir/server" ]; then

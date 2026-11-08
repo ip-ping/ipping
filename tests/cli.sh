@@ -91,6 +91,11 @@ check "dns record type" eq "$(heard record_type)" MX
 check "dns resolver" eq "$(heard resolver)" google
 "$cli" -s "$site" -k ipk_good trace example.com >/dev/null
 check "trace is traceroute" eq "$(heard kind)" traceroute
+"$cli" -s "$site" -k ipk_good -n 3 trace example.com >/dev/null
+check "rounds are the count of a traceroute" eq "$(heard count)" 3
+"$cli" -s "$site" -k ipk_good -p 8443 tls example.com >/dev/null
+check "tls kind" eq "$(heard kind)" tls
+check "tls port" eq "$(heard port)" 8443
 
 IPPING_SERVER="$site/" IPPING_API_KEY=ipk_good "$cli" ping example.com >/dev/null
 check "reads the environment and ignores a trailing slash" eq "$(heard target)" example.com

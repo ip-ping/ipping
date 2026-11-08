@@ -1,6 +1,7 @@
 import type { Measurement, Task } from "@/lib/api/client";
 import { ms } from "@/lib/format";
 
+import { daysUntil } from "./certs";
 import { describeAnswer } from "./dns-groups";
 import { hopStats } from "./hops";
 import { KIND_INFO, kindOf } from "./kinds";
@@ -41,6 +42,24 @@ function kindColumns(m: Measurement, t: Task): Row {
       tls_verified: h?.tls ? String(h.tls.verified) : "",
       tls_not_after: h?.tls?.not_after ?? "",
       server: h?.server,
+    };
+  }
+  if (kind === "tls") {
+    const d = first?.tls;
+    const cert = d?.tls;
+    return {
+      trusted: cert ? String(cert.verified) : "",
+      verify_error: cert?.verify_error,
+      subject: cert?.subject,
+      issuer: cert?.issuer,
+      not_before: cert?.not_before,
+      not_after: cert?.not_after,
+      days_left: daysUntil(cert?.not_after) ?? "",
+      version: cert?.version,
+      names: (d?.names ?? []).join(" | "),
+      chain: d?.chain,
+      handshake_ms: num(msOf(d?.tls_us)),
+      total_ms: num(msOf(d?.total_us)),
     };
   }
   if (kind === "traceroute") {
@@ -125,6 +144,19 @@ export function toText(m: Measurement): string {
           ? `${name}  ${h.status_code}  ${ms(msOf(h.total_us))} ms  (dns ${ms(msOf(h.dns_us))}, connect ${ms(msOf(h.connect_us))}, tls ${ms(msOf(h.tls_us))}, first byte ${ms(msOf(h.ttfb_us))})`
           : `${name}  ${t.samples[0]?.status === "timeout" ? "timed out" : (t.samples[0]?.error_code ?? t.status)}`,
       );
+    } else if (kind === "tls") {
+      const cert = t.samples[0]?.tls?.tls;
+      if (cert) {
+        const days = daysUntil(cert.not_after);
+        const expiry = cert.not_after
+          ? `  expires ${cert.not_after.slice(0, 10)}${days === null ? "" : days < 0 ? ` (${-days} days ago)` : ` (in ${days} days)`}`
+          : "";
+        lines.push(
+          `${name}  ${cert.verified ? "trusted" : `NOT trusted (${cert.verify_error ?? "unknown"})`}  ${cert.version ?? "?"}${expiry}  ${ms(msOf(t.samples[0]?.tls?.total_us))} ms`,
+        );
+      } else {
+        lines.push(`${name}  ${t.samples[0]?.status === "timeout" ? "timed out" : (t.samples[0]?.error_code ?? t.status)}`);
+      }
     } else if (kind === "traceroute") {
       lines.push(`${name}  ${s?.reached ? `reached in ${t.samples.at(-1)?.hop?.ttl} hops, ${ms(s.median_ms)} ms` : "destination not reached"}`);
       for (const sample of t.samples) {

@@ -5,6 +5,7 @@ import type { StripRow } from "@/components/viz/range-strip";
 import type { Measurement, Task } from "@/lib/api/client";
 import { flag, ms, place } from "@/lib/format";
 
+import { daysUntil } from "./certs";
 import { shortError } from "./errors";
 import { kindOf } from "./kinds";
 
@@ -108,12 +109,18 @@ export function mapNodes(measurement: Measurement, colors?: ReadonlyMap<string, 
     if (latitude == null || longitude == null) return [];
     const state = stateOf(task);
     const best =
-      kind !== "http" && kind !== "dns" && task.summary?.reached !== false ? (task.summary?.min_ms ?? null) : null;
+      kind !== "http" && kind !== "dns" && kind !== "tls" && task.summary?.reached !== false ? (task.summary?.min_ms ?? null) : null;
     const summary = task.summary;
     let note: string | undefined;
     if (kind === "dns") {
       const dns = task.samples[0]?.dns;
       note = dns ? `${dns.rcode}${dns.answers?.[0] ? ` · ${dns.answers[0].data}` : ""}` : undefined;
+    } else if (kind === "tls") {
+      const cert = task.samples[0]?.tls?.tls;
+      const days = daysUntil(cert?.not_after);
+      note = cert
+        ? `${cert.verified ? "trusted" : "not trusted"}${days === null ? "" : days < 0 ? `, expired ${-days} d ago` : `, ${days} d left`}`
+        : undefined;
     } else if (kind === "http") {
       const sample = task.samples[0];
       note = sample?.http?.status_code != null ? `HTTP ${sample.http.status_code}, ${ms(sample.http.total_us != null ? sample.http.total_us / 1000 : null)} ms` : undefined;

@@ -18,11 +18,12 @@ import type { Measurement, Task } from "@/lib/api/client";
 import { delta, flag, ms, pct, place } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+import { commonName } from "./certs";
 import { explainError, shortError } from "./errors";
 import type { Focus } from "@/lib/use-focus";
 import { kindOf, type Kind } from "./kinds";
 import { describeAnswer } from "./dns-groups";
-import { CertificateBadge, DnsDetailView, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
+import { CertDetailView, CertificateBadge, DnsDetailView, HttpDetailView, RouteDetailView, StatusCode } from "./sample-details";
 import { TaskStatus } from "./status";
 
 /** Below this width the column is hidden; the row's details carry what the table drops. */
@@ -106,6 +107,26 @@ const COLUMNS: Record<Kind, Column[]> = {
     { head: "TLS", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
     { head: "First byte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
     { head: "Certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
+  ],
+  tls: [
+    {
+      head: "Result",
+      cell: (t) => {
+        const sample = t.samples[0];
+        if (!sample) return <span className="text-muted-foreground">–</span>;
+        const cert = sample.tls?.tls;
+        if (cert) return cert.verified ? <Badge>trusted</Badge> : <Badge variant="destructive">not trusted</Badge>;
+        return (
+          <span className="text-destructive">
+            {sample.status === "timeout" ? "Timed out" : shortError(sample.error_code)}
+          </span>
+        );
+      },
+    },
+    { head: "Expires", cell: (t) => <CertificateBadge tls={t.samples[0]?.tls?.tls} /> },
+    { head: "Issued by", show: "md", cell: (t) => <span className="block max-w-[14rem] truncate">{commonName(t.samples[0]?.tls?.tls?.issuer)}</span> },
+    { head: "Connection", show: "lg", cell: (t) => t.samples[0]?.tls?.tls?.version ?? "–" },
+    { head: "Handshake", align: "right", show: "sm", cell: (t) => ms(t.samples[0]?.tls?.total_us != null ? t.samples[0].tls.total_us / 1000 : null) },
   ],
   dns: [
     {
@@ -292,6 +313,8 @@ function TaskDetail({ task, kind, expected }: { task: Task; kind: Kind; expected
     <>
       {kind === "http" ? (
         <HttpDetailView task={task} />
+      ) : kind === "tls" ? (
+        <CertDetailView task={task} />
       ) : kind === "dns" ? (
         <DnsDetailView task={task} />
       ) : kind === "traceroute" ? (
@@ -300,7 +323,7 @@ function TaskDetail({ task, kind, expected }: { task: Task; kind: Kind; expected
         <Attempts task={task} kind={kind} expected={expected} />
       )}
       <div className="space-y-1 pb-1 text-sm">
-        {task.error_message && kind !== "http" && <p className="text-muted-foreground">{task.error_message}</p>}
+        {task.error_message && kind !== "http" && kind !== "tls" && <p className="text-muted-foreground">{task.error_message}</p>}
         {task.tested_ip && (
           <p className="text-muted-foreground lg:hidden">
             Tested <span className="font-mono text-xs">{task.tested_ip}</span>

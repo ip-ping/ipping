@@ -1,5 +1,5 @@
 """A pretend fleet for developing and testing the interface: 16 nodes around the world speaking node
-protocol v1, answering ping / tcp / http / traceroute / dns with physically plausible numbers.
+protocol v1, answering ping / tcp / http / traceroute / dns / tls with physically plausible numbers.
 NOT FOR PRODUCTION: it enrols itself with a fixed setup token and a fixed administrator password.
 
     IPPING_SETUP_TOKEN=e2e-token ipping-backend serve        # a backend with that setup token
@@ -42,6 +42,8 @@ def rtt_ms(pos, tgt, rnd):
     if tgt is None: return 1.2 + rnd.uniform(0, 3.5)
     return 8 + 1.7 * km(pos, (tgt[1], tgt[2])) / 100 + rnd.uniform(0, 4)
 def public_ip(rnd): return f"{rnd.choice([4, 62, 80, 129, 154, 195, 212])}.{rnd.randint(1,250)}.{rnd.randint(1,250)}.{rnd.randint(1,250)}"
+# A certificate's dates are fixed, whoever asks and whenever: the start of a day, so nodes asking seconds apart agree.
+cert_day = lambda d=0: (datetime.datetime.now(datetime.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=d)).strftime("%Y-%m-%dT%H:%M:%SZ")
 now = lambda d=0: (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=d)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 async def run_task(ws, pos, f, rnd):
@@ -87,6 +89,25 @@ async def run_task(ws, pos, f, rnd):
         await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": int(r * 1000), "detail": detail})
         await send({"type": "task_result", **ids, "status": "completed", "resolved_ips": [x["data"] for x in recs if x["type"] == "A"]})
         return
+    elif kind == "tls":
+        # Ports the simulation treats specially (the backend resolves the name itself, so a made-up name cannot
+        # carry the behaviour): 465 has a certificate with 9 days left, 8443 an expired one that is not trusted,
+        # 993 shows nodes east of 60 degrees E an older certificate (9 days left) than everyone else.
+        host = f["target"].get("server_name") or f["target"].get("hostname") or ip
+        await asyncio.sleep(rnd.uniform(0.2, 0.9))
+        connect = int(rtt_ms(pos, tgt, rnd) * 1000 * 1.1); shake = int(connect * rnd.uniform(1.6, 2.4)); total = connect + shake
+        days, verified, err = 60, True, None
+        port = f["target"].get("port")
+        if port == 465: days = 9
+        if port == 8443: days, verified, err = -3, False, "the certificate has expired"
+        if port == 993 and pos[1] > 60: days = 9
+        info = {"version": "TLSv1.3", "cipher": "TLS13_AES_256_GCM_SHA384", "subject": f"CN={host}", "issuer": "C=US, O=Let's Encrypt, CN=R11",
+                "not_before": cert_day(days - 90), "not_after": cert_day(days), "verified": verified}
+        if err: info["verify_error"] = err
+        detail = {"server_name": host, "connect_us": connect, "tls_us": shake, "total_us": total, "tls": info, "names": [host, f"www.{host}"], "chain": 2}
+        if rnd.random() < 0.03: await send({"type": "sample", **ids, "seq": 0, "status": "timeout"})
+        elif verified: await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": total, "detail": detail})
+        else: await send({"type": "sample", **ids, "seq": 0, "status": "error", "error_code": "tls_certificate_invalid", "detail": detail})
     elif kind == "http":
         await asyncio.sleep(0.8)
         r = rtt_ms(pos, tgt, rnd); dns = int(rnd.uniform(2, 30) * 1000) if "hostname" in f["target"] else 0
@@ -135,7 +156,7 @@ async def run_node(name, cc, lat, lon, credential):
             while True:
                 await asyncio.sleep(8); await ws.send(json.dumps({"type": "ping"}))
         asyncio.create_task(beat())
-        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.4.1", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns"], "ipv4": True, "ipv6": True}}))
+        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.4.1", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns", "tls"], "ipv4": True, "ipv6": True}}))
         async for raw in ws:
             f = json.loads(raw)
             if f["type"] == "task": asyncio.create_task(run_task(ws, (lat, lon), f, rnd))

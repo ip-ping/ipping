@@ -2,7 +2,7 @@ import type { Measurement, Schemas } from "@/lib/api/client";
 
 export type Kind = Schemas["CreateMeasurementRequest"]["kind"];
 
-export const KINDS: Kind[] = ["ping", "tcp", "http", "traceroute", "dns"];
+export const KINDS: Kind[] = ["ping", "tcp", "http", "traceroute", "dns", "tls"];
 
 export type DnsRecordType = NonNullable<Schemas["CreateMeasurementRequest"]["record_type"]>;
 export type DnsResolver = NonNullable<Schemas["CreateMeasurementRequest"]["resolver"]>;
@@ -59,6 +59,14 @@ export const KIND_INFO: Record<Kind, KindInfo> = {
     placeholder: "1.1.1.1 or example.com",
     explain:
       "The routers between each node and the target. A silent hop is normal; what matters is whether the target is reached. More rounds trace it again and again, like mtr, to show how much each hop loses.",
+  },
+  tls: {
+    label: "Certificate",
+    action: "Check",
+    unit: { one: "handshake", many: "handshakes" },
+    placeholder: "example.com or example.com:8443",
+    explain:
+      "A TLS handshake with no request after it: who the certificate is for, who issued it, when it expires, and whether this node trusts it. Works for any TLS service on an allowed port. The port defaults to 443.",
   },
   dns: {
     label: "DNS",

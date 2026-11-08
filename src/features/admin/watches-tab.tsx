@@ -319,7 +319,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
       alert_format: format,
     };
     if (!watch) body.kind = kind;
-    if ((kind === "tcp" || kind === "http") && port.trim()) body.port = Number(port);
+    if ((kind === "tcp" || kind === "http" || kind === "tls") && port.trim()) body.port = Number(port);
     if ((kind === "ping" || kind === "tcp") && count.trim()) body.count = Number(count);
     if (kind === "http") body.follow_redirects = follow;
     if (kind === "dns") {
@@ -362,7 +362,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {(kind === "tcp" || kind === "http") && (
+            {(kind === "tcp" || kind === "http" || kind === "tls") && (
               <div className="space-y-1.5">
                 <Label htmlFor="w-port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>
                 <Input id="w-port" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />

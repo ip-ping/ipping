@@ -72,7 +72,7 @@ export default function MeasurementPage() {
   const options = measurement.options;
   // What goes back into the form to run the same measurement again.
   const rerun =
-    kind === "tcp" && options.port
+    (kind === "tcp" || kind === "tls") && options.port
       ? `${target.host}:${options.port}`
       : kind === "http"
         ? `${options.scheme}://${target.host}${options.port && ![80, 443].includes(options.port) ? `:${options.port}` : ""}${options.path ?? "/"}`

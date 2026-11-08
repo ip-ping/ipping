@@ -44,6 +44,7 @@ const KINDS: { value: string; label: string; help: string }[] = [
   { value: "http", label: "HTTP", help: "One request, with timings and the certificate." },
   { value: "traceroute", label: "Traceroute", help: "Routers on the way (Linux nodes)." },
   { value: "dns", label: "DNS", help: "Ask resolvers about a name and compare the answers." },
+  { value: "tls", label: "Certificate", help: "A TLS handshake with no request: expiry, issuer, names and trust." },
 ];
 
 export function SettingsTab() {

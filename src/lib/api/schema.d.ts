@@ -875,11 +875,11 @@ export interface components {
             follow_redirects: boolean;
             /**
              * Kind
-             * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way. dns: ask each node's resolver (or a public one) about a name and compare the answers.
+             * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way. dns: ask each node's resolver (or a public one) about a name and compare the answers. tls: a TLS handshake with no request after it, and what the certificate says.
              * @default ping
              * @enum {string}
              */
-            kind: "ping" | "tcp" | "http" | "traceroute" | "dns";
+            kind: "ping" | "tcp" | "http" | "traceroute" | "dns" | "tls";
             /**
              * Node Ids
              * @description Limit to these nodes; omit for all eligible
@@ -887,7 +887,7 @@ export interface components {
             node_ids?: string[] | null;
             /**
              * Port
-             * @description Destination port of a tcp check. For tcp it can also be given as host:port or in a URL. An http check takes its port from the URL.
+             * @description Destination port of a tcp or tls check. It can also be given as host:port or in a URL. An http check takes its port from the URL.
              */
             port?: number | null;
             /**
@@ -1629,6 +1629,8 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "timeout" | "error";
+            /** @description tls: the certificate and the handshake */
+            tls?: components["schemas"]["TlsDetail"] | null;
         };
         /** ServiceStatus */
         ServiceStatus: {
@@ -1757,6 +1759,31 @@ export interface components {
             error?: string | null;
             /** Ok */
             ok: boolean;
+        };
+        /**
+         * TlsDetail
+         * @description What one certificate check found: a TLS handshake with no request after it. Times are
+         *     microseconds, measured on the node.
+         *
+         *     `tls` is the same record an HTTP check carries (version, cipher, subject, issuer, validity, whether
+         *     this node trusts the certificate and why not). `names` are the names the certificate is valid for
+         *     and `chain` is how many certificates the server sent. A certificate that is not trusted still
+         *     comes with all of it: the point of the check is to see what is wrong.
+         */
+        TlsDetail: {
+            /** Chain */
+            chain?: number | null;
+            /** Connect Us */
+            connect_us?: number | null;
+            /** Names */
+            names?: string[];
+            /** Server Name */
+            server_name?: string | null;
+            tls?: components["schemas"]["TlsInfo"] | null;
+            /** Tls Us */
+            tls_us?: number | null;
+            /** Total Us */
+            total_us?: number | null;
         };
         /** TlsInfo */
         TlsInfo: {
@@ -1905,7 +1932,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ping" | "tcp" | "http" | "traceroute" | "dns";
+            kind: "ping" | "tcp" | "http" | "traceroute" | "dns" | "tls";
             /**
              * Min Ok Pct
              * @description Bad when fewer than this share of nodes get a good answer
@@ -3269,7 +3296,7 @@ export interface operations {
         parameters: {
             query: {
                 target: string;
-                kind?: "ping" | "tcp" | "http" | "traceroute" | "dns";
+                kind?: "ping" | "tcp" | "http" | "traceroute" | "dns" | "tls";
                 port?: number | null;
                 count?: number | null;
                 record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;

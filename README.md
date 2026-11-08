@@ -31,6 +31,7 @@ keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and trac
 | **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
 | **HTTP** | one `GET` (headers only, body never read) | status, a **phase waterfall** of DNS / connect / TLS / first-byte time per node, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
 | **DNS** | one question to one resolver: a node's own, or Cloudflare, Google or Quad9 | whether the nodes **agree**: stations on the map coloured by the answer they got, every distinct answer with the nodes that got it, response code, TTL and every record. A name that does not exist can be checked. Answers that are private addresses from a node's own resolver are never shown |
+| **Certificate** | a TLS handshake with no request after it (any TLS service on an allowed port; 443 unless given) | one card for each **distinct certificate** the nodes were shown: trusted or not (and why not), days left on a timeline with today marked, the names it is valid for, who issued it and which nodes saw it. Several cards mean the nodes were not talking to one server, or a certificate is being replaced. Stations on the map are coloured by the certificate they saw. A watch on it alerts when a certificate has under 14 days left, before it fails |
 | **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address. With **rounds** (like `mtr`, up to 10) every hop shows its loss and best / average / worst time, and tells a router that is merely slow to answer probes aimed at it from loss that really carries on to the destination. With a GeoIP database on the backend, the **networks** the route crosses are listed and the route is drawn on a map; a router whose registered place light could not have reached in the time it answered is left off the map and counted |
 
 * **Same IP for every node**, or let each node resolve the name itself (to see CDN / DNS differences).
@@ -224,7 +225,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
-| unreleased | backend `main` (`contracts/backend-ref.txt`) | migration `0008` | as below, and **the next node release** to repeat a traceroute in rounds (an older node traces once) |
+| unreleased | backend `main` (`contracts/backend-ref.txt`) | migration `0009` | as below, and **the next node release** to repeat a traceroute in rounds (an older node traces once) and to check certificates (the measure form says how many online nodes can run it) |
 | v0.4.1, v0.4.0 | v0.4.1 | migration `0008` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS (the measure form says how many online nodes can run the chosen kind) |
 | v0.3.2 | v0.3.0 | migration `0005` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute |
 
@@ -289,6 +290,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] An interface of its own: chart-sheet design, live fleet map, nodes page with a roster, restyled admin
 - [x] Compare DNS answers across nodes (A, AAAA, CNAME, MX, NS, TXT, SOA; the node's own resolver or a public one)
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
+- [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)
 

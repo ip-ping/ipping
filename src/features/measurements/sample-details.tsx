@@ -144,7 +144,7 @@ export function HttpDetailView({ task }: { task: Task }) {
   );
 }
 
-function TlsView({ tls }: { tls: Tls }) {
+function TlsView({ tls, names, chain }: { tls: Tls; names?: string[]; chain?: number | null }) {
   return (
     <div className="space-y-1.5 border bg-background/60 p-3">
       <div className="flex flex-wrap items-center gap-2 font-medium">
@@ -165,7 +165,34 @@ function TlsView({ tls }: { tls: Tls }) {
             {when(tls.not_before)} to {when(tls.not_after)}
           </Fact>
         )}
+        {names && names.length > 0 && <Fact label="Valid for"><span className="font-mono text-xs">{names.join(", ")}</span></Fact>}
+        {chain != null && <Fact label="Sent">{chain} {chain === 1 ? "certificate" : "certificates"}</Fact>}
       </dl>
+    </div>
+  );
+}
+
+/** One node's certificate check: how the handshake went and everything the certificate says. */
+export function CertDetailView({ task }: { task: Task }) {
+  const sample = task.samples[0];
+  const detail = sample?.tls;
+  if (!sample) return <p className="text-muted-foreground">Waiting for the node…</p>;
+  return (
+    <div className="space-y-3 py-1 text-sm">
+      {sample.status !== "ok" && !detail?.tls && (
+        <p className="font-medium text-destructive">
+          {sample.status === "timeout" ? explainError("timeout") : explainError(sample.error_code)}
+          {task.error_message && <span className="font-normal text-muted-foreground"> — {task.error_message}</span>}
+        </p>
+      )}
+      {detail && (
+        <dl className="grid gap-1.5 sm:grid-cols-3">
+          {detail.connect_us != null && <Fact label="Connect">{ms(detail.connect_us / 1000)} ms</Fact>}
+          {detail.tls_us != null && <Fact label="Handshake">{ms(detail.tls_us / 1000)} ms</Fact>}
+          {detail.server_name && <Fact label="Presented"><span className="font-mono text-xs">{detail.server_name}</span></Fact>}
+        </dl>
+      )}
+      {detail?.tls && <TlsView tls={detail.tls} names={detail.names} chain={detail.chain} />}
     </div>
   );
 }

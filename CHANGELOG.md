@@ -4,6 +4,31 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### 2026-11-08: certificate checks
+- A new kind in the measure form, the admin settings and the watch form: **Certificate**, a TLS handshake with no
+  request after it, with an optional port (443 unless given). The result is one card for each *distinct certificate*
+  the nodes were shown: trusted or not (and the reason), a validity timeline with today marked and the days left
+  (a warning under 14, the same limit a watch alerts at; bad once expired or not trusted), who issued it, the names
+  it is valid for, the TLS version and how many certificates the server sent, and the nodes that saw it (hover or pin
+  one and the same node lights in the map and the table). Several cards are the interesting case: the nodes were not
+  talking to one server, or a certificate is being replaced and some have not seen the new one yet.
+- State is always a shape and words as well as a colour: a tick, a triangle ("renew soon") or a cross ("not trusted",
+  "expired 3 days ago"). The map's stations are coloured by the certificate their node saw (the same four-colour
+  set the DNS answers use), there are no rings (a handshake takes several round trips plus the server's own work),
+  and the fourth readout is how many of the nodes that got a certificate trust it.
+- The table has Result, Expires (the same badge an HTTP check shows), Issued by, Connection and Handshake; an expanded
+  row shows connect and handshake times, the name presented, and everything the certificate says. The text report and
+  the CSV carry trust, expiry, days left, issuer, names and chain length.
+- `ipping-cli tls example.com` (with `-p` for another port) prints one line per node (trusted or not, TLS version, the
+  expiry date and days left, the handshake time); `-n` on a traceroute is its rounds. ShellCheck (stable and v0.10.0)
+  and the CLI test are clean; run once against the dev stack for both.
+- 6 new unit tests (grouping by certificate, trust and expiry state, days left, the common name); the check
+  `tests/ui/09-certificate.mjs` (two cards for a split certificate, an untrusted one with its reason, the table, a
+  node chip lighting its row, every width, the form), which stops with a note against a backend without the kind.
+  `scripts/dev-fleet.py` answers it: port 993 shows nodes east of 60 degrees E an older certificate with 9 days left,
+  port 465 a certificate with 9 days left, port 8443 an expired one; the fleet's certificate dates are fixed to a day,
+  because nodes that computed them to the second looked like seeing different certificates.
+
 ### 2026-11-08: traceroute in rounds, the networks of a route, and the route on a map
 - The measure form offers **Rounds (like mtr)** for a traceroute: 1, 3, 5 or 10. The backend asks every node to trace
   that many times and report each hop once, with how many probes it got and every reply. Rounds cost probes: a
