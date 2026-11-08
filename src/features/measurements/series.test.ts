@@ -66,13 +66,13 @@ describe("hopsOf", () => {
   it("lists the routers in order, in milliseconds", () => {
     const t = task("A", {
       samples: [
-        sample({ seq: 1, hop: { ttl: 2, ip: "8.8.8.8", private: false, reached: true, rtts_us: [11_000, 12_000] } } as never),
+        sample({ seq: 1, hop: { ttl: 2, ip: "8.8.8.8", private: false, reached: true, rtts_us: [11_000, 12_000], sent: 6 } } as never),
         sample({ seq: 0, hop: { ttl: 1, private: true, reached: false, rtts_us: [500] } } as never),
       ],
     });
     expect(hopsOf(t)).toEqual([
-      { ttl: 1, ip: null, private: true, reached: false, rtts: [0.5] },
-      { ttl: 2, ip: "8.8.8.8", private: false, reached: true, rtts: [11, 12] },
+      { ttl: 1, ip: null, private: true, reached: false, rtts: [0.5], sent: null },
+      { ttl: 2, ip: "8.8.8.8", private: false, reached: true, rtts: [11, 12], sent: 6 },
     ]);
     expect(hopsOf(undefined)).toEqual([]);
   });

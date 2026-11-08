@@ -15,7 +15,11 @@ import { kindOf } from "./kinds";
 import { DnsAnswers } from "./dns-answers";
 import { groupAnswers } from "./dns-groups";
 import { TERMINAL_TASK } from "./summary";
-import { hopsOf, stripRows, waterfallRows } from "./series";
+import { hopsOf, mapNodes, stripRows, waterfallRows } from "./series";
+import { lossKinds } from "./hops";
+import { asPath, networkName, placeRoute } from "./route-geo";
+import { AsPathStrip, RouteMapSection } from "./route-extras";
+import { usePath } from "./use-path";
 
 const SEE_TABLE = "Every number is in the table below.";
 
@@ -118,7 +122,20 @@ function Route({ measurement, focus }: { measurement: Measurement; focus: Focus 
       [...tasks].sort((a, b) => b.samples.length - a.samples.length)[0],
     [tasks, focus.pinned],
   );
-  const hops = useMemo(() => hopsOf(task), [task]);
+  const path = usePath(measurement.id, measurement.status !== "running");
+  const hops = useMemo(() => {
+    const plain = hopsOf(task);
+    const loss = lossKinds(plain);
+    return plain.map((hop) => {
+      const known = hop.ip ? path?.hops?.[hop.ip] : undefined;
+      return { ...hop, loss: loss.get(hop.ttl), network: networkName(known), place: known?.place ?? undefined };
+    });
+  }, [task, path]);
+  const lat = task?.node.latitude;
+  const lon = task?.node.longitude;
+  const route = useMemo(() => placeRoute(hops, path, lat != null && lon != null ? { lat, lon } : null), [hops, path, lat, lon]);
+  const stops = useMemo(() => asPath(hops, path), [hops, path]);
+  const station = useMemo(() => (task ? (mapNodes({ ...measurement, tasks: [task] }, undefined)[0] ?? null) : null), [measurement, task]);
   return (
     <Panel
       label="The route"
@@ -159,10 +176,21 @@ function Route({ measurement, focus }: { measurement: Measurement; focus: Focus 
           );
         })}
       </div>
+      <AsPathStrip stops={stops} onActive={setHop} />
       {task && hops.length === 0 ? (
         <p className="text-sm text-muted-foreground">Waiting for {task.node.name} to report its first router…</p>
       ) : (
         <RouteLadder hops={hops} activeTtl={hop} onActive={setHop} label={`The route from ${task?.node.name ?? "a node"} to ${measurement.target.host}`} />
+      )}
+      {hops.length > 0 && (
+        <RouteMapSection
+          station={station}
+          path={path}
+          route={route}
+          activeTtl={hop}
+          onActive={setHop}
+          label={`Map of the route from ${task?.node.name ?? "a node"} to ${measurement.target.host}`}
+        />
       )}
     </Panel>
   );

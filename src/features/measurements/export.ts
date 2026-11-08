@@ -2,6 +2,7 @@ import type { Measurement, Task } from "@/lib/api/client";
 import { ms } from "@/lib/format";
 
 import { describeAnswer } from "./dns-groups";
+import { hopStats } from "./hops";
 import { KIND_INFO, kindOf } from "./kinds";
 
 export type ExportFormat = "json" | "csv" | "text";
@@ -48,6 +49,12 @@ function kindColumns(m: Measurement, t: Task): Row {
       hops: t.samples.at(-1)?.hop?.ttl,
       answered: s?.received,
       destination_ms: num(s?.median_ms),
+      rounds: m.options.count,
+      // with several rounds, the share of the probes to the destination that got no answer
+      destination_loss_pct: (() => {
+        const last = t.samples.at(-1)?.hop;
+        return last?.reached && last.sent != null ? num(hopStats((last.rtts_us ?? []).map((us) => us / 1000), last.sent).lossPct) : "";
+      })(),
     };
   }
   if (kind === "dns") {
@@ -124,6 +131,14 @@ export function toText(m: Measurement): string {
         const hop = sample.hop;
         if (!hop) continue;
         const who = hop.ip ?? (hop.private ? "(private network)" : "*");
+        if (hop.sent != null) {
+          // a repeated trace: loss and spread, as mtr prints them
+          const rtts = (hop.rtts_us ?? []).map((us) => us / 1000);
+          const stats = hopStats(rtts, hop.sent);
+          const spread = rtts.length ? `best/avg/worst = ${ms(stats.best)}/${ms(stats.avg)}/${ms(stats.worst)} ms` : "";
+          lines.push(`  ${String(hop.ttl).padStart(2)}  ${who.padEnd(40)}  ${`${Number(stats.lossPct.toFixed(1))}% loss`.padEnd(10)}  ${spread}`.trimEnd());
+          continue;
+        }
         const times = (hop.rtts_us ?? []).map((us) => ms(us / 1000)).join("  ");
         lines.push(`  ${String(hop.ttl).padStart(2)}  ${who.padEnd(40)}  ${times}${times ? " ms" : ""}`);
       }

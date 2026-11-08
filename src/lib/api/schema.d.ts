@@ -478,6 +478,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/measurements/{measurement_id}/path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Traced Path
+         * @description The network (ASN) and the place a GeoIP database gives for each router a traceroute found.
+         *
+         *     Empty unless a database is loaded (`ipping-backend geoip-update`). A router's place is a hint:
+         *     check it against the round-trip time before believing it.
+         */
+        get: operations["traced_path_api_v1_measurements__measurement_id__path_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/measurements/{measurement_id}/share": {
         parameters: {
             query?: never;
@@ -823,7 +846,7 @@ export interface components {
         CreateMeasurementRequest: {
             /**
              * Count
-             * @description ping and tcp: probes per node
+             * @description ping and tcp: probes per node. traceroute: how many times to trace the route (default 1; more shows the loss at each hop, like mtr)
              */
             count?: number | null;
             /**
@@ -1059,6 +1082,10 @@ export interface components {
          *     `ip` is only ever a public address. A router inside the node operator's own network (or any
          *     other non-public address) is reported as `private` with no address, so a result never
          *     discloses the layout of someone's LAN.
+         *
+         *     A trace of one round sends three probes to a hop. When it is repeated (`count` above one),
+         *     `sent` says how many probes went to this hop and `rtts_us` has one entry for each that was
+         *     answered, so the hop's loss is `1 - len(rtts_us) / sent`.
          */
         HopDetail: {
             /** Ip */
@@ -1075,8 +1102,33 @@ export interface components {
             reached: boolean;
             /** Rtts Us */
             rtts_us?: number[];
+            /** Sent */
+            sent?: number | null;
             /** Ttl */
             ttl: number;
+        };
+        /**
+         * HopPlaceOut
+         * @description What a GeoIP database says about one router on a path. Routers are often registered at the
+         *     owner's headquarters, so the place is a hint to be checked against the round-trip time, never a
+         *     fact.
+         */
+        HopPlaceOut: {
+            /** As Org */
+            as_org?: string | null;
+            /** Asn */
+            asn?: number | null;
+            /** Country */
+            country?: string | null;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+            /**
+             * Place
+             * @description City, or the country if no city is known
+             */
+            place?: string | null;
         };
         /**
          * HttpDetail
@@ -1285,6 +1337,36 @@ export interface components {
             provider?: string | null;
             /** Region */
             region?: string | null;
+        };
+        /**
+         * PathOut
+         * @description The networks and places of the routers a traceroute measurement found, by address.
+         */
+        PathOut: {
+            /**
+             * Asn Database
+             * @default false
+             */
+            asn_database: boolean;
+            /** Attribution */
+            attribution?: string | null;
+            /**
+             * City Database
+             * @default false
+             */
+            city_database: boolean;
+            /**
+             * Hops
+             * @description Keyed by the hop's public address
+             */
+            hops?: {
+                [key: string]: components["schemas"]["HopPlaceOut"];
+            };
+            /**
+             * Source
+             * @description Database name, when one is loaded
+             */
+            source?: string | null;
         };
         /** PlaceOut */
         PlaceOut: {
@@ -2978,6 +3060,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocationEstimateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    traced_path_api_v1_measurements__measurement_id__path_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathOut"];
                 };
             };
             /** @description Validation Error */

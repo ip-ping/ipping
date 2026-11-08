@@ -58,7 +58,7 @@ export const KIND_INFO: Record<Kind, KindInfo> = {
     unit: { one: "hop", many: "hops" },
     placeholder: "1.1.1.1 or example.com",
     explain:
-      "The routers between each node and the target. A silent hop is normal; what matters is whether the target is reached.",
+      "The routers between each node and the target. A silent hop is normal; what matters is whether the target is reached. More rounds trace it again and again, like mtr, to show how much each hop loses.",
   },
   dns: {
     label: "DNS",

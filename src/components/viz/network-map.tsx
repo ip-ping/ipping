@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 
-import { circlePath, KM_PER_RTT_MS, KM_PER_RTT_MS_MAX, px, py } from "@/lib/geo/project";
+import { circlePath, KM_PER_RTT_MS, KM_PER_RTT_MS_MAX, px, py, routeSegment } from "@/lib/geo/project";
 import { WORLD_PATH } from "@/lib/geo/world-path";
 import { useTween } from "@/lib/use-tween";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,16 @@ export type MapPlace = { lat: number; lon: number; label: string };
 
 /** A place someone else claims (a GeoIP database): a dashed diamond, struck through when the measurements rule it out. */
 export type MapClaim = MapPlace & { ruledOut: boolean };
+
+/** Where a node's traceroute passes: a line from its station through each stop, with the hops at each stop numbered. */
+export type MapRoute = {
+  fromId: string;
+  stops: { key: string; lat: number; lon: number; label: string; place: string; ttls: number[] }[];
+  /** The hop being looked at elsewhere (the ladder): its stop lights up. */
+  activeTtl?: number | null;
+  /** Told which hop the pointer is on, so the ladder can follow. */
+  onStop?: (ttl: number | null) => void;
+};
 
 /** Two stations whose answers cannot both be true: drawn joined by a dashed line, their light limits shown. */
 export type MapConflict = { a: string; b: string; label: string };
@@ -73,6 +83,7 @@ export function NetworkMap({
   onBox,
   conflict,
   claim,
+  route,
   scan = false,
   className,
   label,
@@ -94,6 +105,7 @@ export function NetworkMap({
   onBox?: (ids: string[], additive: boolean) => void;
   conflict?: MapConflict | null;
   claim?: MapClaim | null;
+  route?: MapRoute | null;
   scan?: boolean;
   className?: string;
   label: string;
@@ -194,6 +206,8 @@ export function NetworkMap({
 
         {conflict && <ConflictLine nodes={nodes} conflict={conflict} />}
 
+        {route && <RouteTrail nodes={nodes} route={route} />}
+
         {alternatives.map((a) => (
           <g key={`${a.label}${a.lat}`} transform={`translate(${px(a.lon)} ${py(a.lat)})`}>
             <circle r="3" fill="none" stroke="var(--foreground)" strokeOpacity="0.55" strokeWidth="0.9" strokeDasharray="1.4 1.4" vectorEffect="non-scaling-stroke" />
@@ -240,6 +254,59 @@ export function NetworkMap({
 
       {activeNode && <Tooltip node={activeNode} />}
     </figure>
+  );
+}
+
+function RouteTrail({ nodes, route }: { nodes: MapNode[]; route: MapRoute }) {
+  const from = nodes.find((n) => n.id === route.fromId);
+  if (!from) return null;
+  const start = { x: px(from.lon), y: py(from.lat) };
+  const points = [start, ...route.stops.map((s) => ({ x: px(s.lon), y: py(s.lat) }))];
+  const d = points
+    .slice(1)
+    .map((p, i) => routeSegment(points[i].x, points[i].y, p.x, p.y))
+    .join("");
+  return (
+    <g>
+      <path d={d} fill="none" stroke="var(--viz-1)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" pointerEvents="none" aria-hidden />
+      {route.stops.map((stop, i) => {
+        const lit = route.activeTtl != null && stop.ttls.includes(route.activeTtl);
+        const x = points[i + 1].x;
+        const y = points[i + 1].y;
+        return (
+          <g
+            key={stop.key}
+            transform={`translate(${x} ${y})`}
+            onPointerEnter={() => route.onStop?.(stop.ttls[0])}
+            onPointerLeave={() => route.onStop?.(null)}
+          >
+            <circle r="4.5" fill="transparent" />
+            <circle
+              r={lit ? 2.7 : 1.9}
+              fill={lit ? "var(--signal)" : "var(--card)"}
+              stroke={lit ? "var(--signal)" : "var(--viz-1)"}
+              strokeWidth="1.8"
+              vectorEffect="non-scaling-stroke"
+            />
+            <text
+              y={-3.4}
+              textAnchor="middle"
+              fontFamily="var(--font-data), monospace"
+              fontSize="3"
+              fontWeight="600"
+              fill="var(--foreground)"
+              stroke="var(--card)"
+              strokeWidth="1.1"
+              paintOrder="stroke"
+              pointerEvents="none"
+            >
+              {stop.label}
+            </text>
+            <title>{`${stop.place || "Somewhere"}: hop ${stop.label}`}</title>
+          </g>
+        );
+      })}
+    </g>
   );
 }
 

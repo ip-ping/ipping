@@ -91,6 +91,7 @@ export function hopsOf(task: Task | undefined): Hop[] {
       private: hop.private,
       reached: hop.reached,
       rtts: (hop.rtts_us ?? []).map((us) => us / 1000),
+      sent: hop.sent ?? null,
     }))
     .sort((a, b) => a.ttl - b.ttl);
 }

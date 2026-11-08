@@ -112,6 +112,7 @@ export function MeasureForm({
   const [dnsMode, setDnsMode] = useState<Request["dns_mode"]>("fixed");
   const [family, setFamily] = useState<Request["family"]>("auto");
   const [count, setCount] = useState("4");
+  const [rounds, setRounds] = useState("1");
   const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
   const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
   const [picking, setPicking] = useState(false);
@@ -136,6 +137,7 @@ export function MeasureForm({
         body.resolver = resolver;
       }
       if (kind === "ping" || kind === "tcp") body.count = Number(count);
+      if (kind === "traceroute" && rounds !== "1") body.count = Number(rounds);
       if ((kind === "tcp" || kind === "http") && port.trim()) body.port = Number(port);
       const created = await api<Measurement>("POST", "/measurements", body);
       router.push(`/measurements/${created.id}`);
@@ -245,6 +247,15 @@ export function MeasureForm({
                 value={count}
                 onChange={setCount}
                 options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
+              />
+            )}
+            {kind === "traceroute" && (
+              <Choice
+                className="lg:col-span-3"
+                label="Rounds (like mtr)"
+                value={rounds}
+                onChange={setRounds}
+                options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: n === 1 ? "1 (just trace)" : String(n) }))}
               />
             )}
             {(kind === "tcp" || kind === "http") && (

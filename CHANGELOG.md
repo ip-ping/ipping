@@ -2,6 +2,32 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+### 2026-11-08: traceroute in rounds, the networks of a route, and the route on a map
+- The measure form offers **Rounds (like mtr)** for a traceroute: 1, 3, 5 or 10. The backend asks every node to trace
+  that many times and report each hop once, with how many probes it got and every reply. Rounds cost probes: a
+  30-hop trace counts for 30, and each extra round for a third of that again, so 16 nodes at 5 rounds is 1120 against
+  the default budget of 1000 per measurement (the answer says so; an administrator can raise the budget).
+- The **route ladder** shows, for a repeated trace, a pill from each hop's best to its worst reply, its median, and a
+  loss column. Loss only means something when it carries on: a router that answers some of the probes sent *to it*
+  but whose later hops lose none is rate-limiting its own replies, and is shown as plain percent; loss that continues
+  at every later hop is marked with a red triangle. The tooltip says which and gives jitter and probes answered.
+  Every hop in the text report, the sample table and the CSV (`rounds`, `destination_loss_pct`) carries the same.
+- **Networks and places** (needs a GeoIP database on the backend, `ipping.sh geoip-update`): the route panel lists the
+  networks it crosses in order ("AS3320 Deutsche Telekom hop 2 → AS1299 Arelion hop 6 → ...") and draws the route
+  from the node through each router's registered place on the map, going the short way over the date line. A router's
+  place is a hint (routers are often registered at the owner's head office), so a place light could not have reached
+  from the node in the time that hop answered (150 km per millisecond of round trip, plus 60 km of slack) is left
+  off and counted under the map. Without a database the panel says so. The database's attribution is shown.
+- Pure parts with 23 new unit tests (hop statistics, loss classification, plausibility of a place, networks in order,
+  the date-line segment, hop labels); the check `tests/ui/08-route.mjs` for the page, the form and every width.
+  Looked at in light and dark mode and at 390 px: the loss column made the plot narrow and the axis labels ran
+  together, so the number of ticks now follows the plot's width.
+- `scripts/dev-fleet.py` answers a repeated traceroute with a router that rate-limits its replies and, now and then,
+  a link that drops packets for good. The contract is pinned to backend `main` until the next backend release.
+- Needs the next node release to repeat a trace; an older node traces once (the page then shows an ordinary route).
+
 ## v0.4.1 (2026-11-07)
 
 Installs backend v0.4.1, which fixes two defects found by installing v0.4.0 on a fresh Debian 13 and in a Docker

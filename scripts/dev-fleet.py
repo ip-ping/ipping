@@ -98,14 +98,33 @@ async def run_task(ws, pos, f, rnd):
         await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": total, "detail": detail})
     else:
         total_r = rtt_ms(pos, tgt, rnd); hops = 5 + int((km(pos, (tgt[1], tgt[2])) if tgt else 300) / 1800) + rnd.randint(0, 2)
+        rounds = o.get("count", 1)
+        sent = 3 + (rounds - 1)
+        # In a repeated trace one router rate-limits the replies to probes aimed at itself (loss that stops there),
+        # and now and then a link drops packets for good (loss that carries on to the destination).
+        limited = rnd.randint(2, max(2, hops - 1)) if rounds > 1 else None
+        lossy_from = hops - 1 if rounds > 1 and rnd.random() < 0.3 else None
+        quiet = {ttl for ttl in range(3, hops) if rnd.random() < 0.14}
+        ips = {ttl: (ip if ttl == hops else public_ip(rnd)) for ttl in range(2, hops + 1)}
+        pending = []
         for ttl in range(1, hops + 1):
-            await asyncio.sleep(0.22)
+            if rounds == 1: await asyncio.sleep(0.22)
             frac = ttl / hops; last = ttl == hops
-            rt = [max(0.05, total_r * frac * rnd.uniform(0.85, 1.05) if ttl > 1 else rnd.uniform(0.1, 0.9)) for _ in range(3)]
-            if not last and ttl > 2 and rnd.random() < 0.14: await send({"type": "sample", **ids, "seq": ttl - 1, "status": "timeout", "detail": {"ttl": ttl, "private": False, "rtts_us": [], "reached": False}}); continue
+            chance = 0.5 if ttl == limited else 0.35 if lossy_from is not None and ttl >= lossy_from else 0.02 if rounds > 1 else 0
+            rt = [max(0.05, total_r * frac * rnd.uniform(0.85, 1.05) if ttl > 1 else rnd.uniform(0.1, 0.9)) for _ in range(sent)]
+            rt = [x for x in rt if rnd.random() >= chance]
+            if ttl in quiet and not last: rt = []
+            if last and not rt: rt = [total_r]
             d = {"ttl": ttl, "private": ttl == 1, "rtts_us": sorted(int(x * 1000) for x in rt), "reached": last}
-            if ttl > 1: d["ip"] = ip if last else public_ip(rnd)
-            await send({"type": "sample", **ids, "seq": ttl - 1, "status": "ok", "rtt_us": min(d["rtts_us"]), "detail": d})
+            if rounds > 1: d["sent"] = sent
+            if ttl > 1 and rt: d["ip"] = ips[ttl]
+            sample = {"type": "sample", **ids, "seq": ttl - 1, "status": "ok" if rt else "timeout", "detail": d}
+            if rt: sample["rtt_us"] = min(d["rtts_us"])
+            if rounds == 1: await send(sample)
+            else: pending.append(sample)
+        if pending:
+            await asyncio.sleep(0.4 * (rounds - 1) + 0.5)  # a repeated trace reports once its last round is done
+            for sample in pending: await send(sample)
     await send({"type": "task_result", **ids, "status": "completed", "tested_ip": ip})
 
 NAME = {}
@@ -116,7 +135,7 @@ async def run_node(name, cc, lat, lon, credential):
             while True:
                 await asyncio.sleep(8); await ws.send(json.dumps({"type": "ping"}))
         asyncio.create_task(beat())
-        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.3.3", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns"], "ipv4": True, "ipv6": True}}))
+        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.4.1", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns"], "ipv4": True, "ipv6": True}}))
         async for raw in ws:
             f = json.loads(raw)
             if f["type"] == "task": asyncio.create_task(run_task(ws, (lat, lon), f, rnd))

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { circlePath, distanceKm, px, py } from "./project";
+import { circlePath, distanceKm, px, py, routeSegment } from "./project";
 
 describe("projection", () => {
   it("puts a place at longitude + 180, 90 - latitude", () => {
@@ -34,5 +34,18 @@ describe("circlePath", () => {
   it("says when a ring crosses the antimeridian, so it is not filled across the map", () => {
     expect(circlePath(-17.7, 179, 800).wraps).toBe(true);
     expect(circlePath(0, 0, 800).wraps).toBe(false);
+  });
+});
+
+describe("routeSegment", () => {
+  it("is a plain line when the points are on the same side of the date line", () => {
+    expect(routeSegment(10, 20, 50, 60)).toBe("M10 20L50 60");
+  });
+
+  it("goes the short way over the date line, leaving one edge and entering at the other", () => {
+    // 10 and 350 are 20 map units apart across the edge: 10 to the left edge, 10 in from the right one
+    expect(routeSegment(10, 20, 350, 40)).toBe("M10 20L0 30M360 30L350 40");
+    // and the same line drawn from the other end
+    expect(routeSegment(350, 40, 10, 20)).toBe("M10 20L0 30M360 30L350 40");
   });
 });

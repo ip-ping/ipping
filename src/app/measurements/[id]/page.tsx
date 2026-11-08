@@ -136,7 +136,11 @@ export default function MeasurementPage() {
                 {options.max_redirects ? " (following redirects)" : ""}
               </span>
             )}
-            {kind === "traceroute" && <span>· up to {options.max_hops} hops</span>}
+            {kind === "traceroute" && (
+              <span>
+                · up to {options.max_hops} hops{options.count > 1 ? `, traced ${options.count} times` : ""}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -50,3 +50,16 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   const a = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
   return 12742 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
+
+/**
+ * A straight line on the map from one point to another, in map units (x = longitude + 180). When the short way
+ * between them crosses the date line (the points are more than half the map apart), the line leaves one edge and
+ * comes back on the other instead of crossing the whole sheet.
+ */
+export function routeSegment(ax: number, ay: number, bx: number, by: number): string {
+  if (Math.abs(bx - ax) <= 180) return `M${ax} ${ay}L${bx} ${by}`;
+  const [x1, y1, x2, y2] = ax < bx ? [ax, ay, bx, by] : [bx, by, ax, ay];
+  const t = x1 / (x1 + 360 - x2);
+  const edge = y1 + (y2 - y1) * t;
+  return `M${x1} ${y1}L0 ${edge}M360 ${edge}L${x2} ${y2}`;
+}

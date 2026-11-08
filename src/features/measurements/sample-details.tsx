@@ -6,6 +6,7 @@ import { ms } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { explainError } from "./errors";
+import { hopStats } from "./hops";
 
 type Http = NonNullable<Sample["http"]>;
 type Tls = NonNullable<Http["tls"]>;
@@ -172,6 +173,8 @@ function TlsView({ tls }: { tls: Tls }) {
 export function RouteDetailView({ task }: { task: Task }) {
   if (task.samples.length === 0) return <p className="text-muted-foreground">Waiting for the node…</p>;
   const reached = task.samples.some((s) => s.hop?.reached);
+  // a trace repeated in rounds says how many probes each hop got, and is shown as loss and spread
+  const repeated = task.samples.some((s) => s.hop?.sent != null);
   return (
     <div className="space-y-2 py-1 text-sm">
       <table className="w-full max-w-2xl text-left">
@@ -179,7 +182,8 @@ export function RouteDetailView({ task }: { task: Task }) {
           <tr>
             <th className="w-10 py-1 font-normal">Hop</th>
             <th className="py-1 font-normal">Router</th>
-            <th className="py-1 text-right font-normal">Round trips (ms)</th>
+            {repeated && <th className="py-1 text-right font-normal">Lost</th>}
+            <th className="py-1 text-right font-normal">{repeated ? "Best / avg / worst (ms)" : "Round trips (ms)"}</th>
           </tr>
         </thead>
         <tbody>
@@ -197,8 +201,20 @@ export function RouteDetailView({ task }: { task: Task }) {
                     ))}
                   {hop?.reached && <span className="ml-2 font-sans text-primary">destination</span>}
                 </td>
+                {repeated && (
+                  <td className="py-0.5 text-right tabular-nums">
+                    {hop?.sent != null && (hop.rtts_us?.length ?? 0) > 0 ? `${Number(hopStats(hop.rtts_us!.map((v) => v / 1000), hop.sent).lossPct.toFixed(1))}%` : "–"}
+                  </td>
+                )}
                 <td className="py-0.5 text-right tabular-nums">
-                  {(hop?.rtts_us?.length ?? 0) > 0 ? hop!.rtts_us!.map((v) => ms(v / 1000)).join("  ") : "–"}
+                  {(hop?.rtts_us?.length ?? 0) > 0
+                    ? hop?.sent != null
+                      ? (() => {
+                          const stats = hopStats(hop.rtts_us!.map((v) => v / 1000), hop.sent);
+                          return `${ms(stats.best)} / ${ms(stats.avg)} / ${ms(stats.worst)}`;
+                        })()
+                      : hop!.rtts_us!.map((v) => ms(v / 1000)).join("  ")
+                    : "–"}
                 </td>
               </tr>
             );

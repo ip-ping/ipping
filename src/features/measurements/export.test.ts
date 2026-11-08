@@ -80,6 +80,20 @@ describe("toText", () => {
     expect(text).toContain("2 of 2 nodes answered.");
   });
 
+  it("prints loss and spread for a route traced in rounds", () => {
+    const route = task("A", {
+      summary: { sent: 2, received: 2, loss_pct: 0, reached: true, median_ms: 20 },
+      samples: [
+        sample({ seq: 0, hop: { ttl: 1, ip: "62.115.1.1", private: false, reached: false, rtts_us: [9000, 9500, 12000], sent: 6 } } as never),
+        sample({ seq: 1, hop: { ttl: 2, ip: "93.184.216.34", private: false, reached: true, rtts_us: [20_000, 20_000, 20_000, 20_000, 20_000, 20_000], sent: 6 } } as never),
+      ],
+    });
+    const text = toText(measurement("traceroute", [route]));
+    expect(text).toContain("50% loss");
+    expect(text).toContain("best/avg/worst = 9.0/10.2/12.0 ms");
+    expect(text).toContain("0% loss");
+  });
+
   it("lists the hops of a route", () => {
     const route = task("A", {
       summary: { sent: 2, received: 2, loss_pct: 0, reached: true, median_ms: 11 },
