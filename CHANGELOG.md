@@ -2,7 +2,10 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.5.0 (2026-11-09)
+
+Installs backend v0.5.0 (database migration `0009`). New in the interface: a traceroute in rounds like `mtr`, the networks
+and places of a route's routers on a map, and certificate checks.
 
 ### 2026-11-08: certificate checks
 - A new kind in the measure form, the admin settings and the watch form: **Certificate**, a TLS handshake with no
