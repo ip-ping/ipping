@@ -2,7 +2,37 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.5.1 (2026-11-09)
+
+Installs backend v0.5.1, which fixes a paused backend dropping its nodes, and the installer now tries a download again
+when its connection dies. No change to the interface.
+
+### What was verified on the released v0.5.0 (the files, not the repository)
+- Every release file of the three repositories: all checksums match and all 12 attestations verify. (A first pass
+  refused three of them while the machine was overloaded; each verified when run on its own: a timeout, not a bad file.)
+- A fresh Debian 13 (systemd container), installed in direct mode from the stable `latest` URL (byte-identical to
+  v0.5.0's `ipping.sh`): each download is checked against the release manifest and the dependencies against their
+  hashes; `tls` is enabled by default; the released node installer enrolled a node and `doctor` passed.
+- Every kind against the real internet: ping, TCP, HTTP and DNS; certificate checks of real servers: `example.com`
+  (trusted, 46 days left, 2 names, 4 certificates sent), `1.1.1.1` by address (trusted, 11 names), `smtp.gmail.com:465`
+  (not a web server), and the badssl.com test hosts for the failures: expired ("the certificate has expired"), wrong name
+  ("not valid for this name"), self-signed and untrusted root ("issued by an unknown authority"); a traceroute in 3 rounds
+  (5 probes sent to each hop); `ipping-cli tls` and `ipping-cli -n 3 trace`, both from the released script.
+- `ipping.sh geoip-update` and then the path endpoint: empty before, and after it the destination is `AS13335 Cloudflare`.
+- An upgrade from a real v0.4.1 stack with a v0.4.0 node: the schema moves 0008 to 0009; the saved list of all five
+  kinds gains `tls`; the old measurement keeps its three samples; the old node stays online and still measures; asking
+  for a certificate check says plainly that the nodes need updating; after `ipping-node.sh update` the node has `tls`
+  and a certificate check works. (My first attempt did not test this: an old installer's `install` fetches the latest
+  release unless it is given `--version`, so it installed v0.5.0.)
+- The released Compose stack from the published `compose.yaml`: all four services healthy, backend and frontend 0.5.0.
+
+### What it found
+- **A paused backend dropped its nodes** (fixed in backend v0.5.1). The node was approved and connected, and the site
+  listed it offline for over an hour. The backend's reaper took its own process for dead after a stall and deleted the
+  connection rows of its own live nodes. Reproduced on the released image by freezing the container for 25 seconds: the
+  node went from online to offline and its row disappeared.
+- **Installer downloads were not retried** (fixed here and in the node installer): the TLS connection died in the middle
+  of a download while the machine slept and the installer stopped with "Could not download".
 
 ### fix: a download that loses its connection halfway is tried again
 Found installing the released v0.5.0 on a Debian 13 container while the machine went to sleep: the TLS connection
