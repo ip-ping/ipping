@@ -86,7 +86,8 @@ async def run_task(ws, pos, f, rnd):
         if res == "system":
             kept = [x for x in recs if x["data"] != "10.1.2.3"]; redacted = len(recs) - len(kept); recs = kept
         detail = {"resolver": "system" if res == "system" else res, "record_type": qtype, "rcode": rcode, "authoritative": False, "via_tcp": False, "truncated": False, "answers": recs, "redacted": redacted}
-        await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": int(r * 1000), "detail": detail})
+        if o.get("transport") == "doh": detail["transport"] = "doh"  # HTTPS takes a few round trips more than a UDP packet
+        await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": int(r * (3 if o.get("transport") == "doh" else 1) * 1000), "detail": detail})
         await send({"type": "task_result", **ids, "status": "completed", "resolved_ips": [x["data"] for x in recs if x["type"] == "A"]})
         return
     elif kind == "tls":

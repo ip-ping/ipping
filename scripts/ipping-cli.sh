@@ -7,6 +7,7 @@
 #   ipping-cli traceroute example.com
 #   ipping-cli tls example.com
 #   ipping-cli -t MX dns example.com
+#   ipping-cli -r cloudflare -T doh dns example.com
 #
 # It needs the address of an ipping site and an API key (an administrator creates one on the admin page):
 #
@@ -31,6 +32,7 @@ Options:
   -p PORT    port (tcp, http, tls; tls defaults to 443)
   -t TYPE    record type (dns): A AAAA CNAME MX NS TXT SOA
   -r NAME    resolver (dns): system cloudflare google quad9
+  -T NAME    transport (dns): udp (default) or doh, DNS over HTTPS (cloudflare and google)
   -c CC,CC   only nodes in these countries (ISO 3166 codes)
   -f         follow redirects (http)
   -w SEC     wait up to SEC seconds for the result (1 to 30, default 20)
@@ -48,9 +50,9 @@ die() {
 config_dir="${XDG_CONFIG_HOME:-${HOME:-.}/.config}/ipping"
 server="${IPPING_SERVER:-}"
 key="${IPPING_API_KEY:-}"
-count="" port="" record="" resolver="" countries="" follow="" wait=""
+count="" port="" record="" resolver="" transport="" countries="" follow="" wait=""
 
-while getopts 's:k:n:p:t:r:c:fw:h' option; do
+while getopts 's:k:n:p:t:r:T:c:fw:h' option; do
   case "$option" in
     s) server="$OPTARG" ;;
     k) key="$OPTARG" ;;
@@ -58,6 +60,7 @@ while getopts 's:k:n:p:t:r:c:fw:h' option; do
     p) port="$OPTARG" ;;
     t) record="$OPTARG" ;;
     r) resolver="$OPTARG" ;;
+    T) transport="$OPTARG" ;;
     c) countries="$OPTARG" ;;
     f) follow="true" ;;
     w) wait="$OPTARG" ;;
@@ -111,6 +114,7 @@ set -- --get --data-urlencode "target=$target" --data-urlencode "kind=$kind"
 [ -z "$port" ] || set -- "$@" --data-urlencode "port=$port"
 [ -z "$record" ] || set -- "$@" --data-urlencode "record_type=$record"
 [ -z "$resolver" ] || set -- "$@" --data-urlencode "resolver=$resolver"
+[ -z "$transport" ] || set -- "$@" --data-urlencode "transport=$transport"
 [ -z "$countries" ] || set -- "$@" --data-urlencode "countries=$countries"
 [ -z "$follow" ] || set -- "$@" --data-urlencode "follow_redirects=true"
 [ -z "$wait" ] || set -- "$@" --data-urlencode "wait=$wait"

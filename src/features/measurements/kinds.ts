@@ -6,6 +6,7 @@ export const KINDS: Kind[] = ["ping", "tcp", "http", "traceroute", "dns", "tls"]
 
 export type DnsRecordType = NonNullable<Schemas["CreateMeasurementRequest"]["record_type"]>;
 export type DnsResolver = NonNullable<Schemas["CreateMeasurementRequest"]["resolver"]>;
+export type DnsTransport = NonNullable<Schemas["CreateMeasurementRequest"]["transport"]>;
 
 export const DNS_RECORD_TYPES: DnsRecordType[] = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"];
 
@@ -16,6 +17,15 @@ export const DNS_RESOLVERS: { value: DnsResolver; label: string }[] = [
   { value: "google", label: "Google (8.8.8.8)" },
   { value: "quad9", label: "Quad9 (9.9.9.9)" },
 ];
+
+export const DNS_TRANSPORTS: { value: DnsTransport; label: string }[] = [
+  { value: "udp", label: "Plain DNS (UDP)" },
+  { value: "doh", label: "DNS over HTTPS" },
+];
+
+/** The resolvers that can be asked over HTTPS: Quad9 answers only over HTTP/2, which the nodes do not speak, and a node's own resolvers are not public. */
+export const DOH_RESOLVERS: readonly DnsResolver[] = ["cloudflare", "google"];
+export const canUseDoh = (resolver: DnsResolver) => DOH_RESOLVERS.includes(resolver);
 
 export type KindInfo = {
   label: string;

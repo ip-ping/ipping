@@ -89,6 +89,8 @@ check "passes the countries" eq "$(heard countries)" "DE,NL"
 check "dns kind" eq "$(heard kind)" dns
 check "dns record type" eq "$(heard record_type)" MX
 check "dns resolver" eq "$(heard resolver)" google
+"$cli" -s "$site" -k ipk_good -r cloudflare -T doh dns example.com >/dev/null
+check "dns transport" eq "$(heard transport)" doh
 "$cli" -s "$site" -k ipk_good trace example.com >/dev/null
 check "trace is traceroute" eq "$(heard kind)" traceroute
 "$cli" -s "$site" -k ipk_good -n 3 trace example.com >/dev/null

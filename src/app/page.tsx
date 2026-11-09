@@ -7,7 +7,7 @@ import { SelectionProvider } from "@/features/measurements/selection";
 import { RecentMeasurements } from "@/features/measurements/recent";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
-  const { target, kind, record, resolver } = await searchParams;
+  const { target, kind, record, resolver, transport } = await searchParams;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
@@ -29,6 +29,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             initialTarget={typeof target === "string" ? target : ""}
             initialRecordType={DNS_RECORD_TYPES.find((t) => t === record) ?? "A"}
             initialResolver={DNS_RESOLVERS.find((r) => r.value === resolver)?.value ?? "system"}
+            initialTransport={transport === "doh" ? "doh" : "udp"}
           />
         </Suspense>
       </div>

@@ -122,6 +122,7 @@ export default function MeasurementPage() {
                 <span className="font-mono">{options.record_type ?? "A"}</span> records, asked of{" "}
                 {DNS_RESOLVERS.find((r) => r.value === options.resolver)?.label.replace("Each node's own resolver", "each node's own resolver") ??
                   "each node's own resolver"}
+                {options.transport === "doh" ? ", over HTTPS (DoH)" : ""}
               </span>
             )}
             {(kind === "ping" || kind === "tcp") && (
@@ -156,7 +157,7 @@ export default function MeasurementPage() {
               render={
                 <Link
                   href={`/?kind=${kind}&target=${encodeURIComponent(rerun)}${
-                    kind === "dns" ? `&record=${options.record_type ?? "A"}&resolver=${options.resolver ?? "system"}` : ""
+                    kind === "dns" ? `&record=${options.record_type ?? "A"}&resolver=${options.resolver ?? "system"}${options.transport === "doh" ? "&transport=doh" : ""}` : ""
                   }`}
                 />
               }

@@ -905,6 +905,11 @@ export interface components {
              * @description IP address, hostname or URL
              */
             target: string;
+            /**
+             * Transport
+             * @description dns only: udp (the default) or doh, DNS over HTTPS (cloudflare and google; not the nodes' own resolvers, and not quad9, which answers only over HTTP/2)
+             */
+            transport?: ("udp" | "doh") | null;
         };
         /** CreateTokenRequest */
         CreateTokenRequest: {
@@ -964,6 +969,8 @@ export interface components {
             redacted: number;
             /** Resolver */
             resolver: string;
+            /** Transport */
+            transport?: "doh" | null;
             /**
              * Truncated
              * @default false
@@ -1248,6 +1255,8 @@ export interface components {
             scheme?: ("http" | "https") | null;
             /** Timeout Ms */
             timeout_ms: number;
+            /** Transport */
+            transport?: ("udp" | "doh") | null;
         };
         /** MeasurementOut */
         MeasurementOut: {
@@ -1957,6 +1966,8 @@ export interface components {
              * @description Anything a measurement accepts
              */
             target: string;
+            /** Transport */
+            transport?: ("udp" | "doh") | null;
         };
         /** WatchOut */
         WatchOut: {
@@ -2059,6 +2070,8 @@ export interface components {
             resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
             /** Target */
             target?: string | null;
+            /** Transport */
+            transport?: ("udp" | "doh") | null;
         };
         /** WatchRunOut */
         WatchRunOut: {
@@ -3301,6 +3314,7 @@ export interface operations {
                 count?: number | null;
                 record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
                 resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
+                transport?: ("udp" | "doh") | null;
                 follow_redirects?: boolean;
                 family?: "auto" | "4" | "6";
                 dns_mode?: "fixed" | "regional";

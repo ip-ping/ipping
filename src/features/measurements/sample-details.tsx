@@ -285,6 +285,7 @@ export function DnsDetailView({ task }: { task: Task }) {
         </span>
         {dns.authoritative && <Flag>authoritative</Flag>}
         {dns.via_tcp && <Flag>over TCP</Flag>}
+        {dns.transport === "doh" && <Flag>over HTTPS</Flag>}
         {dns.truncated && <Flag>incomplete</Flag>}
       </div>
       {answers.length > 0 ? (

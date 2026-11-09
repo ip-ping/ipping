@@ -36,10 +36,13 @@ import { useSelection } from "./selection";
 import {
   DNS_RECORD_TYPES,
   DNS_RESOLVERS,
+  DNS_TRANSPORTS,
   KIND_INFO,
   KINDS,
+  canUseDoh,
   type DnsRecordType,
   type DnsResolver,
+  type DnsTransport,
   type Kind,
 } from "./kinds";
 
@@ -94,10 +97,12 @@ export function MeasureForm({
   initialTarget = "",
   initialRecordType = "A",
   initialResolver = "system",
+  initialTransport = "udp",
 }: {
   initialTarget?: string;
   initialRecordType?: DnsRecordType;
   initialResolver?: DnsResolver;
+  initialTransport?: DnsTransport;
 }) {
   const router = useRouter();
   const { nodes } = useNodes();
@@ -116,6 +121,9 @@ export function MeasureForm({
   const [rounds, setRounds] = useState("1");
   const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
   const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
+  const [transport, setTransport] = useState<DnsTransport>(initialTransport);
+  // DNS over HTTPS can be asked of Cloudflare and Google only; for any other resolver the question goes over UDP
+  const viaHttps = transport === "doh" && canUseDoh(resolver);
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | Error | null>(null);
@@ -136,6 +144,7 @@ export function MeasureForm({
       if (kind === "dns") {
         body.record_type = recordType;
         body.resolver = resolver;
+        if (viaHttps) body.transport = "doh";
       }
       if (kind === "ping" || kind === "tcp") body.count = Number(count);
       if (kind === "traceroute" && rounds !== "1") body.count = Number(rounds);
@@ -215,6 +224,15 @@ export function MeasureForm({
                   onChange={setResolver}
                   options={DNS_RESOLVERS}
                 />
+                {canUseDoh(resolver) && (
+                  <Choice
+                    className="lg:col-span-3"
+                    label="Transport"
+                    value={viaHttps ? "doh" : "udp"}
+                    onChange={setTransport}
+                    options={DNS_TRANSPORTS}
+                  />
+                )}
               </>
             ) : (
               <>

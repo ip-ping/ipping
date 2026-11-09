@@ -50,8 +50,8 @@ describe("toCsv", () => {
       { options: { count: 1, interval_ms: 1000, timeout_ms: 5000, record_type: "A", resolver: "google" } as never },
     );
     const [header, row] = toCsv(dns).split("\r\n");
-    expect(header.endsWith("record_type,resolver,rcode,answers,min_ttl,time_ms")).toBe(true);
-    expect(row.endsWith("A,system,NOERROR,A 1.2.3.4 | A 5.6.7.8,30,12")).toBe(true);
+    expect(header.endsWith("record_type,resolver,transport,rcode,answers,min_ttl,time_ms")).toBe(true);
+    expect(row.endsWith("A,system,udp,NOERROR,A 1.2.3.4 | A 5.6.7.8,30,12")).toBe(true);
   });
 
   it("neutralises a formula that arrives from another machine", () => {
@@ -92,6 +92,16 @@ describe("toText", () => {
     expect(text).toContain("50% loss");
     expect(text).toContain("best/avg/worst = 9.0/10.2/12.0 ms");
     expect(text).toContain("0% loss");
+  });
+
+  it("marks a DNS answer that came over HTTPS", () => {
+    const answered = task("A", {
+      samples: [
+        sample({ seq: 0, rtt_ms: 31.2, dns: { resolver: "1.1.1.1", record_type: "A", rcode: "NOERROR", transport: "doh", answers: [{ name: "example.com", type: "A", ttl: 300, data: "93.184.216.34" }] } } as never),
+      ],
+    });
+    const text = toText(measurement("dns", [answered]));
+    expect(text).toMatch(/93\.184\.216\.34\s+31\.2 ms\s+\(DoH\)/);
   });
 
   it("lists the hops of a route", () => {

@@ -2,6 +2,19 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+### DNS over HTTPS
+- The DNS check gains a **Transport** choice, **DNS over HTTPS**, offered only where it can work: for Cloudflare and Google.
+  It is not offered for a node's own resolvers or for Quad9, which answers DNS over HTTPS only over HTTP/2 (found by testing
+  the real resolver: "505 HTTP Version Not Supported"), and the backend refuses those combinations with the reason. A
+  result says the question went over HTTPS: in the header ("over HTTPS (DoH)"), as a flag on an expanded row, `(DoH)` in the
+  text report and a `transport` column in the CSV; the "Run again" link keeps it. The watch form has the same choice.
+- `ipping-cli -r cloudflare -T doh dns example.com`. The simulated fleet answers over HTTPS a few round trips slower.
+- 3 new unit tests (which resolvers can use it; the mark in the text report; the CSV column) and the browser check
+  `tests/ui/10-dns-transport.mjs`; it stops with a note against a backend that has no DNS over HTTPS.
+- Needs a node newer than v0.5.1 to actually ask over HTTPS.
+
 ## v0.5.1 (2026-11-09)
 
 Installs backend v0.5.1, which fixes a paused backend dropping its nodes, and the installer now tries a download again

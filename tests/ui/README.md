@@ -5,7 +5,7 @@ the window, nothing scrolls sideways, the console is clean), what each kind of m
 nodes on the map, comparing and exporting, the administration pages and dialogs, and the administrator's
 tools end to end (a watch that alerts a webhook once, an API key that works from `ipping-cli` and stops when
 revoked), and a traceroute repeated in rounds (loss per hop, the networks, the route on a map) and a certificate check
-(one card for each distinct certificate, trust and expiry); both stop with a note when the backend is older than that. They exist because overflow bugs and dead clicks do not show up in a type check.
+(one card for each distinct certificate, trust and expiry), and DNS over HTTPS (the choice only where it can work); all three stop with a note when the backend is older than that. They exist because overflow bugs and dead clicks do not show up in a type check.
 
 The logic that does not need a browser (geometry, answer grouping, series, export) is covered by `npm test`.
 

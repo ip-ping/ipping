@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Legend, UptimeStrip } from "@/components/viz/uptime-strip";
-import { DNS_RECORD_TYPES, DNS_RESOLVERS, KIND_INFO, KINDS, type Kind } from "@/features/measurements/kinds";
+import { canUseDoh, DNS_RECORD_TYPES, DNS_RESOLVERS, DNS_TRANSPORTS, KIND_INFO, KINDS, type Kind } from "@/features/measurements/kinds";
 import { api, ApiError, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 import { ms } from "@/lib/format";
@@ -296,6 +296,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
   const [count, setCount] = useState(o.count ? String(o.count) : "");
   const [follow, setFollow] = useState(Boolean(o.follow_redirects));
   const [record, setRecord] = useState<(typeof DNS_RECORD_TYPES)[number]>((o.record_type as (typeof DNS_RECORD_TYPES)[number]) ?? "A");
+  const [transport, setTransport] = useState<"udp" | "doh">(o.transport === "doh" ? "doh" : "udp");
   const [resolver, setResolver] = useState<(typeof DNS_RESOLVERS)[number]["value"]>((o.resolver as (typeof DNS_RESOLVERS)[number]["value"]) ?? "system");
   const [interval, setInterval_] = useState(watch ? String(watch.interval_s) : "300");
   const [minOk, setMinOk] = useState(String(watch?.min_ok_pct ?? 80));
@@ -325,6 +326,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
     if (kind === "dns") {
       body.record_type = record;
       body.resolver = resolver;
+      body.transport = transport === "doh" && canUseDoh(resolver) ? "doh" : "udp";
     }
     try {
       if (watch) await api("PATCH", `/admin/watches/${watch.id}`, body);
@@ -383,6 +385,9 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
               <>
                 <Choose label="Record type" value={record} onChange={setRecord} options={DNS_RECORD_TYPES.map((t) => ({ value: t, label: t }))} />
                 <Choose label="Resolver" value={resolver} onChange={setResolver} options={DNS_RESOLVERS} />
+                {canUseDoh(resolver) && (
+                  <Choose label="Transport" value={transport} onChange={setTransport} options={DNS_TRANSPORTS} />
+                )}
               </>
             )}
           </div>

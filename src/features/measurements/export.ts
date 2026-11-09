@@ -82,6 +82,7 @@ function kindColumns(m: Measurement, t: Task): Row {
     return {
       record_type: d?.record_type ?? m.options.record_type,
       resolver: d?.resolver ?? m.options.resolver,
+      transport: d?.transport ?? m.options.transport ?? "udp",
       rcode: d?.rcode,
       answers: (d?.answers ?? []).map((a) => `${a.type} ${a.data}`).join(" | "),
       min_ttl: ttls.length ? Math.min(...ttls) : "",
@@ -177,7 +178,7 @@ export function toText(m: Measurement): string {
     } else if (kind === "dns") {
       const answer = describeAnswer(t);
       lines.push(
-        `${name}  ${answer ? answer.lines.join(", ") : "waiting"}${t.samples[0]?.rtt_ms != null ? `  ${ms(t.samples[0].rtt_ms)} ms` : ""}`,
+        `${name}  ${answer ? answer.lines.join(", ") : "waiting"}${t.samples[0]?.rtt_ms != null ? `  ${ms(t.samples[0].rtt_ms)} ms` : ""}${t.samples[0]?.dns?.transport === "doh" ? "  (DoH)" : ""}`,
       );
     } else {
       lines.push(
