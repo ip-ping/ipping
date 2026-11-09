@@ -39,6 +39,8 @@ import {
   DNS_RESOLVERS,
   DNS_TRANSPORTS,
   KIND_INFO,
+  TLS_TRANSPORTS,
+  type TlsTransport,
   KINDS,
   canUseDoh,
   type DnsRecordType,
@@ -99,11 +101,13 @@ export function MeasureForm({
   initialRecordType = "A",
   initialResolver = "system",
   initialTransport = "udp",
+  initialTlsTransport = "tcp",
 }: {
   initialTarget?: string;
   initialRecordType?: DnsRecordType;
   initialResolver?: DnsResolver;
   initialTransport?: DnsTransport;
+  initialTlsTransport?: TlsTransport;
 }) {
   const router = useRouter();
   const { nodes } = useNodes();
@@ -124,6 +128,7 @@ export function MeasureForm({
   const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
   const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
   const [transport, setTransport] = useState<DnsTransport>(initialTransport);
+  const [tlsTransport, setTlsTransport] = useState<TlsTransport>(initialTlsTransport);
   // DNS over HTTPS can be asked of Cloudflare and Google only; for any other resolver the question goes over UDP
   const viaHttps = transport === "doh" && canUseDoh(resolver);
   const [picking, setPicking] = useState(false);
@@ -149,6 +154,7 @@ export function MeasureForm({
         body.resolver = resolver;
         if (viaHttps) body.transport = "doh";
       }
+      if (kind === "tls" && tlsTransport === "quic") body.transport = "quic";
       if (kind === "ping" || kind === "tcp") body.count = Number(count);
       if (kind === "traceroute" && rounds !== "1") body.count = Number(rounds);
       if ((kind === "tcp" || kind === "http" || kind === "tls") && port.trim()) body.port = Number(port);
@@ -279,6 +285,9 @@ export function MeasureForm({
                 onChange={setRounds}
                 options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: n === 1 ? "1 (just trace)" : String(n) }))}
               />
+            )}
+            {kind === "tls" && (
+              <Choice className="lg:col-span-3" label="Transport" value={tlsTransport} onChange={setTlsTransport} options={TLS_TRANSPORTS} />
             )}
             {(kind === "tcp" || kind === "http" || kind === "tls") && (
               <div className="min-w-0 space-y-1.5 lg:col-span-3">

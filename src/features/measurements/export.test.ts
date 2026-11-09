@@ -104,6 +104,16 @@ describe("toText", () => {
     expect(text).toMatch(/93\.184\.216\.34\s+31\.2 ms\s+\(DoH\)/);
   });
 
+  it("marks a certificate seen over QUIC", () => {
+    const seen = task("A", {
+      samples: [
+        sample({ seq: 0, rtt_ms: 21.5, tls: { transport: "quic", alpn: "h3", total_us: 21_500, tls: { version: "TLSv1.3", verified: true, not_after: "2099-01-01T00:00:00Z" }, names: [], chain: 1 } } as never),
+      ],
+    });
+    const text = toText(measurement("tls", [seen]));
+    expect(text).toMatch(/trusted\s+TLSv1\.3\s+expires 2099-01-01.*\(QUIC, h3\)/);
+  });
+
   it("lists the hops of a route", () => {
     const route = task("A", {
       summary: { sent: 2, received: 2, loss_pct: 0, reached: true, median_ms: 11 },

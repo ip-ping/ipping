@@ -56,6 +56,22 @@ describe("certificatesOf", () => {
     expect(groups[0].color).not.toBe(groups[1].color);
   });
 
+  it("remembers that a handshake was QUIC and what protocol it agreed", () => {
+    const quic = task("Q", {
+      samples: [
+        {
+          seq: 0,
+          status: "ok",
+          rtt_ms: 20,
+          tls: { transport: "quic", alpn: "h3", tls: { subject: "CN=example.com", issuer: "CN=Test CA", not_after: inDays(60), verified: true }, names: [], chain: 1 },
+        } as never,
+      ],
+    });
+    const [group] = certificatesOf([quic, cert("T", 60)]);
+    expect([group.transport, group.alpn]).toEqual(["quic", "h3"]);
+    expect(certificatesOf([cert("T", 60)])[0].transport).toBeNull();
+  });
+
   it("tells a certificate a node did not trust from the same certificate that another trusted", () => {
     const groups = certificatesOf([cert("A", 60), cert("B", 60, { verified: false, verify_error: "unknown issuer" }, "error")]);
     expect(groups).toHaveLength(2);

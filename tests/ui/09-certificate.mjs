@@ -75,10 +75,29 @@ export default async function check(t) {
     }
   }
 
+  // over QUIC (the transport of HTTP/3): the page says so and the card names the protocol agreed
+  const quic = await call("POST", "/measurements", { target: "example.com", kind: "tls", transport: "quic" });
+  if (quic?.id) {
+    for (let i = 0; i < 60; i++) {
+      const m = await call("GET", "/measurements/" + quic.id);
+      if (m.status !== "running") break;
+      await page.waitForTimeout(1000);
+    }
+    await page.goto(`${BASE}/measurements/${quic.id}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(900);
+    const q = await page.locator("main").innerText();
+    t.ok(/over QUIC \(HTTP\/3\)/.test(q), "the header should say the handshake was over QUIC");
+    t.ok(/over QUIC \(h3\)/.test(q), "the card should name the protocol agreed");
+  } else {
+    t.note("QUIC not checked: this backend has no QUIC transport for certificate checks");
+  }
+
   // the form: a port is optional, and the button says what it does
   await page.goto(`${BASE}/?kind=tls`);
   await page.waitForLoadState("networkidle");
   t.ok((await page.getByText("Port (optional)").count()) > 0, "the form should offer a port for a certificate check");
   t.ok((await page.getByRole("button", { name: "Check", exact: true }).count()) > 0, "the button should say Check");
+  t.ok((await page.getByText("Transport", { exact: true }).count()) > 0, "the form should offer TCP or QUIC");
   await close();
 }

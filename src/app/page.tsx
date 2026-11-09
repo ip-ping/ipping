@@ -30,6 +30,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             initialRecordType={DNS_RECORD_TYPES.find((t) => t === record) ?? "A"}
             initialResolver={DNS_RESOLVERS.find((r) => r.value === resolver)?.value ?? "system"}
             initialTransport={transport === "doh" ? "doh" : "udp"}
+            initialTlsTransport={transport === "quic" ? "quic" : "tcp"}
           />
         </Suspense>
       </div>

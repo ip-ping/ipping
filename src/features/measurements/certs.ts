@@ -17,6 +17,10 @@ export type CertGroup = {
   verified: boolean;
   verifyError: string | null;
   version: string | null;
+  /** "quic" when the handshake was QUIC; null for TLS over TCP. */
+  transport: string | null;
+  /** The application protocol agreed (h3 over QUIC). */
+  alpn: string | null;
   names: string[];
   chain: number | null;
   nodeIds: string[];
@@ -69,6 +73,8 @@ export function certificatesOf(tasks: Task[]): CertGroup[] {
         verified: info.verified === true,
         verifyError: info.verify_error ?? null,
         version: info.version ?? null,
+        transport: detail.transport ?? null,
+        alpn: detail.alpn ?? null,
         names: detail.names ?? [],
         chain: detail.chain ?? null,
         nodeIds: [],

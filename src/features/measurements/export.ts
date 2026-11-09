@@ -56,6 +56,8 @@ function kindColumns(m: Measurement, t: Task): Row {
       not_after: cert?.not_after,
       days_left: daysUntil(cert?.not_after) ?? "",
       version: cert?.version,
+      transport: d?.transport ?? "tcp",
+      alpn: d?.alpn,
       names: (d?.names ?? []).join(" | "),
       chain: d?.chain,
       handshake_ms: num(msOf(d?.tls_us)),
@@ -153,7 +155,7 @@ export function toText(m: Measurement): string {
           ? `  expires ${cert.not_after.slice(0, 10)}${days === null ? "" : days < 0 ? ` (${-days} days ago)` : ` (in ${days} days)`}`
           : "";
         lines.push(
-          `${name}  ${cert.verified ? "trusted" : `NOT trusted (${cert.verify_error ?? "unknown"})`}  ${cert.version ?? "?"}${expiry}  ${ms(msOf(t.samples[0]?.tls?.total_us))} ms`,
+          `${name}  ${cert.verified ? "trusted" : `NOT trusted (${cert.verify_error ?? "unknown"})`}  ${cert.version ?? "?"}${expiry}  ${ms(msOf(t.samples[0]?.tls?.total_us))} ms${t.samples[0]?.tls?.transport === "quic" ? `  (QUIC, ${t.samples[0].tls.alpn ?? "?"})` : ""}`,
         );
       } else {
         lines.push(`${name}  ${t.samples[0]?.status === "timeout" ? "timed out" : (t.samples[0]?.error_code ?? t.status)}`);

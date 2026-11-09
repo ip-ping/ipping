@@ -108,6 +108,7 @@ async def run_task(ws, pos, f, rnd):
                 "not_before": cert_day(days - 90), "not_after": cert_day(days), "verified": verified}
         if err: info["verify_error"] = err
         detail = {"server_name": host, "connect_us": connect, "tls_us": shake, "total_us": total, "tls": info, "names": [host, f"www.{host}"], "chain": 2}
+        if o.get("transport") == "quic": detail.update(transport="quic", alpn="h3"); info.pop("cipher", None)
         if rnd.random() < 0.03: await send({"type": "sample", **ids, "seq": 0, "status": "timeout"})
         elif verified: await send({"type": "sample", **ids, "seq": 0, "status": "ok", "rtt_us": total, "detail": detail})
         else: await send({"type": "sample", **ids, "seq": 0, "status": "error", "error_code": "tls_certificate_invalid", "detail": detail})

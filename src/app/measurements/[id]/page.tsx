@@ -137,6 +137,7 @@ export default function MeasurementPage() {
                 {options.max_redirects ? " (following redirects)" : ""}
               </span>
             )}
+            {kind === "tls" && options.transport === "quic" && <span>· over QUIC (HTTP/3)</span>}
             {kind === "traceroute" && (
               <span>
                 · up to {options.max_hops} hops{options.count > 1 ? `, traced ${options.count} times` : ""}
@@ -157,7 +158,7 @@ export default function MeasurementPage() {
               render={
                 <Link
                   href={`/?kind=${kind}&target=${encodeURIComponent(rerun)}${
-                    kind === "dns" ? `&record=${options.record_type ?? "A"}&resolver=${options.resolver ?? "system"}${options.transport === "doh" ? "&transport=doh" : ""}` : ""
+                    kind === "dns" ? `&record=${options.record_type ?? "A"}&resolver=${options.resolver ?? "system"}${options.transport === "doh" ? "&transport=doh" : ""}` : kind === "tls" && options.transport === "quic" ? "&transport=quic" : ""
                   }`}
                 />
               }

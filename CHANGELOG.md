@@ -4,6 +4,13 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### QUIC as a transport of the certificate check
+- The certificate check's form (and a watch's) has a **Transport**: TLS over TCP, or **QUIC (HTTP/3)**. A QUIC result says so in the
+  header ("over QUIC (HTTP/3)"), on the card ("TLSv1.3 over QUIC (h3)", the protocol agreed), in the table's Connection column, in
+  the text report (`(QUIC, h3)`) and in the CSV (`transport`, `alpn`); the "Run again" link keeps it. The simulated fleet answers it.
+- 2 unit tests; the certificate browser check asks for QUIC and looks for both texts.
+- Needs a node newer than v0.5.1 to do a QUIC handshake.
+
 ### Community nodes (first slice)
 - **Enrollment**: a token can be for *a volunteer's node* (community). The token list says who each is for. A community node
   is a different thing from one you run: the form says what that means (left out unless asked for, rate limited, no say in

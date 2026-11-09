@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Legend, UptimeStrip } from "@/components/viz/uptime-strip";
-import { canUseDoh, DNS_RECORD_TYPES, DNS_RESOLVERS, DNS_TRANSPORTS, KIND_INFO, KINDS, type Kind } from "@/features/measurements/kinds";
+import { canUseDoh, DNS_RECORD_TYPES, DNS_RESOLVERS, DNS_TRANSPORTS, KIND_INFO, KINDS, TLS_TRANSPORTS, type Kind } from "@/features/measurements/kinds";
 import { api, ApiError, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 import { ms } from "@/lib/format";
@@ -297,6 +297,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
   const [follow, setFollow] = useState(Boolean(o.follow_redirects));
   const [record, setRecord] = useState<(typeof DNS_RECORD_TYPES)[number]>((o.record_type as (typeof DNS_RECORD_TYPES)[number]) ?? "A");
   const [transport, setTransport] = useState<"udp" | "doh">(o.transport === "doh" ? "doh" : "udp");
+  const [tlsTransport, setTlsTransport] = useState<"tcp" | "quic">(o.transport === "quic" ? "quic" : "tcp");
   const [resolver, setResolver] = useState<(typeof DNS_RESOLVERS)[number]["value"]>((o.resolver as (typeof DNS_RESOLVERS)[number]["value"]) ?? "system");
   const [interval, setInterval_] = useState(watch ? String(watch.interval_s) : "300");
   const [minOk, setMinOk] = useState(String(watch?.min_ok_pct ?? 80));
@@ -323,6 +324,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
     if ((kind === "tcp" || kind === "http" || kind === "tls") && port.trim()) body.port = Number(port);
     if ((kind === "ping" || kind === "tcp") && count.trim()) body.count = Number(count);
     if (kind === "http") body.follow_redirects = follow;
+    if (kind === "tls") body.transport = tlsTransport;
     if (kind === "dns") {
       body.record_type = record;
       body.resolver = resolver;
@@ -364,6 +366,7 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
+            {kind === "tls" && <Choose label="Transport" value={tlsTransport} onChange={setTlsTransport} options={TLS_TRANSPORTS} />}
             {(kind === "tcp" || kind === "http" || kind === "tls") && (
               <div className="space-y-1.5">
                 <Label htmlFor="w-port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>

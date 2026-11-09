@@ -93,6 +93,7 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
             <dt className="label">Connection</dt>
             <dd>
               {group.version}
+              {group.transport === "quic" ? ` over QUIC${group.alpn ? ` (${group.alpn})` : ""}` : ""}
               {group.chain != null ? `, ${group.chain} ${group.chain === 1 ? "certificate" : "certificates"} sent` : ""}
             </dd>
           </div>

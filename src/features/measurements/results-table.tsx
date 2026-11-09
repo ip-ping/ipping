@@ -126,7 +126,14 @@ const COLUMNS: Record<Kind, Column[]> = {
     },
     { head: "Expires", cell: (t) => <CertificateBadge tls={t.samples[0]?.tls?.tls} /> },
     { head: "Issued by", show: "md", cell: (t) => <span className="block max-w-[14rem] truncate">{commonName(t.samples[0]?.tls?.tls?.issuer)}</span> },
-    { head: "Connection", show: "lg", cell: (t) => t.samples[0]?.tls?.tls?.version ?? "–" },
+    {
+      head: "Connection",
+      show: "lg",
+      cell: (t) => {
+        const d = t.samples[0]?.tls;
+        return d?.tls?.version ? `${d.tls.version}${d.transport === "quic" ? " · QUIC" : ""}` : "–";
+      },
+    },
     { head: "Handshake", align: "right", show: "sm", cell: (t) => ms(t.samples[0]?.tls?.total_us != null ? t.samples[0].tls.total_us / 1000 : null) },
   ],
   dns: [

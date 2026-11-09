@@ -945,9 +945,9 @@ export interface components {
             target: string;
             /**
              * Transport
-             * @description dns only: udp (the default) or doh, DNS over HTTPS (cloudflare and google; not the nodes' own resolvers, and not quad9, which answers only over HTTP/2)
+             * @description dns: udp (the default) or doh, DNS over HTTPS (cloudflare and google; not the nodes' own resolvers, and not quad9, which answers only over HTTP/2). tls: tcp (the default) or quic, a QUIC handshake offering h3 over UDP
              */
-            transport?: ("udp" | "doh") | null;
+            transport?: ("udp" | "doh" | "tcp" | "quic") | null;
         };
         /** CreateTokenRequest */
         CreateTokenRequest: {
@@ -1301,7 +1301,7 @@ export interface components {
             /** Timeout Ms */
             timeout_ms: number;
             /** Transport */
-            transport?: ("udp" | "doh") | null;
+            transport?: ("udp" | "doh" | "tcp" | "quic") | null;
         };
         /** MeasurementOut */
         MeasurementOut: {
@@ -1844,6 +1844,8 @@ export interface components {
          *     comes with all of it: the point of the check is to see what is wrong.
          */
         TlsDetail: {
+            /** Alpn */
+            alpn?: string | null;
             /** Chain */
             chain?: number | null;
             /** Connect Us */
@@ -1857,6 +1859,8 @@ export interface components {
             tls_us?: number | null;
             /** Total Us */
             total_us?: number | null;
+            /** Transport */
+            transport?: "quic" | null;
         };
         /** TlsInfo */
         TlsInfo: {
@@ -2039,7 +2043,7 @@ export interface components {
              */
             target: string;
             /** Transport */
-            transport?: ("udp" | "doh") | null;
+            transport?: ("udp" | "doh" | "tcp" | "quic") | null;
         };
         /** WatchOut */
         WatchOut: {
@@ -2143,7 +2147,7 @@ export interface components {
             /** Target */
             target?: string | null;
             /** Transport */
-            transport?: ("udp" | "doh") | null;
+            transport?: ("udp" | "doh" | "tcp" | "quic") | null;
         };
         /** WatchRunOut */
         WatchRunOut: {
@@ -3417,7 +3421,7 @@ export interface operations {
                 count?: number | null;
                 record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
                 resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
-                transport?: ("udp" | "doh") | null;
+                transport?: ("udp" | "doh" | "tcp" | "quic") | null;
                 follow_redirects?: boolean;
                 include_community?: boolean;
                 family?: "auto" | "4" | "6";

@@ -6,7 +6,15 @@ export const KINDS: Kind[] = ["ping", "tcp", "http", "traceroute", "dns", "tls"]
 
 export type DnsRecordType = NonNullable<Schemas["CreateMeasurementRequest"]["record_type"]>;
 export type DnsResolver = NonNullable<Schemas["CreateMeasurementRequest"]["resolver"]>;
-export type DnsTransport = NonNullable<Schemas["CreateMeasurementRequest"]["transport"]>;
+export type Transport = NonNullable<Schemas["CreateMeasurementRequest"]["transport"]>;
+export type DnsTransport = Extract<Transport, "udp" | "doh">;
+export type TlsTransport = Extract<Transport, "tcp" | "quic">;
+
+/** How a certificate check reaches the server: TLS over TCP, or a QUIC handshake (the transport of HTTP/3). */
+export const TLS_TRANSPORTS: { value: TlsTransport; label: string }[] = [
+  { value: "tcp", label: "TLS over TCP" },
+  { value: "quic", label: "QUIC (HTTP/3)" },
+];
 
 export const DNS_RECORD_TYPES: DnsRecordType[] = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"];
 
