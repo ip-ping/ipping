@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.6.0** (application), installing backend **v0.6.0**. Nodes of any earlier version
+Current release: **v0.6.1** (application), installing backend **v0.6.1**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, and **v0.6.0** for DNS over HTTPS and QUIC.
 
@@ -139,7 +139,7 @@ sudo bash ipping.sh install --mode docker
 sudo bash ipping.sh install --mode direct --domain ping.example.com
 
 # A specific release instead of the newest, a different port, several backend processes:
-sudo bash ipping.sh install --mode docker --version v0.6.0 --http-port 8088 --backend-workers 4
+sudo bash ipping.sh install --mode docker --version v0.6.1 --http-port 8088 --backend-workers 4
 
 sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | geoip-update | uninstall
 ```
@@ -226,6 +226,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.6.1 | v0.6.1 | migration `0010` | as v0.6.0 (a measurement that asks for DNS over HTTPS or QUIC goes only to nodes that have them) |
 | v0.6.0 | v0.6.0 | migration `0010` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS; **v0.5.0+** for traceroute in rounds and certificate checks; **v0.6.0+** for DNS over HTTPS and QUIC |
 | v0.5.1 | v0.5.1 | migration `0009` | as v0.5.0 |
 | v0.5.0 | v0.5.0 | migration `0009` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS; **v0.5.0+** to repeat a traceroute in rounds and to check certificates (an older node traces once; the measure form says how many online nodes can run the chosen kind) |
@@ -285,7 +286,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1 and v0.6.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0 and v0.6.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

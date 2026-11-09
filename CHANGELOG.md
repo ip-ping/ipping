@@ -2,6 +2,40 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.6.1 (2026-11-09)
+
+Installs backend v0.6.1, which stops asking a node that cannot do DNS over HTTPS or QUIC for either. No change to the interface;
+the simulated fleet (`scripts/dev-fleet.py`) now announces v0.6.0, since it answers both.
+
+### What was verified on the released v0.6.0 (the files, not the repository)
+- Every release file of the three repositories: all 12 attestations verify, and the three container images exist for amd64
+  and arm64.
+- A fresh Debian 13 (systemd container), installed in direct mode from the stable `latest` URL: the schema is at `0010`; a
+  community token enrolled a volunteer's node that announces v0.6.0 with all six kinds.
+  - A default measurement with only a community node online has nobody to ask ("No online node can run this measurement
+    right now"); `include_community` and choosing the node by id both reach it; its location audit says "inconclusive" because
+    the node connects from a private address; a TCP estimate does not use it.
+  - DNS over HTTPS against the real resolvers: Cloudflare (A records, 28 ms) and Google (TXT, `v=spf1 -all`, 31 ms) answer
+    over HTTPS; plain UDP to Cloudflare for comparison (9 ms). Quad9 and the nodes' own resolvers are refused with the reason.
+  - Certificate checks over QUIC: `www.cloudflare.com` and `example.com` complete a handshake and agree `h3`; `github.com` and
+    `expired.badssl.com` do not serve HTTP/3 and time out. The released `ipping-cli -C -r cloudflare -T doh dns` and
+    `-T quic tls` print `(DoH)` and `(QUIC, h3)`.
+- An upgrade from a real v0.5.1 stack with a v0.5.1 node: the schema moves `0009` to `0010`; the saved list of kinds, a ping
+  and a certificate check made before the upgrade all read back as they were; the existing node becomes `official`, goes
+  offline for the moment the backend restarts, comes back on its own, and still measures; after `ipping-node.sh update` it
+  is v0.6.0 and both DNS over HTTPS (`rcode NOERROR`) and a QUIC handshake (`h3`, trusted) work.
+- The browser checks (11 of them, including the three new ones) pass against the simulated fleet.
+
+### What it found
+- **An old node answered a DoH or QUIC question the plain way and said nothing** (fixed in backend v0.6.1). A v0.5.1 node
+  ignores the `transport` option: asked for DoH it asked over UDP, asked for QUIC it did the handshake over TCP, and both
+  came back `ok` and looked like an ordinary result. A measurement that asks for either now goes only to nodes of v0.6.0
+  or newer; if none is online it says so and what to update.
+- **QUIC handshakes took 5 to 7 seconds from the machine used for testing**, against 35 to 40 ms for TLS over TCP to the
+  same servers. Not the node's client: an independent implementation (`aioquic`) took 5.2 to 6.2 s for the same handshakes
+  from the same machine. It is something on that network's path for UDP; where was not found. Google's servers never
+  answered QUIC from there. Written down in the node's changelog.
+
 ## v0.6.0 (2026-11-09)
 
 Installs backend v0.6.0 (database migration `0010`). New in the interface: **community nodes** (a volunteer's node, left out unless asked
