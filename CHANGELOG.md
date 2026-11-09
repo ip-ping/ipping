@@ -2,6 +2,17 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+### What was verified on the released v0.6.1 (the files, not the repository)
+- All 9 attestations of the application and backend releases verify and every checksum matches; the application and backend
+  images exist for amd64 and arm64. The node is unchanged (still v0.6.0).
+- On the Debian 13 stack from the v0.6.0 check, updated with the released `ipping.sh` (schema `0010`, "Updated to v0.6.1"),
+  with the node rolled back to v0.5.1: asking for DNS over HTTPS or QUIC is refused with "None of the 1 online nodes can run a
+  dns measurement over DoH yet. Nodes need to be updated to a newer version.", also when the old node is named; plain DNS
+  and a TCP certificate check still reach it. After `ipping-node.sh update` (v0.6.0) both DoH and QUIC are answered, and the
+  results say so.
+
 ## v0.6.1 (2026-11-09)
 
 Installs backend v0.6.1, which stops asking a node that cannot do DNS over HTTPS or QUIC for either. No change to the interface;
