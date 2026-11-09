@@ -24,7 +24,7 @@ the simulated fleet (`scripts/dev-fleet.py`) now announces v0.6.0, since it answ
   and a certificate check made before the upgrade all read back as they were; the existing node becomes `official`, goes
   offline for the moment the backend restarts, comes back on its own, and still measures; after `ipping-node.sh update` it
   is v0.6.0 and both DNS over HTTPS (`rcode NOERROR`) and a QUIC handshake (`h3`, trusted) work.
-- The browser checks (11 of them, including the three new ones) pass against the simulated fleet.
+- The 11 browser checks, including the DNS transport and community nodes ones, passed against the simulated fleet before the release.
 
 ### What it found
 - **An old node answered a DoH or QUIC question the plain way and said nothing** (fixed in backend v0.6.1). A v0.5.1 node
