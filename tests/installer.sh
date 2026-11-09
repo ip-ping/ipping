@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2329,SC2317  # test doubles that the sourced script calls; shellcheck cannot see that
 # Tests for the installer's own logic (no root, no network, nothing installed).
 #   bash tests/installer.sh
 set -u
@@ -37,6 +38,18 @@ done
 export OS_RELEASE_FILE=/nonexistent
 check "a missing file reads as empty" "" "$(os_release ID)"
 unset OS_RELEASE_FILE
+
+echo "downloads are tried again when the connection dies halfway"
+sleep() { :; }
+attempts=0
+curl() { attempts=$((attempts + 1)); [ "$attempts" -le "$FAIL_FIRST" ] && return 56; return 0; }
+FAIL_FIRST=0; attempts=0; fetch http://x /dev/null; check "a download that works is fetched once" "0 1" "$? $attempts"
+FAIL_FIRST=2; attempts=0; fetch http://x /dev/null; check "two dropped connections, then it works (curl exit 56 is retried)" "0 3" "$? $attempts"
+FAIL_FIRST=99; attempts=0; fetch http://x /dev/null; check "it gives up after four tries" "1 4" "$? $attempts"
+unset -f curl sleep
+# shellcheck disable=SC2016 # the pattern is literal text, not something to expand
+bad="$(grep -nE 'curl -fsSL' "$SCRIPT" | grep -v 'curl -fsSL --connect-timeout 20 "\$1" -o "\$2" && return 0' || true)"
+check "no download bypasses fetch" "" "$bad"
 
 echo "no code path sources os-release into the main shell"
 bad="$(grep -nE '^[[:space:]]*(\.|source)[[:space:]]+/etc/os-release' "$SCRIPT" || true)"

@@ -359,12 +359,26 @@ verify_sha256() {
   [ "$actual" = "$2" ] || die "Checksum mismatch for $(basename "$1") (expected $2, got ${actual}). Nothing was installed."
 }
 
+# fetch URL DEST: curl, tried up to four times. `curl --retry` alone does not retry a connection that dies
+# halfway ("unexpected EOF", exit 56) or a file that stops short (exit 18), which is what a flaky link, or a
+# machine that goes to sleep, does to a download; `--retry-all-errors` would, but curl older than 7.71 (Ubuntu
+# 20.04) does not know it. A single command on purpose, so `run` can show progress for it.
+fetch() {
+  local tries=0
+  while :; do
+    curl -fsSL --connect-timeout 20 "$1" -o "$2" && return 0
+    tries=$((tries + 1))
+    [ "$tries" -ge 4 ] && return 1
+    sleep $((tries * 3))
+  done
+}
+
 download() {
   # download URL DEST [LABEL]: with a label the download shows progress (curl's own output goes to the log).
   if [ -n "${3:-}" ]; then
-    run "$3" curl -fsSL --retry 3 "$1" -o "$2"
+    run "$3" fetch "$1" "$2"
   else
-    curl -fsSL --retry 3 "$1" -o "$2" || die "Could not download $1"
+    fetch "$1" "$2" || die "Could not download $1"
   fi
 }
 
@@ -389,7 +403,7 @@ resolve_release() {
   if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
     TAG="$(normalize_tag "$VERSION")"
   else
-    TAG="$(curl -fsSL "${API_BASE}/releases/latest" | jq -r '.tag_name // empty' 2>/dev/null)" || true
+    TAG="$(fetch "${API_BASE}/releases/latest" /dev/stdout | jq -r '.tag_name // empty' 2>/dev/null)" || true
     [ -n "$TAG" ] || die "No published release of ${REPO} was found. Use --version vX.Y.Z, or --version main for the edge channel."
   fi
   step "Fetching release ${TAG}"
@@ -445,7 +459,7 @@ install_docker_if_missing() {
   step "Installing Docker"
   apt_install ca-certificates curl
   install -m 0755 -d /etc/apt/keyrings
-  run "Adding Docker's package signing key" curl -fsSL "https://download.docker.com/linux/${distro}/gpg" -o /etc/apt/keyrings/docker.asc
+  run "Adding Docker's package signing key" fetch "https://download.docker.com/linux/${distro}/gpg" /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
   cat >/etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
