@@ -2,7 +2,10 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.6.0 (2026-11-09)
+
+Installs backend v0.6.0 (database migration `0010`). New in the interface: **community nodes** (a volunteer's node, left out unless asked
+for, marked, rate limited, audited), **DNS over HTTPS** for the DNS check and **QUIC (HTTP/3)** for the certificate check.
 
 ### QUIC as a transport of the certificate check
 - The certificate check's form (and a watch's) has a **Transport**: TLS over TCP, or **QUIC (HTTP/3)**. A QUIC result says so in the
