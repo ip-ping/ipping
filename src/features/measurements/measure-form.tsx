@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/panel";
+import { CommunityBadge } from "@/components/community-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -119,6 +120,7 @@ export function MeasureForm({
   const [family, setFamily] = useState<Request["family"]>("auto");
   const [count, setCount] = useState("4");
   const [rounds, setRounds] = useState("1");
+  const [includeCommunity, setIncludeCommunity] = useState(false);
   const [recordType, setRecordType] = useState<DnsRecordType>(initialRecordType);
   const [resolver, setResolver] = useState<DnsResolver>(initialResolver);
   const [transport, setTransport] = useState<DnsTransport>(initialTransport);
@@ -140,6 +142,7 @@ export function MeasureForm({
         family,
         follow_redirects: kind === "http" && follow,
         node_ids: scope === "selected" ? [...selected] : null,
+        include_community: scope === "all" && includeCommunity,
       };
       if (kind === "dns") {
         body.record_type = recordType;
@@ -299,6 +302,17 @@ export function MeasureForm({
                 Follow redirects
               </label>
             )}
+            {scope === "all" && online.some((n) => n.tier === "community") && (
+              <label className="flex cursor-pointer items-start gap-2 text-sm sm:col-span-2 lg:col-span-12">
+                <Checkbox checked={includeCommunity} onCheckedChange={(checked) => setIncludeCommunity(checked === true)} className="mt-0.5" />
+                <span>
+                  Include community nodes ({online.filter((n) => n.tier === "community").length} online)
+                  <span className="block text-xs text-muted-foreground">
+                    Run by volunteers. They are left out unless you ask, and what they report has not been verified.
+                  </span>
+                </span>
+              </label>
+            )}
             <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-6">
               <Label>Nodes</Label>
               <div className="flex gap-2">
@@ -353,7 +367,10 @@ export function MeasureForm({
                               setSelected(next);
                             }}
                           />
-                          <span className="font-medium">{node.name}</span>
+                          <span className="font-medium">
+                            {node.name}
+                            <CommunityBadge tier={node.tier} />
+                          </span>
                           <span className="text-muted-foreground">
                             {flag(node.country)} {place(node)}
                           </span>

@@ -3,6 +3,7 @@
 import { ChevronRightIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
+import { CommunityBadge } from "@/components/community-badge";
 import { Panel } from "@/components/panel";
 import { Sparkline } from "@/components/viz/sparkline";
 import { Badge } from "@/components/ui/badge";
@@ -255,6 +256,7 @@ export function ResultsTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     {task.node.name}
+                    <CommunityBadge tier={task.node.tier} />
                     <div className="text-xs font-normal text-muted-foreground md:hidden">
                       {flag(task.node.country)} {place(task.node)}
                     </div>

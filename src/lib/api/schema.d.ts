@@ -194,6 +194,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/nodes/{node_id}/audit-location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Audit Node Location
+         * @description Ask verified official nodes to ping the node's address and check its declared place against the answers.
+         *
+         *     It stores what it found (`location_audit`) and changes nothing else: whether to mark the place verified
+         *     is the administrator's decision. It waits for the measurement (up to 30 s).
+         */
+        post: operations["audit_node_location_api_v1_admin_nodes__node_id__audit_location_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/nodes/{node_id}/revoke": {
         parameters: {
             query?: never;
@@ -666,6 +689,10 @@ export interface components {
             last_seen_at: string | null;
             /** Latitude */
             latitude: number | null;
+            /** Location Audit */
+            location_audit: {
+                [key: string]: unknown;
+            } | null;
             /** Location Verified */
             location_verified: boolean;
             /** Longitude */
@@ -687,6 +714,11 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "revoked";
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "official" | "community";
             /** Version */
             version: string | null;
         };
@@ -874,6 +906,12 @@ export interface components {
              */
             follow_redirects: boolean;
             /**
+             * Include Community
+             * @description Also use community nodes (run by volunteers; their results are not verified). Without this, "all nodes" means the official ones; choosing a node by id is a choice.
+             * @default false
+             */
+            include_community: boolean;
+            /**
              * Kind
              * @description ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way. dns: ask each node's resolver (or a public one) about a name and compare the answers. tls: a TLS handshake with no request after it, and what the certificate says.
              * @default ping
@@ -915,6 +953,13 @@ export interface components {
         CreateTokenRequest: {
             /** Label */
             label?: string | null;
+            /**
+             * Tier
+             * @description community: for a volunteer's node. It is left out of measurements unless asked for.
+             * @default official
+             * @enum {string}
+             */
+            tier: "official" | "community";
             /**
              * Ttl Minutes
              * @default 60
@@ -1346,6 +1391,12 @@ export interface components {
             provider?: string | null;
             /** Region */
             region?: string | null;
+            /**
+             * Tier
+             * @default official
+             * @enum {string}
+             */
+            tier: "official" | "community";
         };
         /**
          * PathOut
@@ -1416,6 +1467,12 @@ export interface components {
             provider: string | null;
             /** Region */
             region: string | null;
+            /**
+             * Tier
+             * @default official
+             * @enum {string}
+             */
+            tier: "official" | "community";
         };
         /**
          * RedirectHop
@@ -1481,6 +1538,11 @@ export interface components {
             allow_private_webhooks: boolean;
             /** Allowed Ports */
             allowed_ports?: number[];
+            /**
+             * Community Tasks Per Minute
+             * @default 20
+             */
+            community_tasks_per_minute: number;
             /**
              * Creations Per Minute Per Ip
              * @default 10
@@ -1580,6 +1642,8 @@ export interface components {
             allow_private_webhooks?: boolean | null;
             /** Allowed Ports */
             allowed_ports?: number[] | null;
+            /** Community Tasks Per Minute */
+            community_tasks_per_minute?: number | null;
             /** Creations Per Minute Per Ip */
             creations_per_minute_per_ip?: number | null;
             /** Default Count */
@@ -1856,6 +1920,12 @@ export interface components {
              * @enum {string}
              */
             state: "active" | "used" | "expired" | "revoked";
+            /**
+             * Tier
+             * @default official
+             * @enum {string}
+             */
+            tier: "official" | "community";
         };
         /** UpdateNodeRequest */
         UpdateNodeRequest: {
@@ -1877,6 +1947,8 @@ export interface components {
             provider?: string | null;
             /** Region */
             region?: string | null;
+            /** Tier */
+            tier?: ("official" | "community") | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2466,6 +2538,37 @@ export interface operations {
         };
     };
     approve_node_api_v1_admin_nodes__node_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNode"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audit_node_location_api_v1_admin_nodes__node_id__audit_location_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3316,6 +3419,7 @@ export interface operations {
                 resolver?: ("system" | "cloudflare" | "google" | "quad9") | null;
                 transport?: ("udp" | "doh") | null;
                 follow_redirects?: boolean;
+                include_community?: boolean;
                 family?: "auto" | "4" | "6";
                 dns_mode?: "fixed" | "regional";
                 /** @description Comma-separated ISO country codes */

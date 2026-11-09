@@ -35,6 +35,7 @@ Options:
   -T NAME    transport (dns): udp (default) or doh, DNS over HTTPS (cloudflare and google)
   -c CC,CC   only nodes in these countries (ISO 3166 codes)
   -f         follow redirects (http)
+  -C         also use community nodes (run by volunteers; their results are not verified)
   -w SEC     wait up to SEC seconds for the result (1 to 30, default 20)
   -h         this help
 
@@ -50,9 +51,9 @@ die() {
 config_dir="${XDG_CONFIG_HOME:-${HOME:-.}/.config}/ipping"
 server="${IPPING_SERVER:-}"
 key="${IPPING_API_KEY:-}"
-count="" port="" record="" resolver="" transport="" countries="" follow="" wait=""
+count="" port="" record="" resolver="" transport="" countries="" follow="" community="" wait=""
 
-while getopts 's:k:n:p:t:r:T:c:fw:h' option; do
+while getopts 's:k:n:p:t:r:T:c:fCw:h' option; do
   case "$option" in
     s) server="$OPTARG" ;;
     k) key="$OPTARG" ;;
@@ -63,6 +64,7 @@ while getopts 's:k:n:p:t:r:T:c:fw:h' option; do
     T) transport="$OPTARG" ;;
     c) countries="$OPTARG" ;;
     f) follow="true" ;;
+    C) community="true" ;;
     w) wait="$OPTARG" ;;
     h)
       usage
@@ -117,6 +119,7 @@ set -- --get --data-urlencode "target=$target" --data-urlencode "kind=$kind"
 [ -z "$transport" ] || set -- "$@" --data-urlencode "transport=$transport"
 [ -z "$countries" ] || set -- "$@" --data-urlencode "countries=$countries"
 [ -z "$follow" ] || set -- "$@" --data-urlencode "follow_redirects=true"
+[ -z "$community" ] || set -- "$@" --data-urlencode "include_community=true"
 [ -z "$wait" ] || set -- "$@" --data-urlencode "wait=$wait"
 
 body="$(mktemp)"

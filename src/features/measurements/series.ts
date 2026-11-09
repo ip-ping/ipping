@@ -129,6 +129,7 @@ export function mapNodes(measurement: Measurement, colors?: ReadonlyMap<string, 
     } else if (summary?.median_ms != null) {
       note = `median ${ms(summary.median_ms)} ms${summary.loss_pct ? `, ${summary.loss_pct}% lost` : ""}`;
     }
+    if (task.node.tier === "community") note = ["community node", note].filter(Boolean).join(" · ");
     return [
       {
         id: task.node.id,

@@ -25,7 +25,9 @@ NODES = [
     ("Sao Paulo", "BR", -23.55, -46.63, "Vultr"), ("Johannesburg", "ZA", -26.2, 28.05, "Afrihost"), ("Mumbai", "IN", 19.08, 72.88, "Vultr"),
     ("Singapore", "SG", 1.35, 103.82, "DigitalOcean"), ("Tokyo", "JP", 35.68, 139.69, "Vultr"), ("Sydney", "AU", -33.87, 151.21, "Vultr"),
     ("Dubai", "AE", 25.2, 55.27, "Equinix"),
+    ("Lisbon", "PT", 38.72, -9.14, "Home fibre"),  # a volunteer's node: a community node, never verified
 ]
+COMMUNITY = {"Lisbon"}
 TARGETS = [("New York", 40.71, -74.0), ("Frankfurt", 50.11, 8.68), ("Singapore", 1.35, 103.82), ("Sydney", -33.87, 151.21), ("Sao Paulo", -23.55, -46.63), ("Tokyo", 35.68, 139.69)]
 jar = http.cookiejar.CookieJar(); op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)); csrf = ""
 def call(m, p, b=None, anon=False):
@@ -182,7 +184,7 @@ async def main():
     creds = json.load(open(CREDS)) if os.path.exists(CREDS) else {}
     for i, (name, cc, lat, lon, prov) in enumerate(NODES):
         if name in existing or name in creds: continue
-        tok = call("POST", "/api/v1/admin/enrollment-tokens", {"label": name})["token"]
+        tok = call("POST", "/api/v1/admin/enrollment-tokens", {"label": name, "tier": "community" if name in COMMUNITY else "official"})["token"]
         r = None
         body = {"token": tok, "name": name, "version": "0.3.3", "country": cc, "city": name, "latitude": lat, "longitude": lon, "provider": prov}
         r = urllib.request.Request(B + "/api/v1/nodes/enroll", method="POST", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
@@ -194,7 +196,7 @@ async def main():
                 if err.code != 429: raise
                 print("rate limited, waiting a minute", flush=True); await asyncio.sleep(62)
         call("POST", f"/api/v1/admin/nodes/{e['node_id']}/approve")
-        if i % 3 != 2: call("PATCH", f"/api/v1/admin/nodes/{e['node_id']}", {"location_verified": True})
+        if i % 3 != 2 and name not in COMMUNITY: call("PATCH", f"/api/v1/admin/nodes/{e['node_id']}", {"location_verified": True})
         creds[name] = e["credential"]
     json.dump(creds, open(CREDS, "w"))
     print("fleet ready:", len(creds), "nodes", flush=True)

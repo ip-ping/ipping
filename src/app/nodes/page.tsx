@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { CommunityBadge } from "@/components/community-badge";
 import { Panel } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ export default function NodesPage() {
           lat: n.latitude as number,
           lon: n.longitude as number,
           online: n.online,
-          note: n.online ? n.kinds.join(" · ") : undefined,
+          note: n.online ? [n.tier === "community" ? "community node (a volunteer's)" : null, n.kinds.join(" · ")].filter(Boolean).join(" · ") : undefined,
         })),
     [list],
   );
@@ -137,7 +138,10 @@ export default function NodesPage() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className="figure truncate text-[0.95rem] font-semibold tracking-[-0.01em]">{node.name}</span>
+                        <span className="figure truncate text-[0.95rem] font-semibold tracking-[-0.01em]">
+                          {node.name}
+                          <CommunityBadge tier={node.tier} />
+                        </span>
                         <span className="flex shrink-0 gap-1">
                           {node.ipv4 && <Badge variant="secondary">v4</Badge>}
                           {node.ipv6 && <Badge variant="secondary">v6</Badge>}

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +28,7 @@ export function TokensTab() {
   const { data, reload } = useApiData<Token[]>("/admin/enrollment-tokens", 10_000);
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("60");
+  const [community, setCommunity] = useState(false);
   const [created, setCreated] = useState<Created | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,6 +39,7 @@ export function TokensTab() {
       const result = await api<Created>("POST", "/admin/enrollment-tokens", {
         label: label.trim() || null,
         ttl_minutes: Number(ttl),
+        tier: community ? "community" : "official",
       });
       setCreated(result);
       setLabel("");
@@ -74,13 +77,23 @@ export function TokensTab() {
           <Label htmlFor="token-ttl">Valid for (minutes)</Label>
           <Input id="token-ttl" type="number" min={1} max={1440} value={ttl} onChange={(e) => setTtl(e.target.value)} className="w-32" />
         </div>
+        <label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
+          <Checkbox checked={community} onCheckedChange={(checked) => setCommunity(checked === true)} />
+          For a volunteer&apos;s node (community)
+        </label>
         <Button type="submit" disabled={busy}>
           Create enrollment token
         </Button>
       </form>
       <p className="text-sm text-muted-foreground">
         A token works once and expires. The node trades it for its own credential, then waits for
-        your approval on the Nodes tab.
+        your approval on the Nodes tab.{" "}
+        {community && (
+          <span>
+            A community node is left out of measurements unless a visitor asks for it, is rate limited, and cannot
+            move a location estimate until you have checked its place. What it reports is not verified.
+          </span>
+        )}
       </p>
 
       <Table>
@@ -90,13 +103,14 @@ export function TokensTab() {
             <TableHead className="hidden md:table-cell">Created by</TableHead>
             <TableHead className="hidden sm:table-cell">Expires</TableHead>
             <TableHead>State</TableHead>
+            <TableHead className="hidden sm:table-cell">For</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {data?.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
                 No tokens yet.
               </TableCell>
             </TableRow>
@@ -114,6 +128,7 @@ export function TokensTab() {
               <TableCell>
                 <Badge variant={token.state === "active" ? "default" : "outline"}>{token.state}</Badge>
               </TableCell>
+              <TableCell className="hidden text-muted-foreground sm:table-cell">{token.tier === "community" ? "a volunteer" : "us"}</TableCell>
               <TableCell className="text-right">
                 {token.state === "active" && (
                   <Button size="sm" variant="outline" onClick={() => revoke(token.id)}>

@@ -28,9 +28,26 @@ import { api, errorMessage, type AdminNode, type Schemas } from "@/lib/api/clien
 import { useApiData } from "@/lib/api/use-api-data";
 import { flag, place } from "@/lib/format";
 
+import { CommunityBadge } from "@/components/community-badge";
+
 import { SecretDialog } from "./secret-dialog";
 
 type Update = Schemas["UpdateNodeRequest"];
+
+type Audit = { status: "consistent" | "inconsistent" | "inconclusive"; summary: string; checked_at: string; address?: string };
+
+/** What the last location audit found, as the node carries it (see the backend's `nodes/audit.py`). */
+const auditOf = (node: AdminNode): Audit | null => (node.location_audit as Audit | null) ?? null;
+
+function AuditNote({ audit }: { audit: Audit }) {
+  const variant = audit.status === "inconsistent" ? "destructive" : audit.status === "consistent" ? "secondary" : "outline";
+  return (
+    <div className="space-y-1 text-xs" data-testid="location-audit">
+      <Badge variant={variant}>location {audit.status}</Badge>
+      <p className="text-muted-foreground">{audit.summary}</p>
+    </div>
+  );
+}
 
 function ago(iso: string | null): string {
   if (!iso) return "never";
@@ -55,6 +72,7 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
     latitude: node.latitude?.toString() ?? "",
     longitude: node.longitude?.toString() ?? "",
     verified: node.location_verified,
+    community: node.tier === "community",
   });
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
@@ -73,6 +91,7 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
       latitude: number(form.latitude),
       longitude: number(form.longitude),
       location_verified: form.verified,
+      tier: form.community ? "community" : "official",
     };
     try {
       await api("PATCH", `/admin/nodes/${node.id}`, body);
@@ -122,6 +141,11 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
             <Switch id="verified" checked={form.verified} onCheckedChange={(verified) => setForm({ ...form, verified })} />
             <Label htmlFor="verified">Location verified by an administrator</Label>
           </div>
+          <div className="flex items-center gap-3">
+            <Switch id="community" checked={form.community} onCheckedChange={(community) => setForm({ ...form, community })} />
+            <Label htmlFor="community">Run by a volunteer (community node)</Label>
+          </div>
+          {auditOf(node) && <AuditNote audit={auditOf(node) as Audit} />}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
@@ -209,6 +233,11 @@ export function NodesTab() {
                     <Button size="sm" variant="outline" onClick={() => setEditing(node)}>
                       Edit
                     </Button>
+                    {node.latitude != null && (
+                      <Button size="sm" variant="outline" onClick={() => act(`/admin/nodes/${node.id}/audit-location`, `Checked where ${node.name} is`)}>
+                        Check location
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" onClick={() => rotate(node)}>
                       Rotate key
                     </Button>
@@ -222,8 +251,16 @@ export function NodesTab() {
             return (
               <TableRow key={node.id}>
                 <TableCell className="whitespace-normal">
-                  <div className="font-medium">{node.name}</div>
+                  <div className="font-medium">
+                    {node.name}
+                    <CommunityBadge tier={node.tier} />
+                  </div>
                   <div className="font-mono text-xs text-muted-foreground">{node.remote_addr ?? ""}</div>
+                  {auditOf(node) && (
+                    <div className="mt-1">
+                      <AuditNote audit={auditOf(node) as Audit} />
+                    </div>
+                  )}
                   {/* On a narrow screen everything about the node, and its buttons, goes under its name. */}
                   <div className="mt-2 space-y-2 md:hidden">
                     <div className="text-sm">

@@ -4,6 +4,22 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## Unreleased
 
+### Community nodes (first slice)
+- **Enrollment**: a token can be for *a volunteer's node* (community). The token list says who each is for. A community node
+  is a different thing from one you run: the form says what that means (left out unless asked for, rate limited, no say in
+  a location estimate until you have checked its place, results not verified).
+- **Marked wherever a node is named**: a "community" badge in the results table, the node list and the node picker, in the
+  admin list, and a note on the map. The measure form gets **Include community nodes (N online)** when any is online;
+  without it, "all nodes" is the official ones. `ipping-cli -C` does the same.
+- **Admin > Nodes**: the node's tier can be switched, and **Check location** asks verified nodes to ping the address the node
+  connects from and shows what they found (consistent, inconsistent naming the node that ruled it out, or inconclusive with
+  the reason), in the row and in the edit dialog. It changes nothing by itself; marking a place verified stays yours.
+  Settings has **Tasks a minute for each community node**.
+- `scripts/dev-fleet.py` now enrols a seventeenth node, "Lisbon", as a community node (never verified); the browser check
+  `tests/ui/11-community.mjs` covers a default measurement without it, one with it, the badge in the table and the node list,
+  its exclusion from a location estimate, the form, a community token and the audit (inconclusive here: the fleet connects from
+  a private address). It stops with a note against a backend without community nodes. ShellCheck and the CLI test are clean.
+
 ### DNS over HTTPS
 - The DNS check gains a **Transport** choice, **DNS over HTTPS**, offered only where it can work: for Cloudflare and Google.
   It is not offered for a node's own resolvers or for Quad9, which answers DNS over HTTPS only over HTTP/2 (found by testing

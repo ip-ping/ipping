@@ -33,6 +33,7 @@ const LIMITS: { key: NumericKey; label: string; help: string; min?: number }[] =
   { key: "max_redirects", label: "Redirects an HTTP check may follow", help: "0 turns following off. Your blocklist applies to the first address only; each redirect is checked by the node for public addresses and allowed ports.", min: 0 },
   { key: "task_retries", label: "Times a task is sent again", help: "When the service instance holding a task stops before the node produced anything. 0 turns it off; partial results are never discarded.", min: 0 },
   { key: "traceroute_max_hops", label: "Most hops in a traceroute", help: "Between 5 and 30.", min: 5 },
+  { key: "community_tasks_per_minute", label: "Tasks a minute for each community node", help: "Volunteers' nodes are asked for at most this many a minute: \"all nodes\" leaves out one that is at its limit.", min: 1 },
   { key: "max_watches", label: "Most watches", help: "Scheduled checks. 0 turns them off.", min: 0 },
   { key: "min_watch_interval_s", label: "Shortest watch interval (seconds)", help: "At least 30.", min: 30 },
   { key: "watch_history_days", label: "Keep a watch's run history (days)", help: "" },

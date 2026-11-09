@@ -87,7 +87,7 @@ frame with registration ticks in its corners.
 
 ## Quick start
 
-1. **Install the central application** on a server (Debian / Ubuntu or anything with Docker):
+1. **Install the central application** on a server (Debian / Ubuntu or anything with Docker). The commands use curl's `--retry-all-errors`, which needs curl 7.71 or newer (every supported system has it except the now end-of-life Ubuntu 20.04: drop that option there):
 
    ```bash
    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh -o ipping.sh && chmod +x ipping.sh && bash ipping.sh
@@ -292,6 +292,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] An interface of its own: chart-sheet design, live fleet map, nodes page with a roster, restyled admin
 - [x] Compare DNS answers across nodes (A, AAAA, CNAME, MX, NS, TXT, SOA; the node's own resolver or a public one)
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
+- [x] Community nodes, first slice: volunteers' nodes marked, left out unless asked for, kept out of location estimates until verified, rate limited, and an audit of their declared place (see the backend README for what it does not do)
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)

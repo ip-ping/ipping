@@ -91,6 +91,10 @@ check "dns record type" eq "$(heard record_type)" MX
 check "dns resolver" eq "$(heard resolver)" google
 "$cli" -s "$site" -k ipk_good -r cloudflare -T doh dns example.com >/dev/null
 check "dns transport" eq "$(heard transport)" doh
+"$cli" -s "$site" -k ipk_good -C ping example.com >/dev/null
+check "community nodes are asked for with -C" eq "$(heard include_community)" true
+"$cli" -s "$site" -k ipk_good ping example.com >/dev/null
+check "and left out otherwise" eq "$(heard include_community)" ""
 "$cli" -s "$site" -k ipk_good trace example.com >/dev/null
 check "trace is traceroute" eq "$(heard kind)" traceroute
 "$cli" -s "$site" -k ipk_good -n 3 trace example.com >/dev/null
