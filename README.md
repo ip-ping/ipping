@@ -294,7 +294,8 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
-- [ ] Public IPv6 verified end to end (needs a test host with IPv6 internet)
+- [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove
+- [ ] Over the real public IPv6 internet (needs a host with IPv6 connectivity; neither the development machine nor CI runners have it)
 
 ## Credits
 
