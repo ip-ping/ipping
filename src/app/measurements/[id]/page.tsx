@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { TestedAddresses } from "@/features/ip-info/tested-addresses";
 import { LocationPanel } from "@/features/location/location-panel";
 import { useLocation } from "@/features/location/use-location";
 import { DNS_RESOLVERS, KIND_INFO, kindOf } from "@/features/measurements/kinds";
@@ -191,8 +192,9 @@ export default function MeasurementPage() {
       <Instrument measurement={measurement} estimate={estimate} focus={focus} slots={slots} />
       <Charts measurement={measurement} focus={focus} slots={slots} previous={before} previousAt={previousRun?.created_at} />
       <ResultsTable measurement={measurement} focus={focus} previous={before} />
+      <TestedAddresses tasks={measurement.tasks} />
       {(kind === "ping" || kind === "tcp") && (
-        <LocationPanel estimate={estimate} error={locationError} finished={!running} onAddress={setAddress} />
+        <LocationPanel estimate={estimate} error={locationError} finished={!running} onAddress={setAddress} nodes={measurement.tasks.map((t) => t.node)} />
       )}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">

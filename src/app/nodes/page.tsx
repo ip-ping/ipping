@@ -73,7 +73,6 @@ export default function NodesPage() {
               ) : (
                 <NetworkMap
                   nodes={mapNodes}
-                  scan
                   selectedId={focus.pinned}
                   activeId={focus.hover}
                   onSelect={focus.pin}

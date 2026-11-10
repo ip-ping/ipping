@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.10.0** (application), installing backend **v0.9.0**. Nodes of any earlier version
+Current release: **v0.10.0** (application), installing backend **v0.9.0** (v0.11.0 is on `main`, not released). Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -43,6 +43,12 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
   per address (the address most nodes measured first, the others one click away), and the map shows rings only
   for the nodes that measured it. How well it works on real data is in the
   [backend README](https://github.com/ip-ping/ipping-backend#estimated-network-location-experimental).
+* **IP info.** What the site's own IP databases (the lookup API, `GET /api/v1/ip/{address}`) say about an address: place,
+  position, time zone, AS number and owner, and the network the record covers. A measurement lists **every address its nodes
+  tested** with that information (a name each node resolved for itself can be several), and the form has an **IP info** option
+  that looks an address up and measures nothing (empty: your own address; `/?kind=ip` opens it). Who sees it follows the lookup's
+  access setting on the admin page (*IP data*): by default it is for API keys and administrators, so an ordinary visitor sees
+  neither the list nor an answer (the option says why) until an administrator opens it to everyone.
 * **Live results** stream in as each node answers and resume after a dropped connection.
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
 * **Admin**: approve nodes, enrollment tokens, which kinds are enabled, the allowed TCP/HTTP ports,
@@ -349,6 +355,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.11.0 | v0.9.0 | migration `0012` | as v0.10.0 (IP info for the addresses a measurement tested and as an option of its own; the evidence of a location estimate says where each node is and whose it is; the map in the theme's own colours) |
 | v0.10.0 | v0.9.0 | migration `0012` | as v0.9.1 (each node resolves a hostname itself by default, or one node you choose resolves it for the rest; the migration adds which node resolved a measurement) |
 | v0.9.1 | v0.8.1 | migration `0011` | as v0.9.0 (a node's place from the IP data is only used where it agrees with the place the node reported or you typed) |
 | v0.9.0 | v0.8.0 | migration `0011` | as v0.8.0 (IP data: MaxMind from the admin page, an IP lookup API, nodes filled in from their address; the installer gives a direct install somewhere to keep the databases) |

@@ -16,8 +16,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <br className="hidden sm:block" /> from <span className="text-signal">everywhere</span>.
         </h1>
         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed sm:text-right">
-          Ping, TCP, HTTP, traceroute and DNS, live from every node you run. See where the answer comes from, and how
-          far away it is.
+          Ping, TCP, HTTP, traceroute, DNS and certificate checks, live from every node you run, and IP info for any address. See where
+          the answer comes from, and how far away it is.
         </p>
       </div>
 
@@ -31,6 +31,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             initialResolver={DNS_RESOLVERS.find((r) => r.value === resolver)?.value ?? "system"}
             initialTransport={transport === "doh" ? "doh" : "udp"}
             initialTlsTransport={transport === "quic" ? "quic" : "tcp"}
+            initialIpInfo={kind === "ip"}
           />
         </Suspense>
       </div>

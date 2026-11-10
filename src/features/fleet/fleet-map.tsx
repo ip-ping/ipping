@@ -57,7 +57,6 @@ export function FleetMap({ className }: { className?: string }) {
     >
       <NetworkMap
         nodes={placed}
-        scan
         marked={chosen}
         onSelect={(id) => id && toggle(id)}
         onBox={pick}
@@ -66,13 +65,13 @@ export function FleetMap({ className }: { className?: string }) {
       />
       <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1 border-t px-3 py-2">
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full bg-foreground" /> connected
+          <span className="size-2 rounded-full bg-primary" /> connected
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full border border-foreground/50" /> offline
+          <span className="size-2 rounded-full border border-muted-foreground" /> offline
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="size-2.5 border border-signal bg-signal-soft" /> chosen
+          <span className="size-2.5 rounded-[3px] border border-primary bg-primary/10" /> chosen
         </span>
         {chosen ? (
           <Button type="button" variant="ghost" size="sm" onClick={clear} className="h-6 px-2 text-xs">

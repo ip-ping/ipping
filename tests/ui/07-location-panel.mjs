@@ -13,6 +13,13 @@ export default async function check(t) {
         const summary = page.getByText(label);
         if (await summary.count()) await summary.first().click();
       }
+      // each node in the evidence says where it is and whose it is: as columns from a tablet up, under the name on a phone
+      const evidence = page.locator("[data-slot=accordion-content] table").first();
+      const evidenceText = await evidence.innerText();
+      t.ok(/[A-Z][a-z]+, [A-Z]{2}/.test(evidenceText), `${width}px: the evidence should name each node's region (${evidenceText.slice(0, 120)})`);
+      t.ok(/Vultr|Hetzner|OVH|DigitalOcean|Linode|Contabo|Equinix/.test(evidenceText), `${width}px: the evidence should name each node's provider`);
+      const headers = await evidence.locator("th:visible").allInnerTexts();
+      t.eq(headers.some((h) => h === "Region") && headers.some((h) => h === "Provider / ASN"), width >= 768, `${width}px: the Region and Provider / ASN columns`);
       await page.locator("tbody tr").first().click();
       await page.waitForTimeout(400);
       await noOverflow(t, page, `${dark ? "dark" : "light"} ${width} location panel`);

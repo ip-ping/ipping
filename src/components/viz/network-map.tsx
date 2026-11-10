@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { circlePath, KM_PER_RTT_MS, KM_PER_RTT_MS_MAX, px, py, routeSegment } from "@/lib/geo/project";
 import { WORLD_PATH } from "@/lib/geo/world-path";
@@ -14,7 +14,7 @@ export type MapNode = {
   lat: number;
   lon: number;
   online?: boolean;
-  /** What this node is doing now: `running` pulses in the signal colour. */
+  /** What this node is doing now: `running` pulses. */
   state?: "idle" | "running" | "done" | "failed";
   /** Its best round trip to the target so far, in milliseconds: the radius of its ring. */
   ms?: number | null;
@@ -54,9 +54,10 @@ const LAT_SPAN = 142;
 export const MAX_RING_KM = 8000;
 
 /**
- * The world as a survey sheet, drawn in SVG with no library and nothing fetched: dotted land, a graticule,
- * each node as a station that pulses while it is live, and, when `rings` is on, a ring around every node
- * showing how far its best round trip could reach. Where the rings overlap is where the target is.
+ * The world drawn in SVG with no library and nothing fetched, in the theme's own colours (muted land on a muted
+ * sheet, `primary` for the data, `destructive` for what failed): each node is a station, a busy one pulses, and,
+ * when `rings` is on, a ring around every node shows how far its best round trip could reach. Where the rings
+ * overlap is where the target is.
  */
 /** Where a pointer event is in the map's own coordinates (longitude + 180, 90 - latitude). */
 function userPoint(e: React.PointerEvent<SVGSVGElement>): { x: number; y: number } | null {
@@ -84,7 +85,6 @@ export function NetworkMap({
   conflict,
   claim,
   route,
-  scan = false,
   className,
   label,
 }: {
@@ -106,11 +106,9 @@ export function NetworkMap({
   conflict?: MapConflict | null;
   claim?: MapClaim | null;
   route?: MapRoute | null;
-  scan?: boolean;
   className?: string;
   label: string;
 }) {
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [hover, setHover] = useState<string | null>(null);
   const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const active = hover ?? activeId ?? selectedId;
@@ -156,40 +154,20 @@ export function NetworkMap({
         }}
         onPointerCancel={() => setBox(null)}
       >
-        <defs>
-          <pattern id={`dots${uid}`} width="2.3" height="2.3" patternUnits="userSpaceOnUse">
-            <circle cx="1.15" cy="1.15" r="0.46" fill="var(--land)" />
-          </pattern>
-          <linearGradient id={`trail${uid}`} x1="0" x2="1">
-            <stop offset="0" stopColor="var(--signal)" stopOpacity="0" />
-            <stop offset="1" stopColor="var(--signal)" stopOpacity="0.13" />
-          </linearGradient>
-          <clipPath id={`world${uid}`}>
-            <rect x="0" y={LAT_TOP} width="360" height={LAT_SPAN} />
-          </clipPath>
-        </defs>
-
-        {/* the sheet */}
-        <rect x="0" y={LAT_TOP} width="360" height={LAT_SPAN} fill="var(--ocean)" />
+        {/* the sheet: a muted field with flat land on it */}
+        <rect x="0" y={LAT_TOP} width="360" height={LAT_SPAN} rx="2" fill="var(--muted)" fillOpacity="0.5" />
         <Graticule />
-        <path d={WORLD_PATH} fill={`url(#dots${uid})`} />
+        <path d={WORLD_PATH} fill="var(--muted-foreground)" fillOpacity="0.22" />
         <path
           d={WORLD_PATH}
           fill="none"
-          stroke="var(--land-edge)"
-          strokeWidth="0.9"
+          stroke="var(--muted-foreground)"
+          strokeOpacity="0.5"
+          strokeWidth="0.7"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
         />
-
-        {scan && (
-          <g clipPath={`url(#world${uid})`} aria-hidden>
-            <g className="scan-line">
-              <rect x="-14" y={LAT_TOP} width="14" height={LAT_SPAN} fill={`url(#trail${uid})`} />
-              <rect x="0" y={LAT_TOP} width="0.5" height={LAT_SPAN} fill="var(--signal)" opacity="0.55" />
-            </g>
-          </g>
-        )}
+        <rect x="0" y={LAT_TOP} width="360" height={LAT_SPAN} rx="2" fill="none" stroke="var(--border)" vectorEffect="non-scaling-stroke" />
 
         {/* how far each round trip could reach */}
         {rings &&
@@ -210,7 +188,7 @@ export function NetworkMap({
 
         {alternatives.map((a) => (
           <g key={`${a.label}${a.lat}`} transform={`translate(${px(a.lon)} ${py(a.lat)})`}>
-            <circle r="3" fill="none" stroke="var(--foreground)" strokeOpacity="0.55" strokeWidth="0.9" strokeDasharray="1.4 1.4" vectorEffect="non-scaling-stroke" />
+            <circle r="3" fill="none" stroke="var(--muted-foreground)" strokeWidth="0.9" strokeDasharray="1.4 1.4" vectorEffect="non-scaling-stroke" />
             <title>{`Also fits: ${a.label}`}</title>
           </g>
         ))}
@@ -225,8 +203,9 @@ export function NetworkMap({
             y={Math.min(box.y0, box.y1)}
             width={Math.abs(box.x1 - box.x0)}
             height={Math.abs(box.y1 - box.y0)}
-            fill="var(--signal-soft)"
-            stroke="var(--signal)"
+            fill="var(--primary)"
+            fillOpacity="0.08"
+            stroke="var(--primary)"
             strokeWidth="1.2"
             strokeDasharray="3 2"
             vectorEffect="non-scaling-stroke"
@@ -235,11 +214,10 @@ export function NetworkMap({
         )}
 
         {/* in a stable order: re-ordering the DOM under the pointer would swallow a quick click or tap */}
-        {nodes.map((n, i) => (
+        {nodes.map((n) => (
           <Station
             key={n.id}
             node={n}
-            index={i}
             active={n.id === active}
             selected={n.id === selectedId}
             marked={marked?.has(n.id) ?? false}
@@ -268,7 +246,7 @@ function RouteTrail({ nodes, route }: { nodes: MapNode[]; route: MapRoute }) {
     .join("");
   return (
     <g>
-      <path d={d} fill="none" stroke="var(--viz-1)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" pointerEvents="none" aria-hidden />
+      <path d={d} fill="none" stroke="var(--primary)" strokeOpacity="0.8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" pointerEvents="none" aria-hidden />
       {route.stops.map((stop, i) => {
         const lit = route.activeTtl != null && stop.ttls.includes(route.activeTtl);
         const x = points[i + 1].x;
@@ -283,17 +261,17 @@ function RouteTrail({ nodes, route }: { nodes: MapNode[]; route: MapRoute }) {
             <circle r="4.5" fill="transparent" />
             <circle
               r={lit ? 2.7 : 1.9}
-              fill={lit ? "var(--signal)" : "var(--card)"}
-              stroke={lit ? "var(--signal)" : "var(--viz-1)"}
+              fill={lit ? "var(--primary)" : "var(--card)"}
+              stroke="var(--primary)"
               strokeWidth="1.8"
               vectorEffect="non-scaling-stroke"
             />
             <text
               y={-3.4}
               textAnchor="middle"
-              fontFamily="var(--font-data), monospace"
+              fontFamily="var(--font-sans)"
               fontSize="3"
-              fontWeight="600"
+              fontWeight="500"
               fill="var(--foreground)"
               stroke="var(--card)"
               strokeWidth="1.1"
@@ -316,15 +294,15 @@ function Claim({ claim }: { claim: MapClaim }) {
   const left = x > 300;
   return (
     <g transform={`translate(${x} ${y})`} pointerEvents="none" aria-hidden>
-      <path d="M0 -3.4L3.4 0L0 3.4L-3.4 0Z" fill="var(--card)" fillOpacity="0.6" stroke="var(--foreground)" strokeWidth="1.4" strokeDasharray="2 1.6" vectorEffect="non-scaling-stroke" />
-      {claim.ruledOut && <path d="M-5 5L5 -5" stroke="var(--signal)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />}
+      <path d="M0 -3.4L3.4 0L0 3.4L-3.4 0Z" fill="var(--card)" fillOpacity="0.6" stroke="var(--muted-foreground)" strokeWidth="1.4" strokeDasharray="2 1.6" vectorEffect="non-scaling-stroke" />
+      {claim.ruledOut && <path d="M-5 5L5 -5" stroke="var(--destructive)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />}
       <text
         x={left ? -5.5 : 5.5}
         y="1"
         textAnchor={left ? "end" : "start"}
-        fontFamily="var(--font-data), monospace"
+        fontFamily="var(--font-sans)"
         fontSize="3"
-        fontWeight="600"
+        fontWeight="500"
         fill="var(--foreground)"
         stroke="var(--card)"
         strokeWidth="1.1"
@@ -345,14 +323,14 @@ function ConflictLine({ nodes, conflict }: { nodes: MapNode[]; conflict: MapConf
   const my = (y1 + y2) / 2;
   return (
     <g aria-hidden pointerEvents="none">
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--signal)" strokeWidth="1.8" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--destructive)" strokeWidth="1.8" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
       <text
         x={mx}
         y={my - 1.8}
         textAnchor="middle"
-        fontFamily="var(--font-data), monospace"
+        fontFamily="var(--font-sans)"
         fontSize="3.1"
-        fontWeight="600"
+        fontWeight="500"
         fill="var(--foreground)"
         stroke="var(--card)"
         strokeWidth="1.1"
@@ -368,15 +346,14 @@ function Graticule() {
   const meridians = [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150];
   const parallels = [-60, -30, 0, 30, 60];
   return (
-    <g aria-hidden fill="none" stroke="var(--graticule)" strokeWidth="1" vectorEffect="non-scaling-stroke">
+    <g aria-hidden fill="none" stroke="var(--border)" strokeWidth="1" vectorEffect="non-scaling-stroke">
       {meridians.map((lon) => (
-        <line key={lon} x1={px(lon)} x2={px(lon)} y1={LAT_TOP} y2={LAT_TOP + LAT_SPAN} vectorEffect="non-scaling-stroke" />
+        <line key={lon} x1={px(lon)} x2={px(lon)} y1={LAT_TOP} y2={LAT_TOP + LAT_SPAN} strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
       ))}
       {parallels.map((lat) => (
-        <line key={lat} x1="0" x2="360" y1={py(lat)} y2={py(lat)} vectorEffect="non-scaling-stroke" strokeOpacity={lat === 0 ? 1.8 : 1} />
+        <line key={lat} x1="0" x2="360" y1={py(lat)} y2={py(lat)} strokeDasharray={lat === 0 ? undefined : "1 3"} vectorEffect="non-scaling-stroke" />
       ))}
-      <rect x="0" y={LAT_TOP} width="360" height={LAT_SPAN} stroke="var(--foreground)" strokeOpacity="0.35" vectorEffect="non-scaling-stroke" />
-      <g fill="var(--muted-foreground)" stroke="none" fontFamily="var(--font-data), monospace" fontSize="2.9" letterSpacing="0.05em">
+      <g fill="var(--muted-foreground)" stroke="none" fontFamily="var(--font-sans)" fontSize="2.9">
         {meridians.map((lon) => (
           <text key={lon} x={px(lon)} y={LAT_TOP - 1.6} textAnchor="middle">
             {lon === 0 ? "0°" : `${Math.abs(lon)}°${lon < 0 ? "W" : "E"}`}
@@ -404,13 +381,13 @@ function Ring({ node, emphasised, dimmed }: { node: MapNode; emphasised: boolean
   return (
     <g aria-hidden pointerEvents="none">
       {hard && (
-        <path d={hard.d} fill="none" stroke="var(--foreground)" strokeOpacity="0.35" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        <path d={hard.d} fill="none" stroke="var(--muted-foreground)" strokeOpacity="0.6" strokeWidth="1" strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
       )}
       <path
         d={typical.d}
-        fill={typical.wraps ? "none" : "var(--signal)"}
-        fillOpacity={dimmed ? 0.01 : emphasised ? 0.09 : 0.03}
-        stroke="var(--signal)"
+        fill={typical.wraps ? "none" : "var(--primary)"}
+        fillOpacity={dimmed ? 0.01 : emphasised ? 0.08 : 0.025}
+        stroke="var(--primary)"
         strokeOpacity={opacity}
         strokeWidth={emphasised ? 1.9 : 1.2}
         vectorEffect="non-scaling-stroke"
@@ -424,24 +401,23 @@ function Target({ place }: { place: MapPlace }) {
   const y = py(place.lat);
   return (
     <g transform={`translate(${x} ${y})`} pointerEvents="none">
-      <circle r="2.2" fill="none" stroke="var(--signal)" strokeWidth="0.5" className="ring-out" />
-      <circle r="2.1" fill="var(--card)" fillOpacity="0.55" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-      <path d="M-5.2 0H-2.9M2.9 0H5.2M0 -5.2V-2.9M0 2.9V5.2" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-      <circle r="0.7" fill="var(--signal)" />
+      <circle r="2.2" fill="none" stroke="var(--primary)" strokeWidth="0.5" className="ring-out" />
+      <circle r="2.1" fill="var(--card)" fillOpacity="0.55" stroke="var(--primary)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      <path d="M-5.2 0H-2.9M2.9 0H5.2M0 -5.2V-2.9M0 2.9V5.2" stroke="var(--primary)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      <circle r="0.7" fill="var(--primary)" />
       <text
         x={x > 300 ? -6.5 : 6.5}
         y="1"
         textAnchor={x > 300 ? "end" : "start"}
-        fontFamily="var(--font-data), monospace"
+        fontFamily="var(--font-sans)"
         fontSize="3.2"
         fontWeight="600"
         fill="var(--foreground)"
         stroke="var(--card)"
         strokeWidth="1.1"
         paintOrder="stroke"
-        letterSpacing="0.04em"
       >
-        {place.label.toUpperCase()}
+        {place.label}
       </text>
     </g>
   );
@@ -449,7 +425,6 @@ function Target({ place }: { place: MapPlace }) {
 
 function Station({
   node,
-  index,
   active,
   selected,
   marked,
@@ -457,7 +432,6 @@ function Station({
   onSelect,
 }: {
   node: MapNode;
-  index: number;
   active: boolean;
   selected: boolean;
   marked: boolean;
@@ -469,7 +443,7 @@ function Station({
   const failed = node.state === "failed";
   const painted = node.color !== undefined;
   const hollow = !live || node.color === "none";
-  const fill = hollow ? "none" : failed ? "var(--critical)" : running ? "var(--signal)" : (node.color ?? "var(--foreground)");
+  const fill = hollow ? "none" : failed ? "var(--destructive)" : (node.color ?? "var(--primary)");
   return (
     <g
       transform={`translate(${px(node.lon)} ${py(node.lat)})`}
@@ -492,19 +466,12 @@ function Station({
       }}
     >
       <title>{node.name}</title>
-      {/* a live station sends a slow ring out, a busy one a faster signal-coloured one */}
-      {live && (
-        <circle
-          r="2.4"
-          fill="none"
-          stroke={running ? "var(--signal)" : "var(--foreground)"}
-          strokeWidth="0.6"
-          className="ring-out"
-          style={{ animationDelay: `${(index * 0.43) % 3.6}s`, animationDuration: running ? "1.8s" : undefined }}
-        />
+      {/* only a busy station pulses: a map of idle ones is still */}
+      {live && running && (
+        <circle r="2.4" fill="none" stroke="var(--primary)" strokeWidth="0.6" className="ring-out" style={{ animationDuration: "1.8s" }} />
       )}
       {!!node.pulses && (
-        <circle key={node.pulses} r="1.6" fill="none" stroke="var(--signal)" strokeWidth="0.9" className="sample-ring" />
+        <circle key={node.pulses} r="1.6" fill="none" stroke="var(--primary)" strokeWidth="0.9" className="sample-ring" />
       )}
       <circle r="4.5" fill="transparent" />
       <circle
@@ -517,50 +484,58 @@ function Station({
         opacity={0}
       />
       {marked && (
-        <rect x="-3.4" y="-3.4" width="6.8" height="6.8" fill="var(--signal-soft)" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        <rect x="-3.4" y="-3.4" width="6.8" height="6.8" rx="1.4" fill="var(--primary)" fillOpacity="0.12" stroke="var(--primary)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
       )}
       {(active || selected) && (
-        <circle r="3" fill="none" stroke="var(--signal)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        <circle r="3" fill="none" stroke="var(--primary)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
       )}
       <circle
         r={(painted ? 2.1 : 1.2) + (active ? 0.3 : 0)}
         fill={fill}
-        stroke={hollow ? "var(--foreground)" : "var(--card)"}
-        strokeOpacity={hollow ? 0.5 : 1}
-        strokeWidth={hollow ? 0.45 : painted ? 0.6 : 0.5}
+        stroke={hollow ? "var(--muted-foreground)" : "var(--card)"}
+        strokeWidth={hollow ? 0.5 : painted ? 0.6 : 0.5}
       />
     </g>
   );
 }
 
+/** The same card a shadcn popover or hover card is: rounded, `bg-popover`, a hairline ring and a soft shadow. */
 function Tooltip({ node }: { node: MapNode }) {
   const left = ((px(node.lon) - VIEW.x) / VIEW.w) * 100;
   const top = ((py(node.lat) - VIEW.y) / VIEW.h) * 100;
   const align = left < 18 ? "translate-x-0" : left > 82 ? "-translate-x-full" : "-translate-x-1/2";
   const flip = top < 22;
+  const state =
+    node.online === false ? "offline" : node.state === "running" ? "measuring" : node.state === "failed" ? "no answer" : node.state === "done" ? "done" : "live";
   return (
     <div
       role="status"
       className={cn(
-        "pointer-events-none absolute z-10 w-max max-w-[16rem] border border-foreground/30 bg-popover px-2.5 py-1.5 text-popover-foreground shadow-[3px_3px_0_0_var(--ink-faint)]",
+        "pointer-events-none absolute z-10 w-max max-w-[16rem] rounded-lg bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md ring-1 ring-foreground/10",
         align,
         flip ? "mt-3" : "-mt-3 -translate-y-full",
       )}
       style={{ left: `${left}%`, top: `${top}%` }}
     >
-      <div className="leading-none text-sm font-semibold">{node.name}</div>
-      {node.place && <div className="text-xs text-muted-foreground">{node.place}</div>}
-      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 text-foreground">
+      <div className="text-sm leading-none font-medium">{node.name}</div>
+      {node.place && <div className="mt-1 text-muted-foreground">{node.place}</div>}
+      <div className="mt-1.5 flex items-center gap-2">
         <span
           className={cn(
             "size-1.5 rounded-full",
-            node.online === false ? "bg-muted-foreground/60" : node.state === "failed" ? "bg-critical" : node.state === "running" ? "bg-signal" : "bg-good",
+            node.online === false
+              ? "bg-muted-foreground/60"
+              : node.state === "failed"
+                ? "bg-destructive"
+                : node.state === "running"
+                  ? "animate-pulse bg-primary"
+                  : "bg-good",
           )}
         />
-        {node.online === false ? "offline" : node.state === "running" ? "measuring" : node.state === "failed" ? "no answer" : node.state === "done" ? "done" : "live"}
-        {node.ms != null && <span className="tabular-nums">{node.ms < 100 ? node.ms.toFixed(1) : Math.round(node.ms)} ms</span>}
+        {state}
+        {node.ms != null && <span className="text-muted-foreground tabular-nums">{node.ms < 100 ? node.ms.toFixed(1) : Math.round(node.ms)} ms</span>}
       </div>
-      {node.note && <div className="text-xs text-muted-foreground mt-0.5">{node.note}</div>}
+      {node.note && <div className="mt-0.5 text-muted-foreground">{node.note}</div>}
     </div>
   );
 }

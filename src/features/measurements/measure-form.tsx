@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IpInfoLookup } from "@/features/ip-info/ip-info-lookup";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
 import { flag, place } from "@/lib/format";
@@ -102,12 +103,15 @@ export function MeasureForm({
   initialResolver = "system",
   initialTransport = "udp",
   initialTlsTransport = "tcp",
+  initialIpInfo = false,
 }: {
   initialTarget?: string;
   initialRecordType?: DnsRecordType;
   initialResolver?: DnsResolver;
   initialTransport?: DnsTransport;
   initialTlsTransport?: TlsTransport;
+  /** Open on the "IP info" option, which looks an address up and measures nothing. */
+  initialIpInfo?: boolean;
 }) {
   const router = useRouter();
   const { nodes } = useNodes();
@@ -138,6 +142,7 @@ export function MeasureForm({
   const [tlsTransport, setTlsTransport] = useState<TlsTransport>(initialTlsTransport);
   // DNS over HTTPS can be asked of Cloudflare and Google only; for any other resolver the question goes over UDP
   const viaHttps = transport === "doh" && canUseDoh(resolver);
+  const [ipInfo, setIpInfo] = useState(initialIpInfo);
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | Error | null>(null);
@@ -174,6 +179,31 @@ export function MeasureForm({
     }
   };
 
+  // The row of options is the same for a measurement and for an IP lookup; "IP info" is the one that measures nothing.
+  const tabs = (
+    <Tabs
+      value={ipInfo ? "ip" : kind}
+      onValueChange={(next) => {
+        if (next === null) return;
+        if (next === "ip") setIpInfo(true);
+        else {
+          setIpInfo(false);
+          setKind(next as Kind);
+        }
+      }}
+    >
+      <TabsList>
+        {KINDS.map((k) => (
+          <TabsTrigger key={k} value={k}>
+            {KIND_INFO[k].label}
+          </TabsTrigger>
+        ))}
+        <TabsTrigger value="ip">IP info</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+  if (ipInfo) return <IpInfoLookup tabs={tabs} initialAddress={/^[0-9a-fA-F:.]+$/.test(initialTarget) ? initialTarget : ""} />;
+
   const noNodes = nodes !== null && online.length === 0;
   const noCapable = nodes !== null && online.length > 0 && capable.length === 0;
   const needsSelection = scope === "selected" && selected.size === 0;
@@ -183,15 +213,7 @@ export function MeasureForm({
   return (
     <Panel label="Command" meta={<span className="normal-case tracking-normal">{info.label}</span>}>
         <form onSubmit={submit} className="space-y-5">
-          <Tabs value={kind} onValueChange={(next) => next !== null && setKind(next as Kind)}>
-            <TabsList>
-              {KINDS.map((k) => (
-                <TabsTrigger key={k} value={k}>
-                  {KIND_INFO[k].label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          {tabs}
           <div className="space-y-1.5">
             <Label htmlFor="target">{kind === "dns" ? "Domain name" : "IP address, hostname or URL"}</Label>
             <div className="flex gap-2">

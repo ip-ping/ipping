@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LocationEstimate } from "@/features/location/use-location";
-import { ms } from "@/lib/format";
+import type { Task } from "@/lib/api/client";
+import { flag, ms, place } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const STRENGTH_HELP =
@@ -39,7 +40,10 @@ function Details({ summary, children }: { summary: string; children: React.React
   );
 }
 
-function Evidence({ estimate }: { estimate: LocationEstimate }) {
+/** The nodes of the measurement by id: the evidence names a node, the measurement knows where it is and whose it is. */
+type Nodes = ReadonlyMap<string, Task["node"]>;
+
+function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes }) {
   if (estimate.evidence.length === 0) return null;
   return (
     <Details summary={`Measurements used (${estimate.evidence.filter((e) => e.used).length} of ${estimate.evidence.length} nodes)`}>
@@ -48,26 +52,42 @@ function Evidence({ estimate }: { estimate: LocationEstimate }) {
         <TableHeader className="text-muted-foreground">
           <TableRow>
             <TableHead className="py-1 font-medium">Node</TableHead>
+            <TableHead className="hidden py-1 pl-3 font-medium md:table-cell">Region</TableHead>
+            <TableHead className="hidden py-1 pl-3 font-medium md:table-cell">Provider / ASN</TableHead>
             <TableHead className="py-1 text-right font-medium">Smallest RTT</TableHead>
             <TableHead className="hidden py-1 text-right font-medium sm:table-cell">At most</TableHead>
             <TableHead className="hidden py-1 pl-3 font-medium sm:table-cell">Position</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {estimate.evidence.map((e) => (
-            <TableRow key={e.node_id} className={e.used ? "" : "text-muted-foreground"}>
-              <TableCell className="py-1">
-                {e.node_name}
-                <div className="text-muted-foreground sm:hidden">
-                  within {Math.round(e.rtt_ms * 150).toLocaleString()} km · {e.verified ? "verified" : "not verified"}
-                  {e.used ? "" : " · not used"}
-                </div>
-              </TableCell>
-              <TableCell className="py-1 text-right align-top tabular-nums">{ms(e.rtt_ms)} ms</TableCell>
-              <TableCell className="hidden py-1 text-right tabular-nums sm:table-cell">{Math.round(e.rtt_ms * 150).toLocaleString()} km</TableCell>
-              <TableCell className="hidden py-1 pl-3 sm:table-cell">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</TableCell>
-            </TableRow>
-          ))}
+          {estimate.evidence.map((e) => {
+            const node = nodes.get(e.node_id);
+            const provider = node ? [node.provider, node.asn ? `AS${node.asn}` : null].filter(Boolean).join(" · ") : "";
+            return (
+              <TableRow key={e.node_id} className={e.used ? "" : "text-muted-foreground"}>
+                <TableCell className="py-1">
+                  {e.node_name}
+                  {node && (
+                    <div className="text-muted-foreground md:hidden">
+                      {flag(node.country)} {place(node)}
+                      {provider ? ` · ${provider}` : ""}
+                    </div>
+                  )}
+                  <div className="text-muted-foreground sm:hidden">
+                    within {Math.round(e.rtt_ms * 150).toLocaleString()} km · {e.verified ? "verified" : "not verified"}
+                    {e.used ? "" : " · not used"}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden whitespace-nowrap py-1 pl-3 md:table-cell">
+                  {node ? `${flag(node.country)} ${place(node)}`.trim() : "–"}
+                </TableCell>
+                <TableCell className="hidden py-1 pl-3 md:table-cell">{provider || "–"}</TableCell>
+                <TableCell className="py-1 text-right align-top tabular-nums">{ms(e.rtt_ms)} ms</TableCell>
+                <TableCell className="hidden py-1 text-right tabular-nums sm:table-cell">{Math.round(e.rtt_ms * 150).toLocaleString()} km</TableCell>
+                <TableCell className="hidden py-1 pl-3 sm:table-cell">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
       </div>
@@ -155,7 +175,7 @@ function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
   );
 }
 
-function Body({ estimate }: { estimate: LocationEstimate }) {
+function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes }) {
   if (estimate.status === "unavailable") {
     return <p className="text-sm text-muted-foreground">{estimate.summary}</p>;
   }
@@ -176,7 +196,7 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
           </AlertDescription>
         </Alert>
         <GeoIpNote estimate={estimate} />
-        <Evidence estimate={estimate} />
+        <Evidence estimate={estimate} nodes={nodes} />
         <Limitations estimate={estimate} />
       </div>
     );
@@ -227,7 +247,7 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
         </Alert>
       )}
       <GeoIpNote estimate={estimate} />
-      <Evidence estimate={estimate} />
+      <Evidence estimate={estimate} nodes={nodes} />
       <Limitations estimate={estimate} />
     </div>
   );
@@ -271,11 +291,14 @@ export function LocationPanel({
   error,
   finished,
   onAddress,
+  nodes,
 }: {
   estimate: LocationEstimate | null;
   error: string | null;
   finished: boolean;
   onAddress: (ip: string) => void;
+  /** The nodes of the measurement, for the region and network of each node in the evidence. */
+  nodes: Task["node"][];
 }) {
   if (!finished) return null;
   return (
@@ -287,7 +310,7 @@ export function LocationPanel({
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!estimate && !error && <Skeleton className="h-40 w-full" />}
       {estimate && <Addresses estimate={estimate} onAddress={onAddress} />}
-      {estimate && <Body estimate={estimate} />}
+      {estimate && <Body estimate={estimate} nodes={new Map(nodes.map((n) => [n.id, n]))} />}
     </Panel>
   );
 }

@@ -2,6 +2,43 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.11.0 (2026-11-10, not released yet)
+
+IP info from the site's own lookup API, the location evidence with the nodes' places and networks, and the map in the theme's
+own colours. Interface only: backend v0.9.0 is unchanged and `release.env` still pins it.
+
+### IP info
+- **Tested addresses** card on a measurement: a row for every address the nodes really tested, with the node count, where the
+  IP databases put it, whose network it is (AS number and owner) and the prefix the record covers. A name each node resolved for
+  itself shows a row for each address. It uses `GET /api/v1/ip/{address}` of the site itself, and leaves itself out when the
+  lookup cannot be had by that visitor (off, for API keys or administrators only, no database installed).
+- A new **IP info** option in the form's row (`/?kind=ip` opens it): an address, or nothing for your own, and the answer as rows
+  (location, position, time zone, network, prefix, which database and when it was built, the attribution). Nothing is measured and
+  no node is used. A name or a URL is refused with a pointer to the DNS check; when the lookup is closed to the visitor it says who
+  may use it and where an administrator changes that.
+- The lookup's access setting decides who sees any of this, and it is **API keys and administrators by default**: an ordinary
+  visitor gets neither until an administrator picks *Anyone* on the *IP data* page. This was left as the backend has it.
+
+### Location evidence
+- *Measurements used* shows each node's **region** and **provider / AS number** next to its name, as the Nodes table does (as
+  columns from a tablet up, under the name on a phone). It joins the evidence to the measurement's nodes in the interface; the
+  backend is unchanged.
+
+### The map
+- Drawn with the theme's tokens only: a `muted` sheet with flat `muted-foreground` land and `border` lines (no dotted land, no
+  orange), `primary` for stations, rings, the target and the route, `destructive` for a failed node, a conflict and a ruled-out
+  claim, the sans font for labels (the monospace it named was never defined). The tooltip is the popover look (`bg-popover`, a
+  hairline ring, a soft shadow) instead of a hard-offset box. The scanning line and the pulse on every live station are gone: only
+  a busy node pulses. Light and dark, on the fleet, rings, route and node maps.
+
+### Tests
+- `tests/ui/15-ip-info.mjs` (browser, real backend with the DB-IP files, fleet): a stranger sees no address information while the
+  lookup is for API keys, and the option says why; opened to everyone, a measurement of `example.org` lists both addresses it was
+  tested at, and the option answers for 8.8.8.8 (AS15169), for a private address and for a name (refused); no measurement settings
+  in the option, no overflow at 390 / 768. `07-location-panel.mjs` checks the new columns and the phone layout. 7 unit tests for the
+  wording (`describe.test.ts`). All 15 browser checks pass; typecheck, lint and 87 unit tests pass. What was seen: the form with
+  the option, the card with 8.8.8.8, the tested-addresses table, and the map in light and dark (fleet, rings, route).
+
 ## v0.10.0 (2026-11-10)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.9.0,

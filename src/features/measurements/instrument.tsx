@@ -204,7 +204,6 @@ export function Instrument({
             onHover={focus.setHover}
             conflict={conflict}
             claim={claim}
-            scan={running}
             label={`Map of ${nodes.length} nodes measuring ${measurement.target.host}${target ? `, with the estimated location near ${target.label}` : ""}`}
           />
           <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">
