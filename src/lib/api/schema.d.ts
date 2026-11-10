@@ -92,6 +92,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ip-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ip Data
+         * @description The MaxMind account (never the key), the databases in use, and the settings of the lookup API.
+         */
+        get: operations["get_ip_data_api_v1_admin_ip_data_get"];
+        /**
+         * Put Ip Data
+         * @description Change any of the settings. Only what is sent changes. A license key that is sent replaces the saved one.
+         */
+        put: operations["put_ip_data_api_v1_admin_ip_data_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ip-data/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Now
+         * @description Download the databases now (it runs in the background: ask again to see how it went).
+         */
+        post: operations["update_now_api_v1_admin_ip_data_update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/login": {
         parameters: {
             query?: never;
@@ -211,6 +255,28 @@ export interface paths {
          *     is the administrator's decision. It waits for the measurement (up to 30 s).
          */
         post: operations["audit_node_location_api_v1_admin_nodes__node_id__audit_location_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{node_id}/autofill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Autofill Node
+         * @description Fill the node's empty fields, and refresh the automatic ones, from the address it connects from.
+         *
+         *     Fields an administrator typed (or the node reported) are not touched. It works whether or not auto-fill is on.
+         */
+        post: operations["autofill_node_api_v1_admin_nodes__node_id__autofill_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -400,6 +466,46 @@ export interface paths {
         };
         /** Ready */
         get: operations["ready_api_v1_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Address
+         * @description What the databases say about the address this request comes from.
+         */
+        get: operations["my_address_api_v1_ip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ip/{address}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Address Info
+         * @description What the databases say about an IPv4 or IPv6 address: its network, place, time zone and AS.
+         */
+        get: operations["address_info_api_v1_ip__address__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -668,6 +774,11 @@ export interface components {
         AdminNode: {
             /** Asn */
             asn: number | null;
+            /**
+             * Auto Fields
+             * @description The fields filled in automatically from the node's address; the others were typed or reported
+             */
+            auto_fields: string[];
             /** City */
             city: string | null;
             /** Country */
@@ -966,6 +1077,33 @@ export interface components {
              */
             ttl_minutes: number;
         };
+        /** DatabaseOut */
+        DatabaseOut: {
+            /**
+             * Built
+             * @description When MaxMind built the database
+             */
+            built?: string | null;
+            /** Checked At */
+            checked_at?: string | null;
+            /** Downloaded At */
+            downloaded_at?: string | null;
+            /**
+             * Edition
+             * @enum {string}
+             */
+            edition: "GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN";
+            /** Error */
+            error?: string | null;
+            /** File */
+            file?: string | null;
+            /** Present */
+            present: boolean;
+            /** Size */
+            size?: number | null;
+            /** Type */
+            type?: string | null;
+        };
         /**
          * DnsAnswerRecord
          * @description One record of a DNS answer, as text.
@@ -1233,6 +1371,126 @@ export interface components {
             /** Ttfb Us */
             ttfb_us?: number | null;
         };
+        /** IpDataOut */
+        IpDataOut: {
+            /** Attribution */
+            attribution?: string | null;
+            /**
+             * Databases Loaded
+             * @description Whether any IP database is in use, from MaxMind or another source
+             */
+            databases_loaded: boolean;
+            lookup: components["schemas"]["LookupSettingsOut"];
+            maxmind: components["schemas"]["MaxMindOut"];
+            /** Node Autofill */
+            node_autofill: boolean;
+            /** Source */
+            source?: string | null;
+        };
+        /**
+         * IpDataUpdate
+         * @description Every field optional: only the ones that are sent change.
+         */
+        IpDataUpdate: {
+            /** Account Id */
+            account_id?: string | null;
+            /**
+             * Clear Credentials
+             * @default false
+             */
+            clear_credentials: boolean;
+            /** License Key */
+            license_key?: string | null;
+            /** Lookup Access */
+            lookup_access?: ("public" | "api_key" | "admin") | null;
+            /** Lookup Enabled */
+            lookup_enabled?: boolean | null;
+            /** Lookup Per Minute */
+            lookup_per_minute?: number | null;
+            /** Maxmind Auto Update */
+            maxmind_auto_update?: boolean | null;
+            /** Maxmind Editions */
+            maxmind_editions?: ("GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN")[] | null;
+            /** Maxmind Update Hours */
+            maxmind_update_hours?: number | null;
+            /** Node Autofill */
+            node_autofill?: boolean | null;
+        };
+        /**
+         * IpInfoOut
+         * @description What the IP databases say about an address.
+         */
+        IpInfoOut: {
+            /**
+             * Accuracy Radius Km
+             * @description How far from the point the address may be
+             */
+            accuracy_radius_km?: number | null;
+            /** Address */
+            address: string;
+            /** Asn */
+            asn?: number | null;
+            /** Attribution */
+            attribution?: string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Continent
+             * @description Continent code
+             */
+            continent?: string | null;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2
+             */
+            country?: string | null;
+            /** Country Name */
+            country_name?: string | null;
+            /** Database Built */
+            database_built?: string | null;
+            /**
+             * Found
+             * @description Whether the databases know anything about this address
+             */
+            found: boolean;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+            /**
+             * Network
+             * @description The network the databases' record covers
+             */
+            network?: string | null;
+            /**
+             * Organization
+             * @description Who the AS number belongs to
+             */
+            organization?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /**
+             * Public
+             * @description False for a private, reserved or otherwise non-routable address: nothing is looked up
+             */
+            public: boolean;
+            /** Region */
+            region?: string | null;
+            /** Region Code */
+            region_code?: string | null;
+            /**
+             * Source
+             * @description Which databases answered
+             */
+            source?: string | null;
+            /** Time Zone */
+            time_zone?: string | null;
+            /**
+             * Version
+             * @enum {integer}
+             */
+            version: 4 | 6;
+        };
         /** LocationEstimateOut */
         LocationEstimateOut: {
             /**
@@ -1291,6 +1549,55 @@ export interface components {
             password: string;
             /** Username */
             username: string;
+        };
+        /** LookupSettingsOut */
+        LookupSettingsOut: {
+            /**
+             * Access
+             * @enum {string}
+             */
+            access: "public" | "api_key" | "admin";
+            /** Enabled */
+            enabled: boolean;
+            /** Per Minute */
+            per_minute: number;
+        };
+        /** MaxMindOut */
+        MaxMindOut: {
+            /** Account Id */
+            account_id: string;
+            /** Auto Update */
+            auto_update: boolean;
+            /**
+             * Credentials Source
+             * @enum {string}
+             */
+            credentials_source: "admin" | "environment" | "none";
+            /** Databases */
+            databases: components["schemas"]["DatabaseOut"][];
+            /**
+             * Directory Configured
+             * @description Whether the backend has a directory to keep the databases in
+             */
+            directory_configured: boolean;
+            /** Editions */
+            editions: ("GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN")[];
+            error: components["schemas"]["StatusErrorOut"] | null;
+            /** Last Attempt */
+            last_attempt: string | null;
+            /** Last Success */
+            last_success: string | null;
+            /**
+             * License Key Set
+             * @description Whether a license key is saved. The key itself is never sent back.
+             */
+            license_key_set: boolean;
+            /** Next Check */
+            next_check: string | null;
+            /** Running */
+            running: boolean;
+            /** Update Hours */
+            update_hours: number;
         };
         /**
          * MeasurementOptions
@@ -1765,6 +2072,13 @@ export interface components {
         ShareRequest: {
             /** Shared */
             shared: boolean;
+        };
+        /** StatusErrorOut */
+        StatusErrorOut: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
         };
         /**
          * Summary
@@ -2432,6 +2746,79 @@ export interface operations {
             };
         };
     };
+    get_ip_data_api_v1_admin_ip_data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpDataOut"];
+                };
+            };
+        };
+    };
+    put_ip_data_api_v1_admin_ip_data_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IpDataUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpDataOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_now_api_v1_admin_ip_data_update_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpDataOut"];
+                };
+            };
+        };
+    };
     login_api_v1_admin_login_post: {
         parameters: {
             query?: never;
@@ -2590,6 +2977,37 @@ export interface operations {
         };
     };
     audit_node_location_api_v1_admin_nodes__node_id__audit_location_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNode"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autofill_node_api_v1_admin_nodes__node_id__autofill_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3038,6 +3456,57 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    my_address_api_v1_ip_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpInfoOut"];
+                };
+            };
+        };
+    };
+    address_info_api_v1_ip__address__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpInfoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

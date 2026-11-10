@@ -61,40 +61,53 @@ function ago(iso: string | null): string {
 const text = (value: string): string | null => (value.trim() === "" ? null : value.trim());
 const number = (value: string): number | null => (value.trim() === "" ? null : Number(value));
 
+/** The fields of the dialog, as the strings the inputs hold. */
+const formOf = (node: AdminNode) => ({
+  name: node.name,
+  country: node.country ?? "",
+  region: node.region ?? "",
+  city: node.city ?? "",
+  provider: node.provider ?? "",
+  asn: node.asn?.toString() ?? "",
+  latitude: node.latitude?.toString() ?? "",
+  longitude: node.longitude?.toString() ?? "",
+  verified: node.location_verified,
+  community: node.tier === "community",
+});
+type Form = ReturnType<typeof formOf>;
+type Key = keyof Form;
+
 function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({
-    name: node.name,
-    country: node.country ?? "",
-    region: node.region ?? "",
-    city: node.city ?? "",
-    provider: node.provider ?? "",
-    asn: node.asn?.toString() ?? "",
-    latitude: node.latitude?.toString() ?? "",
-    longitude: node.longitude?.toString() ?? "",
-    verified: node.location_verified,
-    community: node.tier === "community",
-  });
+  // The node as last saved or filled in. The form is compared with it so that only what was changed is sent: a field
+  // that is sent becomes the administrator's own, and one that is left alone keeps following the IP data.
+  const [current, setCurrent] = useState(node);
+  const initial = formOf(current);
+  const [form, setForm] = useState<Form>(initial);
   const [busy, setBusy] = useState(false);
-  const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
-    setForm({ ...form, [key]: e.target.value });
+  const set = (key: Key) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
+  const auto = new Set(current.auto_fields);
+  const changed = (key: Key) => form[key] !== initial[key];
+  const dirty = (Object.keys(form) as Key[]).some(changed);
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
-    const body: Update = {
-      name: form.name.trim(),
-      country: text(form.country),
-      region: text(form.region),
-      city: text(form.city),
-      provider: text(form.provider),
-      asn: number(form.asn),
-      latitude: number(form.latitude),
-      longitude: number(form.longitude),
-      location_verified: form.verified,
-      tier: form.community ? "community" : "official",
-    };
+    const body: Update = {};
+    if (changed("name")) body.name = form.name.trim();
+    if (changed("country")) body.country = text(form.country);
+    if (changed("region")) body.region = text(form.region);
+    if (changed("city")) body.city = text(form.city);
+    if (changed("provider")) body.provider = text(form.provider);
+    if (changed("asn")) body.asn = number(form.asn);
+    // A position is a pair: change one half and both are sent.
+    if (changed("latitude") || changed("longitude")) {
+      body.latitude = number(form.latitude);
+      body.longitude = number(form.longitude);
+    }
+    if (changed("verified")) body.location_verified = form.verified;
+    if (changed("community")) body.tier = form.community ? "community" : "official";
     try {
-      await api("PATCH", `/admin/nodes/${node.id}`, body);
+      if (Object.keys(body).length > 0) await api("PATCH", `/admin/nodes/${node.id}`, body);
       toast.success("Node updated");
       onSaved();
       onClose();
@@ -104,10 +117,37 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
     }
   };
 
-  const field = (key: keyof typeof form, label: string, extra: Record<string, unknown> = {}) => (
+  const fill = async () => {
+    setBusy(true);
+    try {
+      const filled = await api<AdminNode>("POST", `/admin/nodes/${node.id}/autofill`);
+      const before = new Set(current.auto_fields);
+      const gained = filled.auto_fields.filter((f) => !before.has(f)).length;
+      toast.success(gained > 0 ? "Filled in from the IP data" : "Nothing to fill in: every field is set or has no data");
+      setCurrent(filled);
+      // Keep what was typed in the fields that were not touched by the data.
+      const next = formOf(filled);
+      const kept = Object.fromEntries((Object.keys(form) as Key[]).filter((k) => changed(k) && !filled.auto_fields.includes(k)).map((k) => [k, form[k]]));
+      setForm({ ...next, ...kept });
+      onSaved();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // A field that was emptied goes back to the IP data when it is saved.
+  const cleared = (key: Key) => changed(key) && String(form[key]).trim() === "" && String(initial[key]) !== "";
+
+  const field = (key: Key, label: string, extra: Record<string, unknown> = {}) => (
     <div className="space-y-1.5">
-      <Label htmlFor={`node-${key}`}>{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={`node-${key}`}>{label}</Label>
+        {!changed(key) && auto.has(key) && <Badge variant="secondary">auto</Badge>}
+      </div>
       <Input id={`node-${key}`} value={String(form[key])} onChange={set(key)} {...extra} />
+      {cleared(key) && <p className="text-xs text-muted-foreground">Automatic once saved</p>}
     </div>
   );
 
@@ -117,14 +157,15 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
         <DialogHeader>
           <DialogTitle>Edit {node.name}</DialogTitle>
           <DialogDescription>
-            The node declared its own location at enrollment. Correct it here, then mark it
-            verified once you have checked it.
+            Fields marked <em>auto</em> are filled in from the IP data for the address the node connects from, and follow it as it
+            is updated. Type a value to keep your own; clear a field to go back to the automatic one. Mark the location verified
+            once you have checked it.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={save} className="space-y-3">
           {field("name", "Name", { required: true })}
           <div className="grid grid-cols-3 gap-3">
-            {field("country", "Country (ISO)", { maxLength: 2, placeholder: "DE" })}
+            {field("country", "Country", { maxLength: 2, placeholder: "DE" })}
             {field("region", "Region")}
             {field("city", "City")}
           </div>
@@ -146,13 +187,18 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
             <Label htmlFor="community">Run by a volunteer (community node)</Label>
           </div>
           {auditOf(node) && <AuditNote audit={auditOf(node) as Audit} />}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+          <DialogFooter className="sm:justify-between">
+            <Button type="button" variant="outline" onClick={fill} disabled={busy || !current.remote_addr} title={current.remote_addr ? undefined : "The node has not connected yet"}>
+              Fill from IP data
             </Button>
-            <Button type="submit" disabled={busy}>
-              Save
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busy || !dirty}>
+                Save
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

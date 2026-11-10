@@ -2,6 +2,40 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.9.0 (2026-11-10)
+
+IP data: MaxMind GeoLite2 from the admin page, an IP lookup API with its own settings, and nodes that fill themselves in
+from their address. Installs backend **v0.8.0** (database migration `0011`).
+
+### The admin page: *IP data*
+- A new tab with the MaxMind **account ID** and **license key** (the key is write-only: the field shows "Saved" and never
+  the key), which databases to keep (City, ASN, Country), automatic updates and how often, *Update now*, and a table of
+  what is installed (build date, size, status, the last error in words). It polls while a download runs.
+- The **IP lookup API** card: on or off, who may use `GET /api/v1/ip/<address>` (an API key or an administrator, anyone,
+  administrators only) and the lookups a minute per client address, with the `curl` line that goes with the choice.
+- A **Node details** switch for the automatic filling.
+- It says when the backend has nowhere to keep the databases, and when the account comes from the environment.
+
+### Nodes: filled in, unless you type otherwise
+- The edit dialog marks every value that came from the IP data **auto**, sends **only the fields you changed** (a field that
+  is sent becomes yours; one you leave alone keeps following the data), says "Automatic once saved" under a field you
+  emptied, and has a **Fill from IP data** button. *Save* is for changes.
+- Country and city now read "Country" (the ISO hint stays as the placeholder) so the badge fits.
+
+### Installer
+- A direct install and a direct update make sure the backend has a directory it may write (`/var/lib/ipping-backend/geoip` and
+  the systemd drop-in that names it), so the admin page can download without anyone running `geoip-update`. `--purge` removes
+  the directory and the drop-in too.
+
+### Checks
+- Browser check `13-ip-data.mjs` (the tab at phone, tablet and desktop width, the lookup API settings and what they really
+  allow, a node dialog that sends one field); the admin sweep includes the tab. Lint, types, 79 unit tests and ShellCheck
+  (stable and 0.10.0) pass.
+- Against a stand-in MaxMind (a wrong key, then the right one; a checksum that does not match is refused): the table, the
+  source and the attribution change, the key is nowhere in the page or the API's answer, a node was filled in from 8.8.8.8, a typed
+  provider survived a refill, and clearing it brought the data back. Real MaxMind was not reachable from here: the download
+  follows its published service description.
+
 ## v0.8.1 (2026-11-10)
 
 The interface is shadcn/ui only again. No change to the installer, the API or the backend (still v0.7.0).

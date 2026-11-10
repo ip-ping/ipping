@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.8.1** (application), installing backend **v0.7.0**. Nodes of any earlier version
+Current release: **v0.9.0** (application), installing backend **v0.8.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -44,7 +44,9 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 * **Live results** stream in as each node answers and resume after a dropped connection.
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
 * **Admin**: approve nodes, enrollment tokens, which kinds are enabled, the allowed TCP/HTTP ports,
-  probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log.
+  probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log, and the
+  **IP data**: a MaxMind account the backend downloads its databases with, an IP lookup API, and nodes that fill in
+  their own country, city, provider and AS number.
 * Works on phones and in dark mode.
 
 ## The interface
@@ -74,6 +76,14 @@ and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
   The same goes for a **geofeed** (RFC 8805): where the address's own network says its addresses are, from the
   feeds an administrator lists (`ipping.sh geofeed-update --feed https://...`); only those are fetched, only then.
+* **IP data from MaxMind, and an API for it.** In *Admin > IP data* enter a free MaxMind GeoLite2 account ID and license
+  key: the backend downloads the City and ASN databases, keeps them current (how often is a setting; "Update now"
+  is a button), and uses them everywhere an address is looked at. They also answer `GET /api/v1/ip/<address>`
+  (network, country, region, city, position, time zone, AS number and organisation), whose access (off, anyone, an API key
+  or an administrator, administrators only) and rate are settings on the same page. A node's country, region, city,
+  position, provider and AS number are **filled in from the address it connects from** unless the node reported
+  them or you typed them: in a node's edit dialog the values that came from the data are marked *auto*, a value you type
+  stays yours, and clearing a field hands it back. See [IP data](#ip-data-maxmind-and-the-lookup-api).
 * **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
   when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
 * **From a terminal.** An administrator can create API keys (with quotas) and scripts can use them; `ipping-cli`
@@ -127,7 +137,8 @@ On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a
 same information is plain text, and the layout follows the width of the terminal.
 
 Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
-`access`, `logs`, `backup`, `restore FILE`, `update`, `proxy`, `geoip-update`, `geofeed-update --feed URL`, `uninstall`.
+`access`, `logs`, `backup`, `restore FILE`, `update`, `proxy`, `geoip-update` (the free DB-IP Lite databases, with no
+account; MaxMind is set up in the admin page instead), `geofeed-update --feed URL`, `uninstall`.
 
 An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
 settings it already saved instead of refusing, and nothing is marked "installed" until the
@@ -251,6 +262,55 @@ The `compose.yaml` of a release pins that release's images; the one in the repos
 releases. The frontend build contains no platform-specific binaries, so it is compiled once and
 shipped to both architectures without emulation.
 
+## IP data (MaxMind) and the lookup API
+
+IP data says where an address is and who runs its network. It is optional; without it ipping works as it always did,
+and with it the location panel has a second opinion, a traceroute names the networks it crosses, nodes describe
+themselves, and `/api/v1/ip` answers.
+
+**Set it up in the admin page** (*Admin > IP data*):
+
+1. Create a free **GeoLite2** account at maxmind.com, and under *Manage license keys* make a key. MaxMind's current
+   download service needs the **account ID** (a number) as well as the key.
+2. Enter both and press *Save account*. The backend downloads the databases you chose (City for places, ASN for the
+   network; Country only if you leave City out) and the page shows each one's build date, size and status. The key is kept
+   on the server, is never shown again, and never appears in the audit log, an error or a log line. Setting
+   `IPPING_MAXMIND_ACCOUNT_ID` and `IPPING_MAXMIND_LICENSE_KEY` does the same and wins (in `/opt/ipping/.env` for
+   Docker, in `/etc/ipping/backend.env` for a direct install; then restart).
+3. Leave *Keep them up to date automatically* on. A check first asks MaxMind, for free, whether anything newer exists,
+   and downloads only if so (MaxMind allows 30 downloads a day); a failure is tried again in an hour, a refused key in six.
+   *Update now* does it at once. A new database is used without a restart, and shows its attribution
+   ("This product includes GeoLite2 data created by MaxMind") where results do.
+
+Where the databases are kept: Docker installs have a volume for them; a direct install gets a directory
+(`/var/lib/ipping-backend/geoip`) from `ipping.sh install` and `ipping.sh update` (an install from before v0.9.0 gets it
+on the first `update`). A file whose name starts with `GeoLite2` is used in preference to any other.
+
+**The lookup API.** `GET /api/v1/ip/<address>` (and `GET /api/v1/ip` for the caller's own address) answers:
+
+```sh
+curl -H "Authorization: Bearer $KEY" https://ipping.example.com/api/v1/ip/1.1.1.1
+```
+
+On the same page choose who may call it: **off**, **an API key or an administrator** (the default; keys are made in
+the *API keys* tab), **anyone**, or **administrators only**, and how many lookups a minute one client address may make
+(administrators are not limited). Private and reserved addresses are answered as such, without a database. MaxMind's
+license lets you answer single lookups, not give out the databases, and the API does not.
+
+**Nodes fill themselves in.** When a node connects, the fields it has not got (country, region, city, position,
+provider, AS number) are filled from the address it connected from:
+
+| Field | What happens |
+|---|---|
+| empty | filled from the data, and marked *auto* |
+| *auto* | follows the data when it is updated, and when you press *Fill from IP data* in the edit dialog |
+| reported by the node, or typed by you | **never overwritten**; the edit dialog sends only what you changed |
+| cleared by you | handed back: it is filled from the data again |
+
+A position from the databases is a city's, not the node's, so it is never marked *verified*; that stays your decision.
+*Admin > IP data > Node details* turns all of this off. Behind a proxy of your own, the address a node connects from is the
+one the proxy reports (see `ipping.sh proxy`).
+
 ## From a terminal
 
 An administrator creates an **API key** on the admin page (API keys tab: a name and how many measurements a
@@ -281,6 +341,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.9.0 | v0.8.0 | migration `0011` | as v0.8.0 (IP data: MaxMind from the admin page, an IP lookup API, nodes filled in from their address; the installer gives a direct install somewhere to keep the databases) |
 | v0.8.1 | v0.7.0 | migration `0010` | as v0.8.0 (an interface change only: shadcn/ui components only) |
 | v0.8.0 | v0.7.0 | migration `0010` | as v0.7.0 (the installer learns about a proxy of your own and a CDN in front of it) |
 | v0.7.0 | v0.7.0 | migration `0010` | as v0.6.0, and **v0.7.0+** for DNS over HTTPS to Quad9 (older nodes are left out of that question) |
@@ -344,7 +405,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0 and v0.8.1 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1 and v0.9.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
@@ -356,6 +417,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Community nodes, first slice: volunteers' nodes marked, left out unless asked for, kept out of location estimates until verified, rate limited, and an audit of their declared place (see the backend README for what it does not do)
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
+- [x] IP data: a MaxMind account in the admin page (databases downloaded and kept current), an IP lookup API with its own settings, and nodes filled in from their address unless typed otherwise
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove
 - [ ] Over the real public IPv6 internet (needs a host with IPv6 connectivity; neither the development machine nor CI runners have it)

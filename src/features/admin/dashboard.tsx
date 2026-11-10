@@ -9,6 +9,7 @@ import { useApiData } from "@/lib/api/use-api-data";
 
 import { ApiKeysTab } from "./api-keys-tab";
 import { AuditTab } from "./audit-tab";
+import { IpDataTab } from "./ip-data-tab";
 import { NodesTab } from "./nodes-tab";
 import { SettingsTab } from "./settings-tab";
 import { TokensTab } from "./tokens-tab";
@@ -58,6 +59,7 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
           <TabsTrigger value="watches">Watches</TabsTrigger>
           <TabsTrigger value="keys">API keys</TabsTrigger>
           <TabsTrigger value="tokens">Enrollment</TabsTrigger>
+          <TabsTrigger value="ipdata">IP data</TabsTrigger>
           <TabsTrigger value="settings">Limits &amp; safety</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
@@ -72,6 +74,9 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
         </TabsContent>
         <TabsContent value="tokens" className="pt-4">
           <TokensTab />
+        </TabsContent>
+        <TabsContent value="ipdata" className="pt-4">
+          <IpDataTab />
         </TabsContent>
         <TabsContent value="settings" className="pt-4">
           <SettingsTab />

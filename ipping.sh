@@ -1015,6 +1015,7 @@ EOF
   step "Starting ipping"
   run "Updating the database schema" run_migration
   write_direct_units "$TAG"
+  prepare_geoip_dir
   systemctl daemon-reload
   run "Enabling the services at boot" systemctl enable ipping-backend ipping-frontend ipping-caddy
   run "Starting the backend, the frontend and the web server" systemctl restart ipping-backend ipping-frontend ipping-caddy
@@ -1229,8 +1230,10 @@ cmd_backup() {
   BACKUP_FILE="$out"
 }
 
-# Direct mode: the directory the GeoIP databases and geofeeds live in, and the drop-in that tells the sandboxed
-# backend about it. Sets GEOIP_DIR, and GEOIP_RESTART=1 when the backend has to be restarted to learn of it.
+# Direct mode: the directory the IP databases (MaxMind GeoLite2 downloaded from the admin page, DB-IP Lite) and the
+# geofeeds live in, and the drop-in that tells the sandboxed backend about it. Install and update make sure of it, so
+# that the admin page can download without anyone running a command. Sets GEOIP_DIR, and GEOIP_RESTART=1 when the
+# backend has to be restarted to learn of it.
 prepare_geoip_dir() {
   local dropin_dir=/etc/systemd/system/ipping-backend.service.d
   GEOIP_DIR=/var/lib/ipping-backend/geoip
@@ -1245,7 +1248,7 @@ prepare_geoip_dir() {
 Environment=IPPING_GEOIP_DIR=${GEOIP_DIR}
 StateDirectory=ipping-backend
 EOF
-    run "Telling the backend where the databases are" systemctl daemon-reload
+    run "Giving the backend a place for the IP databases" systemctl daemon-reload
     GEOIP_RESTART=1
   fi
 }
@@ -1453,6 +1456,7 @@ cmd_update() {
       systemctl start ipping-backend ipping-frontend
       die "Update failed during the database migration. Backup: ${BACKUP_FILE}"
     fi
+    prepare_geoip_dir
     run "Starting the backend and frontend" systemctl start ipping-backend ipping-frontend
     run "Reloading the web server" systemctl reload-or-restart ipping-caddy
     run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 90 \
@@ -1535,7 +1539,7 @@ cmd_uninstall() {
     fi
     rm -rf "${APP_DIR}/backend" "${APP_DIR}/frontend" "${APP_DIR}/node" "${APP_DIR}/caddy" "${APP_DIR}/uv" "${APP_DIR}/python"
     if [ "$PURGE" -eq 1 ]; then
-      rm -rf "$CONF_DIR" /var/lib/ipping-caddy
+      rm -rf "$CONF_DIR" /var/lib/ipping-caddy /var/lib/ipping-backend /etc/systemd/system/ipping-backend.service.d
       for u in "${DIRECT_USERS[@]}"; do userdel "$u" 2>/dev/null || true; done
     fi
   fi

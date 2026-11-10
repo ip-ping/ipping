@@ -2,7 +2,7 @@
 // enrollment dialog once overflowed because dialog grids need minmax(0, 1fr)).
 import { BASE, DIALOG_OVERFLOW, noOverflow, open, screenshot, signIn } from "./lib.mjs";
 
-const TABS = ["Nodes", "Watches", "API keys", "Enrollment", "Limits & safety", "Audit log"];
+const TABS = ["Nodes", "Watches", "API keys", "Enrollment", "IP data", "Limits & safety", "Audit log"];
 
 export default async function check(t) {
   for (const width of [390, 768, 1440]) {

@@ -62,7 +62,7 @@ async function toError(response: Response): Promise<ApiError> {
 }
 
 export async function api<T>(
-  method: "GET" | "POST" | "PATCH" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   retried = false,
