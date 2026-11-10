@@ -771,6 +771,31 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AccuracyOut
+         * @description How often answers like this one were right on real targets of known position (RIPE Atlas anchors).
+         */
+        AccuracyOut: {
+            /**
+             * Basis
+             * @description What the figure is a rate of, in words: it is not a probability for this address
+             */
+            basis: string;
+            /**
+             * By Radius
+             * @description The same share for 100, 300, 500, 1000 and 2000 km (keys are the radii)
+             */
+            by_radius: {
+                [key: string]: number;
+            };
+            /**
+             * Percent
+             * @description The share of such answers within `radius_km` of the truth (1 to 99, never certainty)
+             */
+            percent: number;
+            /** Radius Km */
+            radius_km: number;
+        };
+        /**
          * AddressGroupOut
          * @description One address that some of the nodes measured, when they did not all measure the same one.
          */
@@ -1516,6 +1541,8 @@ export interface components {
         };
         /** LocationEstimateOut */
         LocationEstimateOut: {
+            /** @description How accurate answers like this are, measured on real targets: the share within each radius. Given whenever there is a likely place. */
+            accuracy?: components["schemas"]["AccuracyOut"] | null;
             /**
              * Alternatives
              * @default []
@@ -1524,6 +1551,12 @@ export interface components {
             /** @description The network, if an ASN database is set up */
             asn?: components["schemas"]["AsnOut"] | null;
             closest?: components["schemas"]["ClosestOut"] | null;
+            /**
+             * Conflicting
+             * @description The nodes disagree about where the address is (anycast, a rerouted path, a bad measurement); the estimate is made from the nearest node and the nodes that agree with it
+             * @default false
+             */
+            conflicting: boolean;
             /**
              * Evidence
              * @default []

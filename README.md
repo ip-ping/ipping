@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.11.0** (application), installing backend **v0.9.0**. Nodes of any earlier version
+Current release: **v0.11.0** (application), installing backend **v0.9.0** (v0.12.0 is on `main`, not released; it needs backend v0.10.0, which is not released either). Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -38,8 +38,9 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 
 * **Who resolves a hostname is a choice.** By default each node resolves the name itself and probes the address it gets, so a CDN or geo-DNS shows its differences; or **one node you pick** resolves it and every node probes that address (the same server measured from everywhere). The measurement says who resolved it. An IP address is the same for every node either way.
 * **Estimated location** (ping and TCP): where the address appears to be, from the nodes' round
-  trips, with the evidence, alternatives and an honest "not enough evidence" or "inconclusive"
-  (anycast looks like that). When the nodes resolved a name to different addresses there is one estimate
+  trips, with the evidence, alternatives, warnings and an **accuracy percentage** (how often answers like it
+  were within 500 km on real targets; thin evidence still gets an answer, and says how thin; nodes that disagree,
+  which anycast looks like, are said so). When the nodes resolved a name to different addresses there is one estimate
   per address (the address most nodes measured first, the others one click away), and the map shows rings only
   for the nodes that measured it. How well it works on real data is in the
   [backend README](https://github.com/ip-ping/ipping-backend#estimated-network-location-experimental).
@@ -355,6 +356,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.12.0 | v0.10.0 (not released yet) | migration `0012` | as v0.11.0 (the location estimate always shows, with an accuracy percentage, and says when the nodes disagree) |
 | v0.11.0 | v0.9.0 | migration `0012` | as v0.10.0 (IP info for the addresses a measurement tested and as an option of its own; the evidence of a location estimate says where each node is and whose it is; the map in the theme's own colours) |
 | v0.10.0 | v0.9.0 | migration `0012` | as v0.9.1 (each node resolves a hostname itself by default, or one node you choose resolves it for the rest; the migration adds which node resolved a measurement) |
 | v0.9.1 | v0.8.1 | migration `0011` | as v0.9.0 (a node's place from the IP data is only used where it agrees with the place the node reported or you typed) |

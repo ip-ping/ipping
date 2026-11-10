@@ -5,6 +5,7 @@ import { InfoIcon } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Panel } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -175,14 +176,40 @@ function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
   );
 }
 
+/**
+ * How accurate answers like this one have been: the share, on real targets of known position, that were within each
+ * radius. It is a measured rate for answers made with a closest node this far away, not a probability for this address.
+ */
+function Accuracy({ estimate }: { estimate: LocationEstimate }) {
+  const accuracy = estimate.accuracy;
+  if (!accuracy) return null;
+  const rows = Object.entries(accuracy.by_radius).sort((a, b) => Number(a[0]) - Number(b[0]));
+  return (
+    <div className="max-w-xl space-y-2" data-testid="accuracy">
+      <Progress value={accuracy.percent} aria-label="Accuracy">
+        <ProgressLabel>Accuracy</ProgressLabel>
+        <ProgressValue>{() => `${accuracy.percent}% within ${accuracy.radius_km.toLocaleString()} km`}</ProgressValue>
+      </Progress>
+      <p className="text-xs text-muted-foreground">
+        {rows.map(([km, pct], i) => (
+          <span key={km} className="whitespace-nowrap">
+            {i > 0 && " · "}
+            {Number(km).toLocaleString()} km <span className="tabular-nums text-foreground">{pct}%</span>
+          </span>
+        ))}
+      </p>
+      <p className="text-xs leading-relaxed text-muted-foreground">{accuracy.basis}</p>
+    </div>
+  );
+}
+
 function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes }) {
   if (estimate.status === "unavailable") {
     return <p className="text-sm text-muted-foreground">{estimate.summary}</p>;
   }
 
   if (estimate.status !== "estimated") {
-    const title =
-      estimate.status === "inconclusive" ? "A single location could not be established" : "Not enough evidence";
+    const title = estimate.status === "inconclusive" ? "A single location could not be established" : "No estimate";
     return (
       <div className="space-y-4">
         <Alert>
@@ -211,6 +238,7 @@ function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes })
         </div>
         {estimate.strength && <StrengthBadge strength={estimate.strength} />}
       </div>
+      <Accuracy estimate={estimate} />
       <p className="text-sm text-muted-foreground">
         {closest && (
           <>
@@ -236,7 +264,7 @@ function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes })
       {estimate.warnings.length > 0 && (
         <Alert>
           <InfoIcon />
-          <AlertTitle>Keep in mind</AlertTitle>
+          <AlertTitle>{estimate.conflicting ? "The nodes disagree" : "Keep in mind"}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc space-y-0.5 pl-4">
               {estimate.warnings.map((w) => (

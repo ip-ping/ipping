@@ -22,7 +22,7 @@ import { TERMINAL_TASK } from "./summary";
 const CAPTION = {
   rings: {
     lead: "Each ring is how far that node's fastest round trip could have reached: about 100 km per millisecond, and never more than 150, which light itself cannot beat.",
-    more: " Hover a station to see that limit. The target is inside all of the rings. Rings wider than 8,000 km rule almost nothing out and are left off.",
+    more: " Hover a station to see that limit. The target is inside all of the rings that agree. Rings wider than 8,000 km rule almost nothing out and are left off.",
   },
   dns: {
     lead: "Each station is coloured by the answer its node got, and the key is below the map. A hollow grey station got no answer.",
@@ -163,7 +163,7 @@ export function Instrument({
   }, [estimate]);
   // Two nodes that measured the target as being in two places at once: what an anycast address looks like.
   const conflictPair = useMemo(
-    () => (estimate && estimate.status === "inconclusive" ? findConflict(estimate.evidence.map((e) => ({ ...e }))) : null),
+    () => (estimate && estimate.conflicting ? findConflict(estimate.evidence.map((e) => ({ ...e }))) : null),
     [estimate],
   );
   const conflict = useMemo<MapConflict | null>(
@@ -226,7 +226,8 @@ export function Instrument({
               <strong className="font-semibold">{conflictPair.b.node_name}</strong> ({ms(conflictPair.b.rtt_ms)} ms) are{" "}
               {Math.round(conflictPair.distanceKm).toLocaleString()} km apart, but round trips that short allow at most{" "}
               {Math.round(conflictPair.allowedKm).toLocaleString()} km between them. They cannot both be measuring one place:
-              this is what an <em>anycast</em> address looks like (the same address answered from several sites).
+              this is what an <em>anycast</em> address looks like (the same address answered from several sites). The estimate
+              uses the nearest node and the nodes that agree with it.
             </p>
           )}
         </div>

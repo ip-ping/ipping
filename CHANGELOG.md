@@ -2,6 +2,30 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.12.0 (2026-11-10, not released yet)
+
+The estimated network location is not strict any more: it always shows an estimate and an accuracy percentage. It needs backend
+**v0.10.0** (not released yet: `release.env` still pins v0.9.0, the contract is pinned to backend `367c639`).
+
+### What changed
+- The panel shows an **Accuracy** bar under the place: "96% within 500 km", the figure for 100, 300, 500, 1,000 and 2,000 km
+  under it, and in words what it is a rate of (answers made when the closest node was this far away, on real targets of known
+  position; not a probability for this address). It follows the closest node: 99% within 500 km with a node a few ms away, 7% with
+  one 100 ms away.
+- Thin evidence is not hidden: one or two nodes, or a closest node over 40 ms away, give an estimate with a warning ("Only 2
+  node(s)...", "...treat this as a guess"), and the only panel without a place is a measurement no node with a position took part
+  in ("No estimate", with the reason).
+- Nodes that disagree (an anycast address looks like that) still get an estimate, with the note titled **The nodes disagree**, the
+  conflict line on the map, and a deliberately low figure (the backend uses the one for a closest node as far away as the nodes
+  disagree: 7% within 500 km for an anycast address whose nodes are 17,000 km apart, not the 99% a node 1 ms away would suggest).
+- The map caption says the target is inside all the rings *that agree*.
+
+### Tests
+- `tests/ui/16-location-accuracy.mjs` (browser, real backend and fleet): an ordinary answer shows the API's percentage, its radius,
+  the other radii and what the figure is; two nodes still give an answer and the warning; an anycast address (1.1.1.1 in the fleet)
+  gets an estimate, "The nodes disagree" and a low figure; no overflow at 390 / 768 / 1440. All 16 browser checks pass; typecheck,
+  lint and 87 unit tests pass. What was seen: the panel for an ordinary and an anycast address.
+
 ## v0.11.0 (2026-11-10)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.9.0
