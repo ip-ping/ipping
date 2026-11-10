@@ -6,66 +6,48 @@ import { usePathname } from "next/navigation";
 import { FleetStatus } from "@/components/fleet-status";
 import { Mark } from "@/components/mark";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const links = [
-  { href: "/", label: "Measure", n: "01" },
-  { href: "/nodes", label: "Nodes", n: "02" },
-  { href: "/admin", label: "Admin", n: "03" },
+  { href: "/", label: "Measure" },
+  { href: "/nodes", label: "Nodes" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" || pathname.startsWith("/measurements") : pathname.startsWith(href);
+  const nav = (className: string) =>
+    links.map(({ href, label }) => (
+      <Button
+        key={href}
+        variant={isActive(href) ? "secondary" : "ghost"}
+        size="sm"
+        className={className}
+        nativeButton={false}
+        render={<Link href={href} aria-current={isActive(href) ? "page" : undefined} />}
+      >
+        {label}
+      </Button>
+    ));
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-x-6 px-4">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="ipping, home">
-          <Mark className="size-7" animated />
-          <span className="figure text-[1.35rem] font-bold tracking-[-0.04em]">ipping</span>
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight" aria-label="ipping, home">
+          <Mark className="size-6" animated />
+          ipping
         </Link>
-        <nav className="ml-2 hidden items-stretch self-stretch sm:flex" aria-label="Main">
-          {links.map(({ href, label, n }) => {
-            const active = href === "/" ? pathname === "/" || pathname.startsWith("/measurements") : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "label relative flex items-center gap-1.5 border-x border-transparent px-4 transition-colors hover:text-foreground",
-                  active && "border-border bg-card text-foreground",
-                )}
-              >
-                <span className="text-signal">{n}</span>
-                {label}
-                {active && <span aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 bg-signal" />}
-              </Link>
-            );
-          })}
+        <nav className="ml-2 hidden items-center gap-1 sm:flex" aria-label="Main">
+          {nav("")}
         </nav>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-2">
           <FleetStatus />
           <ThemeToggle />
         </div>
       </div>
-      <nav className="flex border-t sm:hidden" aria-label="Main">
-        {links.map(({ href, label, n }) => {
-          const active = href === "/" ? pathname === "/" || pathname.startsWith("/measurements") : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "label flex flex-1 items-center justify-center gap-1.5 py-2.5",
-                active && "bg-card text-foreground shadow-[inset_0_-2px_0_var(--signal)]",
-              )}
-            >
-              <span className="text-signal">{n}</span>
-              {label}
-            </Link>
-          );
-        })}
+      <nav className="flex gap-1 border-t px-2 py-1.5 sm:hidden" aria-label="Main">
+        {nav("flex-1")}
       </nav>
     </header>
   );

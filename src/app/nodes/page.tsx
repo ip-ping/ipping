@@ -13,6 +13,7 @@ import { useNodes } from "@/features/nodes/use-nodes";
 import { flag, place } from "@/lib/format";
 import { useFocus } from "@/lib/use-focus";
 import { cn } from "@/lib/utils";
+import { Toggle } from "@/components/ui/toggle";
 
 const count = (n: number) => String(Math.round(n));
 
@@ -46,8 +47,7 @@ export default function NodesPage() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <header className="space-y-2">
-        <p className="label">02 / the fleet</p>
-        <h1 className="figure text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">Nodes</h1>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Nodes</h1>
         <p className="max-w-prose text-sm text-muted-foreground">
           Every measurement runs from the online nodes below. Point at a station or a name and the other lights up.
         </p>
@@ -62,7 +62,7 @@ export default function NodesPage() {
 
       <Panel
         label="Stations"
-        meta={nodes && <span className="num normal-case tracking-normal">{online.length} of {list.length} online</span>}
+        meta={nodes && <span className="tabular-nums">{online.length} of {list.length} online</span>}
         flush
       >
         <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -81,7 +81,7 @@ export default function NodesPage() {
                   label={`Map of the ${mapNodes.length} measurement nodes, ${online.length} of them online`}
                 />
               )}
-              <div className="label mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 px-1">
+              <div className="text-xs text-muted-foreground mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 px-1">
                 <span className="inline-flex items-center gap-2">
                   <span className="size-2 rounded-full bg-foreground" /> connected
                 </span>
@@ -118,17 +118,16 @@ export default function NodesPage() {
               const active = focus.active === node.id;
               return (
                 <li key={node.id}>
-                  <button
-                    type="button"
-                    aria-pressed={focus.pinned === node.id}
+                  <Toggle
+                    pressed={focus.pinned === node.id}
                     onPointerEnter={() => focus.setHover(node.id)}
                     onPointerLeave={() => focus.setHover(null)}
                     onFocus={() => focus.setHover(node.id)}
                     onBlur={() => focus.setHover(null)}
-                    onClick={() => focus.pin(focus.pinned === node.id ? null : node.id)}
+                    onPressedChange={() => focus.pin(focus.pinned === node.id ? null : node.id)}
                     className={cn(
-                      "flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                      active ? "bg-signal-soft" : "hover:bg-muted/60",
+                      "h-auto w-full items-start justify-start gap-3 rounded-none px-3 py-2.5 text-left font-normal",
+                      active && "bg-signal-soft",
                       !node.online && "text-muted-foreground",
                     )}
                   >
@@ -138,7 +137,7 @@ export default function NodesPage() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className="figure truncate text-[0.95rem] font-semibold tracking-[-0.01em]">
+                        <span className="truncate font-medium">
                           {node.name}
                           <CommunityBadge tier={node.tier} />
                         </span>
@@ -147,16 +146,16 @@ export default function NodesPage() {
                           {node.ipv6 && <Badge variant="secondary">v6</Badge>}
                         </span>
                       </span>
-                      <span className="label block truncate normal-case tracking-normal">
+                      <span className="text-xs text-muted-foreground block truncate">
                         {flag(node.country)} {place(node)}
                       </span>
-                      <span className="label block truncate text-[0.65rem] normal-case tracking-normal">
+                      <span className="text-xs text-muted-foreground block truncate">
                         {[node.provider && `${node.provider}${node.asn ? ` · AS${node.asn}` : ""}`, node.online ? node.kinds.join(" · ") : "offline"]
                           .filter(Boolean)
                           .join("  ·  ")}
                       </span>
                     </span>
-                  </button>
+                  </Toggle>
                 </li>
               );
             })}

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Focus } from "@/lib/use-focus";
 
 import type { AnswerGroup } from "./dns-groups";
+import { Toggle } from "@/components/ui/toggle";
 
 /**
  * Do the nodes agree? One row per distinct answer, in the colour the map uses for it, with the nodes
@@ -28,7 +29,7 @@ export function DnsAnswers({
     <Panel
       label="Do the answers agree?"
       meta={
-        <span className="num normal-case tracking-normal">
+        <span className="tabular-nums">
           {answers.length === 0 ? "no answers yet" : `${answers.length} distinct answer${answers.length === 1 ? "" : "s"}`}
         </span>
       }
@@ -60,7 +61,7 @@ export function DnsAnswers({
                       <div key={`${i}-${line}`}>{line}</div>
                     ))}
                   </div>
-                  <div className="label flex flex-wrap gap-x-4 gap-y-1 normal-case tracking-normal">
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
                     {group.rcode && group.rcode !== "NOERROR" && <span className="text-foreground">{group.rcode}</span>}
                     {group.ttl && (
                       <span>
@@ -73,30 +74,28 @@ export function DnsAnswers({
                 </div>
               </div>
               <div className="min-w-0 sm:max-w-[26rem] sm:text-right">
-                <div className="figure mb-1.5 text-2xl leading-none font-semibold tracking-[-0.02em]">
+                <div className="leading-none mb-1.5 text-2xl font-semibold">
                   {group.nodeIds.length}
-                  <span className="label ml-1.5 align-middle text-[0.65rem] font-normal tracking-wider">
+                  <span className="text-xs text-muted-foreground ml-1.5 align-middle font-normal">
                     {group.nodeIds.length === 1 ? "node" : "nodes"}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 sm:justify-end">
                   {group.nodeIds.map((id, i) => (
-                    <button
+                    <Toggle
                       key={id}
-                      type="button"
+                      variant="outline"
+                      size="sm"
+                      pressed={focus.pinned === id}
                       onPointerEnter={() => focus.setHover(id)}
                       onPointerLeave={() => focus.setHover(null)}
                       onFocus={() => focus.setHover(id)}
                       onBlur={() => focus.setHover(null)}
-                      onClick={() => focus.pin(focus.pinned === id ? null : id)}
-                      aria-pressed={focus.pinned === id}
-                      className={cn(
-                        "label border px-1.5 py-0.5 text-[0.65rem] normal-case tracking-normal transition-colors hover:border-foreground/60",
-                        focus.active === id && "border-signal bg-signal-soft",
-                      )}
+                      onPressedChange={() => focus.pin(focus.pinned === id ? null : id)}
+                      className={cn("h-6 px-1.5 text-xs", focus.active === id && "border-signal bg-signal-soft")}
                     >
                       {group.names[i]}
-                    </button>
+                    </Toggle>
                   ))}
                 </div>
               </div>

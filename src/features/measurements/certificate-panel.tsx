@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 import { type CertGroup, type CertState, certState, certificatesOf, commonName, daysUntil } from "./certs";
 import { TERMINAL_TASK } from "./summary";
+import { Toggle } from "@/components/ui/toggle";
+import { Badge } from "@/components/ui/badge";
 
 const SHOW_NAMES = 12;
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }) : "unknown");
@@ -52,7 +54,7 @@ function Validity({ group, state, now }: { group: CertGroup; state: CertState; n
         <div className={cn("absolute inset-y-0 left-0", fill)} style={{ width: `${at * 100}%` }} />
         <div className="absolute -inset-y-1 w-0.5 bg-foreground" style={{ left: `calc(${at * 100}% - 1px)` }} title="today" />
       </div>
-      <div className="label flex justify-between normal-case tracking-normal">
+      <div className="text-xs text-muted-foreground flex justify-between">
         <span>{date(group.notBefore)}</span>
         <span>today</span>
         <span>{date(group.notAfter)}</span>
@@ -72,7 +74,7 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
       aria-label={`Certificate for ${commonName(group.subject)}, seen by ${group.nodeNames.length} ${group.nodeNames.length === 1 ? "node" : "nodes"}`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="figure min-w-0 text-xl font-semibold tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-2xl">{commonName(group.subject)}</h3>
+        <h3 className="leading-none min-w-0 text-xl font-semibold [overflow-wrap:anywhere] sm:text-2xl">{commonName(group.subject)}</h3>
         <Verdict state={state} days={days} />
       </div>
       {!group.verified && group.verifyError && (
@@ -84,13 +86,13 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
       <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
         {group.issuer && (
           <div className="min-w-0">
-            <dt className="label">Issued by</dt>
+            <dt className="text-xs text-muted-foreground">Issued by</dt>
             <dd className="[overflow-wrap:anywhere]">{commonName(group.issuer)}</dd>
           </div>
         )}
         {group.version && (
           <div>
-            <dt className="label">Connection</dt>
+            <dt className="text-xs text-muted-foreground">Connection</dt>
             <dd>
               {group.version}
               {group.transport === "quic" ? ` over QUIC${group.alpn ? ` (${group.alpn})` : ""}` : ""}
@@ -101,11 +103,13 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
       </dl>
       {group.names.length > 0 && (
         <div className="space-y-1">
-          <div className="label">Valid for</div>
+          <div className="text-xs text-muted-foreground">Valid for</div>
           <ul className="flex flex-wrap gap-1.5" aria-label="Names the certificate is valid for">
             {group.names.slice(0, SHOW_NAMES).map((name) => (
-              <li key={name} className="border px-1.5 py-0.5 font-mono text-xs [overflow-wrap:anywhere]">
-                {name}
+              <li key={name}>
+                <Badge variant="outline" className="h-auto font-mono whitespace-normal [overflow-wrap:anywhere]">
+                  {name}
+                </Badge>
               </li>
             ))}
             {group.names.length > SHOW_NAMES && (
@@ -115,28 +119,25 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
         </div>
       )}
       <div className="space-y-1">
-        <div className="label">
+        <div className="text-xs text-muted-foreground">
           Seen by {group.nodeNames.length} {group.nodeNames.length === 1 ? "node" : "nodes"}
         </div>
         <ul className="flex flex-wrap gap-1.5" aria-label="Nodes that were shown this certificate">
           {group.nodeIds.map((id, i) => (
             <li key={id}>
-              <button
-                type="button"
-                aria-pressed={focus.pinned === id}
-                onClick={() => focus.pin(focus.pinned === id ? null : id)}
+              <Toggle
+                variant="outline"
+                size="sm"
+                pressed={focus.pinned === id}
+                onPressedChange={() => focus.pin(focus.pinned === id ? null : id)}
                 onPointerEnter={() => focus.setHover(id)}
                 onPointerLeave={() => focus.setHover(null)}
                 onFocus={() => focus.setHover(id)}
                 onBlur={() => focus.setHover(null)}
-                className={cn(
-                  "label inline-flex min-h-7 items-center border px-2 normal-case tracking-normal transition-colors hover:border-foreground/60",
-                  focus.pinned === id && "border-foreground bg-foreground text-background",
-                  focus.hover === id && focus.pinned !== id && "border-signal bg-signal-soft",
-                )}
+                className={cn(focus.hover === id && focus.pinned !== id && "border-signal bg-signal-soft")}
               >
                 {group.nodeNames[i]}
-              </button>
+              </Toggle>
             </li>
           ))}
         </ul>

@@ -306,13 +306,13 @@ export function MeasureForm({
               </div>
             )}
             {kind === "http" && (
-              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-3">
+              <Label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-3">
                 <Checkbox checked={follow} onCheckedChange={(checked) => setFollow(checked === true)} />
                 Follow redirects
-              </label>
+              </Label>
             )}
             {scope === "all" && online.some((n) => n.tier === "community") && (
-              <label className="flex cursor-pointer items-start gap-2 text-sm sm:col-span-2 lg:col-span-12">
+              <Label className="flex cursor-pointer items-start gap-2 text-sm sm:col-span-2 lg:col-span-12">
                 <Checkbox checked={includeCommunity} onCheckedChange={(checked) => setIncludeCommunity(checked === true)} className="mt-0.5" />
                 <span>
                   Include community nodes ({online.filter((n) => n.tier === "community").length} online)
@@ -320,7 +320,7 @@ export function MeasureForm({
                     Run by volunteers. They are left out unless you ask, and what they report has not been verified.
                   </span>
                 </span>
-              </label>
+              </Label>
             )}
             <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-6">
               <Label>Nodes</Label>
@@ -366,7 +366,7 @@ export function MeasureForm({
                     </DialogHeader>
                     <div className="max-h-72 space-y-2 overflow-y-auto">
                       {online.map((node) => (
-                        <label key={node.id} className="flex cursor-pointer items-center gap-3 text-sm">
+                        <Label key={node.id} className="flex cursor-pointer items-center gap-3 text-sm">
                           <Checkbox
                             checked={selected.has(node.id)}
                             onCheckedChange={(checked) => {
@@ -383,7 +383,7 @@ export function MeasureForm({
                           <span className="text-muted-foreground">
                             {flag(node.country)} {place(node)}
                           </span>
-                        </label>
+                        </Label>
                       ))}
                     </div>
                     <DialogFooter>

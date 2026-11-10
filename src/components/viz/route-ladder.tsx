@@ -168,7 +168,7 @@ export function RouteLadder({
                 >
                   <rect x="0" y={y} width={width} height={ROW} fill={isActive ? "var(--signal-soft)" : "transparent"} />
                   <rect className="focus-ring" x="1" y={y + 1} width={width - 2} height={ROW - 2} fill="none" stroke="var(--ring)" strokeWidth="2" opacity="0" />
-                  <text x={TTL_W - 8} y={y + ROW / 2 + 4} textAnchor="end" className="num" fontSize="11" fill="var(--muted-foreground)">
+                  <text x={TTL_W - 8} y={y + ROW / 2 + 4} textAnchor="end" className="tabular-nums" fontSize="11" fill="var(--muted-foreground)">
                     {hop.ttl}
                   </text>
                   <text
@@ -213,7 +213,7 @@ export function RouteLadder({
                           x={x(Math.max(...hop.rtts)) > x1 - 70 ? x(Math.min(...hop.rtts)) - 12 : x(Math.max(...hop.rtts)) + 12}
                           y={y + ROW / 2 + 4}
                           textAnchor={x(Math.max(...hop.rtts)) > x1 - 70 ? "end" : "start"}
-                          className="num"
+                          className="tabular-nums"
                           fontSize="11"
                           fontWeight="600"
                           fill="var(--foreground)"
@@ -228,7 +228,7 @@ export function RouteLadder({
                       {hop.loss === "carried" && <path d="M-34 -9.5L-29 -0.5H-39Z" fill="var(--critical)" />}
                       <text
                         textAnchor="end"
-                        className="num"
+                        className="tabular-nums"
                         fontSize="11"
                         fontWeight={hop.loss === "carried" ? 700 : 400}
                         fill={hop.loss === "carried" ? "var(--critical)" : stats && stats.lossPct > 0 ? "var(--foreground)" : "var(--muted-foreground)"}
@@ -245,8 +245,8 @@ export function RouteLadder({
         {tip && (
           <ChartTip x={Math.min(Math.max(tip.rtts.length ? x(median(tip.rtts)) : x0 + 20, 0), width)} y={TOP + activeIndex * ROW} width={width}>
             <div className="mb-1">
-              <div className="num text-sm font-semibold">{tip.ip ?? (tip.private ? "A router in a private network" : "No answer")}</div>
-              <div className="label normal-case tracking-normal">
+              <div className="tabular-nums text-sm font-semibold">{tip.ip ?? (tip.private ? "A router in a private network" : "No answer")}</div>
+              <div className="text-xs text-muted-foreground">
                 hop {tip.ttl}
                 {tip.reached ? " · destination" : ""}
               </div>
@@ -262,12 +262,12 @@ export function RouteLadder({
                     <TipRow k="Jitter" v={`${ms(hopStats(tip.rtts, tip.sent).jitter ?? 0)} ms`} />
                     <TipRow k="Answered" v={`${tip.rtts.length} of ${tip.sent}`} />
                     {tip.loss === "limited" && (
-                      <div className="label mt-1 normal-case tracking-normal">
+                      <div className="text-xs text-muted-foreground mt-1">
                         Later hops lose less: this router is slow to answer probes aimed at it, not dropping traffic.
                       </div>
                     )}
                     {tip.loss === "carried" && (
-                      <div className="label mt-1 normal-case tracking-normal">The loss continues at the hops after it: packets really are dropped here or just before.</div>
+                      <div className="text-xs text-muted-foreground mt-1">The loss continues at the hops after it: packets really are dropped here or just before.</div>
                     )}
                   </>
                 ) : (
@@ -275,7 +275,7 @@ export function RouteLadder({
                 )}
               </>
             ) : (
-              <div className="label normal-case tracking-normal">Many routers do not answer these probes; that is normal.</div>
+              <div className="text-xs text-muted-foreground">Many routers do not answer these probes; that is normal.</div>
             )}
           </ChartTip>
         )}

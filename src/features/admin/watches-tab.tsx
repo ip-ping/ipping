@@ -19,6 +19,7 @@ import { canUseDoh, DNS_RECORD_TYPES, DNS_RESOLVERS, DNS_TRANSPORTS, KIND_INFO, 
 import { api, ApiError, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 import { ms } from "@/lib/format";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Watch = Schemas["WatchOut"];
 type Run = Schemas["WatchRunOut"];
@@ -223,44 +224,44 @@ function HistoryDialog({ watch, onClose }: { watch: Watch; onClose: () => void }
           <DialogDescription>The latest runs, newest first. A run that made a measurement links to it.</DialogDescription>
         </DialogHeader>
         <div className="max-h-96 overflow-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="label sticky top-0 bg-card">
-              <tr>
-                <th className="py-1.5 pr-3 font-normal">When</th>
-                <th className="py-1.5 pr-3 font-normal">Result</th>
-                <th className="py-1.5 pr-3 text-right font-normal">Nodes</th>
-                <th className="py-1.5 pr-3 text-right font-normal">Median</th>
-                <th className="py-1.5 font-normal" />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-left text-sm">
+            <TableHeader className="text-xs text-muted-foreground sticky top-0 bg-card">
+              <TableRow>
+                <TableHead className="py-1.5 pr-3 font-normal">When</TableHead>
+                <TableHead className="py-1.5 pr-3 font-normal">Result</TableHead>
+                <TableHead className="py-1.5 pr-3 text-right font-normal">Nodes</TableHead>
+                <TableHead className="py-1.5 pr-3 text-right font-normal">Median</TableHead>
+                <TableHead className="py-1.5 font-normal" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data?.map((run) => (
-                <tr key={run.at} className="border-t align-top">
-                  <td className="py-1.5 pr-3 whitespace-nowrap tabular-nums">{new Date(run.at).toLocaleString()}</td>
-                  <td className="py-1.5 pr-3">
+                <TableRow key={run.at} className="border-t align-top">
+                  <TableCell className="py-1.5 pr-3 whitespace-nowrap tabular-nums">{new Date(run.at).toLocaleString()}</TableCell>
+                  <TableCell className="py-1.5 pr-3">
                     <Badge variant={run.status === "ok" ? "default" : run.status === "error" ? "outline" : "secondary"}>{run.status === "error" ? "can't run" : run.status}</Badge>
                     {run.note && <div className="text-xs text-muted-foreground">{run.note}</div>}
-                  </td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">{run.status === "error" ? "–" : `${run.nodes_ok} / ${run.nodes_total}`}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">{run.median_ms != null ? `${ms(run.median_ms)} ms` : "–"}</td>
-                  <td className="py-1.5 text-right">
+                  </TableCell>
+                  <TableCell className="py-1.5 pr-3 text-right tabular-nums">{run.status === "error" ? "–" : `${run.nodes_ok} / ${run.nodes_total}`}</TableCell>
+                  <TableCell className="py-1.5 pr-3 text-right tabular-nums">{run.median_ms != null ? `${ms(run.median_ms)} ms` : "–"}</TableCell>
+                  <TableCell className="py-1.5 text-right">
                     {run.measurement_id && (
                       <Link href={`/measurements/${run.measurement_id}`} className="text-xs underline">
                         open
                       </Link>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {data?.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                     No runs yet.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </DialogContent>
     </Dialog>
@@ -380,9 +381,9 @@ function WatchDialog({ watch, onClose, onSaved }: { watch: Watch | null; onClose
               </div>
             )}
             {kind === "http" && (
-              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
+              <Label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
                 <Checkbox checked={follow} onCheckedChange={(c) => setFollow(c === true)} /> Follow redirects
-              </label>
+              </Label>
             )}
             {kind === "dns" && (
               <>

@@ -60,7 +60,7 @@ const bar = (task: Task, { fastest, slowest, before }: Context) => {
       )}
       <span className={cn(fastest && "font-semibold")}>{ms(median)}</span>
       {before != null && median != null && (
-        <span className="w-11 text-left text-[0.65rem] font-normal text-muted-foreground" title={`${ms(before)} ms last time`}>
+        <span className="w-11 text-left text-xs font-normal text-muted-foreground" title={`${ms(before)} ms last time`}>
           {delta(median, before)}
         </span>
       )}
@@ -361,11 +361,12 @@ function Attempts({ task, kind, expected }: { task: Task; kind: Kind; expected: 
           // A refusal is an answer from the machine (it has a time), but not a success.
           const refused = sample?.status === "error" && sample.error_code === "connection_refused";
           return (
-            <span
+            <Badge
               key={seq}
+              variant="outline"
               title={sample?.status === "error" ? explainError(sample.error_code) : undefined}
               className={cn(
-                "rounded-[2px] border px-2 py-1 font-mono text-xs tabular-nums",
+                "h-auto px-2 py-1 text-xs tabular-nums",
                 !sample && "border-dashed text-muted-foreground",
                 sample?.status === "timeout" && "border-destructive/40 text-destructive",
                 sample?.status === "error" && "border-destructive text-destructive",
@@ -381,7 +382,7 @@ function Attempts({ task, kind, expected }: { task: Task; kind: Kind; expected: 
                     : refused && sample.rtt_ms != null
                       ? `refused after ${ms(sample.rtt_ms)} ms`
                       : (sample.error_code ?? "error")}
-            </span>
+            </Badge>
           );
         })}
       </div>

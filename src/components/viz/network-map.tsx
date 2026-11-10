@@ -548,9 +548,9 @@ function Tooltip({ node }: { node: MapNode }) {
       )}
       style={{ left: `${left}%`, top: `${top}%` }}
     >
-      <div className="figure text-sm font-semibold tracking-[-0.01em]">{node.name}</div>
-      {node.place && <div className="label normal-case tracking-normal">{node.place}</div>}
-      <div className="label mt-1 flex items-center gap-2 text-foreground">
+      <div className="leading-none text-sm font-semibold">{node.name}</div>
+      {node.place && <div className="text-xs text-muted-foreground">{node.place}</div>}
+      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 text-foreground">
         <span
           className={cn(
             "size-1.5 rounded-full",
@@ -558,9 +558,9 @@ function Tooltip({ node }: { node: MapNode }) {
           )}
         />
         {node.online === false ? "offline" : node.state === "running" ? "measuring" : node.state === "failed" ? "no answer" : node.state === "done" ? "done" : "live"}
-        {node.ms != null && <span className="num tracking-normal">{node.ms < 100 ? node.ms.toFixed(1) : Math.round(node.ms)} ms</span>}
+        {node.ms != null && <span className="tabular-nums">{node.ms < 100 ? node.ms.toFixed(1) : Math.round(node.ms)} ms</span>}
       </div>
-      {node.note && <div className="label mt-0.5 normal-case tracking-normal">{node.note}</div>}
+      {node.note && <div className="text-xs text-muted-foreground mt-0.5">{node.note}</div>}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { explainError } from "./errors";
 import { hopStats } from "./hops";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Http = NonNullable<Sample["http"]>;
 type Tls = NonNullable<Http["tls"]>;
@@ -204,22 +205,22 @@ export function RouteDetailView({ task }: { task: Task }) {
   const repeated = task.samples.some((s) => s.hop?.sent != null);
   return (
     <div className="space-y-2 py-1 text-sm">
-      <table className="w-full max-w-2xl text-left">
-        <thead className="text-xs text-muted-foreground">
-          <tr>
-            <th className="w-10 py-1 font-normal">Hop</th>
-            <th className="py-1 font-normal">Router</th>
-            {repeated && <th className="py-1 text-right font-normal">Lost</th>}
-            <th className="py-1 text-right font-normal">{repeated ? "Best / avg / worst (ms)" : "Round trips (ms)"}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full max-w-2xl text-left">
+        <TableHeader className="text-xs text-muted-foreground">
+          <TableRow>
+            <TableHead className="w-10 py-1 font-normal">Hop</TableHead>
+            <TableHead className="py-1 font-normal">Router</TableHead>
+            {repeated && <TableHead className="py-1 text-right font-normal">Lost</TableHead>}
+            <TableHead className="py-1 text-right font-normal">{repeated ? "Best / avg / worst (ms)" : "Round trips (ms)"}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {task.samples.map((s) => {
             const hop = s.hop;
             return (
-              <tr key={s.seq} className={cn(hop?.reached && "font-medium")}>
-                <td className="py-0.5 tabular-nums text-muted-foreground">{hop?.ttl ?? s.seq + 1}</td>
-                <td className="py-0.5 font-mono text-xs">
+              <TableRow key={s.seq} className={cn(hop?.reached && "font-medium")}>
+                <TableCell className="py-0.5 tabular-nums text-muted-foreground">{hop?.ttl ?? s.seq + 1}</TableCell>
+                <TableCell className="py-0.5 font-mono text-xs">
                   {hop?.ip ??
                     (hop?.private ? (
                       <span className="font-sans text-muted-foreground">a router inside a private network</span>
@@ -227,13 +228,13 @@ export function RouteDetailView({ task }: { task: Task }) {
                       <span className="text-muted-foreground">* no answer</span>
                     ))}
                   {hop?.reached && <span className="ml-2 font-sans text-primary">destination</span>}
-                </td>
+                </TableCell>
                 {repeated && (
-                  <td className="py-0.5 text-right tabular-nums">
+                  <TableCell className="py-0.5 text-right tabular-nums">
                     {hop?.sent != null && (hop.rtts_us?.length ?? 0) > 0 ? `${Number(hopStats(hop.rtts_us!.map((v) => v / 1000), hop.sent).lossPct.toFixed(1))}%` : "–"}
-                  </td>
+                  </TableCell>
                 )}
-                <td className="py-0.5 text-right tabular-nums">
+                <TableCell className="py-0.5 text-right tabular-nums">
                   {(hop?.rtts_us?.length ?? 0) > 0
                     ? hop?.sent != null
                       ? (() => {
@@ -242,12 +243,12 @@ export function RouteDetailView({ task }: { task: Task }) {
                         })()
                       : hop!.rtts_us!.map((v) => ms(v / 1000)).join("  ")
                     : "–"}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       {task.status === "completed" && !reached && (
         <p className="text-muted-foreground">
           The destination did not answer. Many networks drop these probes, so this does not mean it
@@ -290,26 +291,26 @@ export function DnsDetailView({ task }: { task: Task }) {
       </div>
       {answers.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="w-full max-w-3xl text-left">
-            <thead className="text-xs text-muted-foreground">
-              <tr>
-                <th className="py-1 pr-3 font-normal">Name</th>
-                <th className="py-1 pr-3 font-normal">Type</th>
-                <th className="py-1 pr-3 text-right font-normal">TTL</th>
-                <th className="py-1 font-normal">Value</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full max-w-3xl text-left">
+            <TableHeader className="text-xs text-muted-foreground">
+              <TableRow>
+                <TableHead className="py-1 pr-3 font-normal">Name</TableHead>
+                <TableHead className="py-1 pr-3 font-normal">Type</TableHead>
+                <TableHead className="py-1 pr-3 text-right font-normal">TTL</TableHead>
+                <TableHead className="py-1 font-normal">Value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {answers.map((a, i) => (
-                <tr key={`${i}-${a.type}-${a.data}`} className="align-top">
-                  <td className="py-0.5 pr-3 font-mono text-xs [overflow-wrap:anywhere]">{a.name}</td>
-                  <td className="py-0.5 pr-3 font-mono text-xs">{a.type}</td>
-                  <td className="py-0.5 pr-3 text-right tabular-nums">{a.ttl}</td>
-                  <td className="py-0.5 font-mono text-xs [overflow-wrap:anywhere]">{a.data}</td>
-                </tr>
+                <TableRow key={`${i}-${a.type}-${a.data}`} className="align-top">
+                  <TableCell className="py-0.5 pr-3 font-mono text-xs [overflow-wrap:anywhere]">{a.name}</TableCell>
+                  <TableCell className="py-0.5 pr-3 font-mono text-xs">{a.type}</TableCell>
+                  <TableCell className="py-0.5 pr-3 text-right tabular-nums">{a.ttl}</TableCell>
+                  <TableCell className="py-0.5 font-mono text-xs [overflow-wrap:anywhere]">{a.data}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <p className="text-muted-foreground">

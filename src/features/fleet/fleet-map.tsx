@@ -47,10 +47,10 @@ export function FleetMap({ className }: { className?: string }) {
       label="The fleet"
       meta={
         <>
-          <span className="num normal-case tracking-normal">
+          <span className="tabular-nums">
             {chosen ? `${chosen.size} chosen of ${live}` : `${live} live`}
           </span>
-          <span className="num hidden normal-case tracking-normal sm:inline">{countries} countries</span>
+          <span className="tabular-nums hidden sm:inline">{countries} countries</span>
         </>
       }
       flush
@@ -64,7 +64,7 @@ export function FleetMap({ className }: { className?: string }) {
         label={`Map of the ${placed.length} measurement nodes, ${live} of them connected now. Click a station to choose where to measure from.`}
         className="px-1 pt-1 sm:px-3 sm:pt-2"
       />
-      <div className="label flex flex-wrap items-center gap-x-5 gap-y-1 border-t px-3 py-2">
+      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1 border-t px-3 py-2">
         <span className="inline-flex items-center gap-2">
           <span className="size-2 rounded-full bg-foreground" /> connected
         </span>
@@ -75,7 +75,7 @@ export function FleetMap({ className }: { className?: string }) {
           <span className="size-2.5 border border-signal bg-signal-soft" /> chosen
         </span>
         {chosen ? (
-          <Button type="button" variant="ghost" size="sm" onClick={clear} className="h-6 px-2 text-[0.65rem]">
+          <Button type="button" variant="ghost" size="sm" onClick={clear} className="h-6 px-2 text-xs">
             Use all nodes
           </Button>
         ) : (

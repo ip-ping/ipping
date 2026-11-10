@@ -45,7 +45,7 @@ export function Legend() {
       {LOOK[status].label}
     </span>
   );
-  return <span className="label flex flex-wrap gap-x-4 gap-y-1 normal-case tracking-normal">{(["ok", "degraded", "down", "error"] as RunStatus[]).map(item)}</span>;
+  return <span className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">{(["ok", "degraded", "down", "error"] as RunStatus[]).map(item)}</span>;
 }
 
 /**
@@ -110,7 +110,7 @@ export function UptimeStrip({
           <TipRow k="Result" v={LOOK[tip.status].label} />
           {tip.status !== "error" && <TipRow k="Nodes" v={`${tip.nodes_ok} of ${tip.nodes_total}`} />}
           {tip.median_ms != null && <TipRow k="Median" v={`${ms(tip.median_ms)} ms`} />}
-          {tip.note && <div className="label mt-1 normal-case tracking-normal">{tip.note}</div>}
+          {tip.note && <div className="text-xs text-muted-foreground mt-1">{tip.note}</div>}
         </ChartTip>
       )}
     </div>

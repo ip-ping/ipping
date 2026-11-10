@@ -38,8 +38,8 @@ export function ChartTip({
 export function TipTitle({ name, place }: { name: string; place?: string }) {
   return (
     <div className="mb-1">
-      <div className="figure text-sm font-semibold tracking-[-0.01em]">{name}</div>
-      {place && <div className="label normal-case tracking-normal">{place}</div>}
+      <div className="leading-none text-sm font-semibold">{name}</div>
+      {place && <div className="text-xs text-muted-foreground">{place}</div>}
     </div>
   );
 }
@@ -47,11 +47,11 @@ export function TipTitle({ name, place }: { name: string; place?: string }) {
 export function TipRow({ k, v, swatch }: { k: string; v: ReactNode; swatch?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-5">
-      <span className="label flex items-center gap-1.5 normal-case tracking-normal">
+      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
         {swatch && <span className="inline-block size-2" style={{ background: swatch }} />}
         {k}
       </span>
-      <span className="num font-medium">{v}</span>
+      <span className="tabular-nums font-medium">{v}</span>
     </div>
   );
 }

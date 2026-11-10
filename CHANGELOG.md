@@ -2,7 +2,31 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.8.1 (2026-11-10)
+
+The interface is shadcn/ui only again. No change to the installer, the API or the backend (still v0.7.0).
+
+### What was wrong
+The "look of its own" work (v0.4.0 and after) broke the rule that the frontend uses shadcn/ui only: it **edited the shadcn
+components themselves** (3 px corners, mono uppercase table headers and tabs, a custom "signal" colour on buttons, progress
+and tabs), replaced the Card with a hand-made framed `Panel` with corner ticks, and added a custom colour theme and fonts
+(Bricolage Grotesque, IBM Plex Mono), a custom header, small-caps/mono label classes used about 75 times, and hand-rolled
+`<table>`, `<details>`, `<label>` and `<button>` elements.
+
+### What changed
+- Every file in `src/components/ui` is the registry's again (`npx shadcn@latest add -o`); `accordion`, `collapsible` and
+  `toggle` were added.
+- The theme is the stock shadcn neutral theme with Geist and Geist Mono. The map and graphs keep a few colour tokens
+  (`--signal`, `--viz-*`, `--land`, `--ocean`, ...), derived from the theme's own foreground where they can be.
+- `Panel` is now a thin composition of the shadcn Card (`CardHeader`, `CardTitle`, `CardAction`, `CardContent`); the header
+  is shadcn Buttons; the fleet status and the certificate names, AS chips and sample chips are Badges; the node, certificate
+  and answer pickers are Toggles; the readouts are Cards; "details" is an Accordion; every table is the shadcn Table and
+  every checkbox label the shadcn Label. The typography classes are plain Tailwind, headings are ordinary sizes, the
+  numbered section marks are gone.
+- The live SVG map, graphs, route ladder and their animations stay, inside Cards.
+- **ESLint now fails on a raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`, `<table>`, `<details>` and
+  similar outside `src/components/ui`**, and `AGENTS.md` says the rule.
+- The browser checks all pass at phone, tablet and desktop widths (one needed the Card's markup instead of the old frame's).
 
 ### What was verified on the released v0.8.0 (the files, not the repository)
 - All 6 attestations of the release verify, every checksum matches, and the image exists for amd64 and arm64.

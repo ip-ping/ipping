@@ -20,8 +20,7 @@ export function Dashboard({ username, onSignOut }: { username: string; onSignOut
     <div className="space-y-4 sm:space-y-5">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0 space-y-2">
-          <p className="label">03 / control</p>
-          <h1 className="figure text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">Administration</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Administration</h1>
           <p className="truncate text-sm text-muted-foreground">Signed in as {username}</p>
         </div>
         <Button variant="outline" onClick={onSignOut}>

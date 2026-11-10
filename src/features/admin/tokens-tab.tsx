@@ -77,10 +77,10 @@ export function TokensTab() {
           <Label htmlFor="token-ttl">Valid for (minutes)</Label>
           <Input id="token-ttl" type="number" min={1} max={1440} value={ttl} onChange={(e) => setTtl(e.target.value)} className="w-32" />
         </div>
-        <label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
+        <Label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
           <Checkbox checked={community} onCheckedChange={(checked) => setCommunity(checked === true)} />
           For a volunteer&apos;s node (community)
-        </label>
+        </Label>
         <Button type="submit" disabled={busy}>
           Create enrollment token
         </Button>

@@ -11,18 +11,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
-        <h1 className="figure max-w-3xl text-[clamp(2.1rem,5.4vw,4rem)] font-bold">
+        <h1 className="max-w-3xl text-3xl font-bold tracking-tight sm:text-5xl">
           Ping the internet
           <br className="hidden sm:block" /> from <span className="text-signal">everywhere</span>.
         </h1>
-        <p className="label max-w-xs leading-relaxed normal-case tracking-normal sm:text-right">
+        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed sm:text-right">
           Ping, TCP, HTTP, traceroute and DNS, live from every node you run. See where the answer comes from, and how
           far away it is.
         </p>
       </div>
 
       <SelectionProvider initialKind={KINDS.find((k) => k === kind) ?? "ping"}>
-      <div className="space-y-0 [&>*+*]:-mt-px">
+      <div className="space-y-4">
         <FleetMap />
         <Suspense>
           <MeasureForm

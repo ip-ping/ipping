@@ -156,7 +156,7 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               {KINDS.map(({ value, label, help }) => (
-                <label key={value} className="flex cursor-pointer items-start gap-3 text-sm">
+                <Label key={value} className="flex cursor-pointer items-start gap-3 text-sm">
                   <Checkbox
                     checked={kinds.includes(value)}
                     onCheckedChange={(checked) =>
@@ -169,7 +169,7 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
                     <span className="font-medium">{label}</span>
                     <span className="block text-xs text-muted-foreground">{help}</span>
                   </span>
-                </label>
+                </Label>
               ))}
             </div>
             <div className="space-y-1.5">
@@ -193,7 +193,7 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <Label className="flex cursor-pointer items-start gap-3 text-sm">
               <Checkbox
                 checked={draft.allow_private_webhooks ?? false}
                 onCheckedChange={(checked) => setDraft({ ...draft, allow_private_webhooks: checked === true })}
@@ -205,7 +205,7 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
                   make this server send a request to your internal network, so leave it off unless you need it.
                 </span>
               </span>
-            </label>
+            </Label>
           </CardContent>
         </Card>
 

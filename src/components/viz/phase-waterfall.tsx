@@ -152,7 +152,7 @@ export function PhaseWaterfall({
                       <path key={seg.key} d={bar(seg.x, cy - BAR / 2, Math.max(1, seg.w - 2), BAR, seg.last)} fill={seg.color} className="transition-[d] duration-500" />
                     ))
                   )}
-                  <text x={width - 4} y={cy + 4} textAnchor="end" className="num" fontSize="12" fontWeight="600" fill="var(--foreground)">
+                  <text x={width - 4} y={cy + 4} textAnchor="end" className="tabular-nums" fontSize="12" fontWeight="600" fill="var(--foreground)">
                     {row.total == null ? "–" : ms(row.total)}
                     {row.total != null && (
                       <tspan fontSize="10" fontWeight="400" fill="var(--muted-foreground)">
@@ -179,7 +179,7 @@ export function PhaseWaterfall({
                 {tip.status != null && <TipRow k="Status" v={tip.status} />}
               </>
             ) : (
-              <div className="label normal-case tracking-normal">{tip.note ?? (tip.state === "failed" ? "No answer from this node" : "Waiting for this node")}</div>
+              <div className="text-xs text-muted-foreground">{tip.note ?? (tip.state === "failed" ? "No answer from this node" : "Waiting for this node")}</div>
             )}
           </ChartTip>
         )}

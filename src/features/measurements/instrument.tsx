@@ -219,7 +219,7 @@ export function Instrument({
         <Readouts items={items} className="border-t lg:border-t-0 lg:border-l" />
       </div>
       <div className="flex items-center gap-3 border-t px-3 py-2">
-        <span className="label shrink-0">
+        <span className="text-xs text-muted-foreground shrink-0">
           {done} of {tasks.length} nodes finished
         </span>
         <Progress value={tasks.length ? (done * 100) / tasks.length : 100} className="min-w-0 flex-1" aria-label="Nodes finished" />

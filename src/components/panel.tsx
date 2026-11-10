@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
- * The frame everything on a page sits in: a hairline box with a small caps label on a ruled
- * header and a registration tick in each corner, like a sheet of a survey.
+ * A shadcn Card with a titled header: `label` is the card's title, `meta` sits at the end of the header. `flush` removes
+ * the padding so that a map, a graph or a table can run to the edges of the card.
  */
 export function Panel({
   label,
@@ -23,28 +24,14 @@ export function Panel({
   flush?: boolean;
 }) {
   return (
-    <section className={cn("relative min-w-0 border bg-card", className)}>
-      <Ticks />
+    <Card className={cn("min-w-0", flush && "gap-0 py-0", className)}>
       {(label || meta) && (
-        <header className="flex min-h-8 items-center justify-between gap-3 border-b px-3 py-1.5">
-          <h2 className="label">{label}</h2>
-          {meta && <div className="label flex items-center gap-3 text-foreground/70">{meta}</div>}
-        </header>
+        <CardHeader className={cn(flush && "border-b py-3")}>
+          {label && <CardTitle>{label}</CardTitle>}
+          {meta && <CardAction className="flex items-center gap-3 text-xs text-muted-foreground">{meta}</CardAction>}
+        </CardHeader>
       )}
-      <div className={cn(!flush && "p-3 sm:p-4", bodyClassName)}>{children}</div>
-    </section>
-  );
-}
-
-const corner = "pointer-events-none absolute size-2 border-foreground/70";
-
-function Ticks() {
-  return (
-    <>
-      <span aria-hidden className={cn(corner, "-top-px -left-px border-t-2 border-l-2")} />
-      <span aria-hidden className={cn(corner, "-top-px -right-px border-t-2 border-r-2")} />
-      <span aria-hidden className={cn(corner, "-bottom-px -left-px border-b-2 border-l-2")} />
-      <span aria-hidden className={cn(corner, "-right-px -bottom-px border-r-2 border-b-2")} />
-    </>
+      <CardContent className={cn(flush && "p-0", bodyClassName)}>{children}</CardContent>
+    </Card>
   );
 }

@@ -104,8 +104,8 @@ export default function MeasurementPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
-          <p className="label">{KIND_INFO[kind].label} measurement</p>
-          <h1 className="figure text-3xl font-semibold tracking-[-0.03em] [overflow-wrap:anywhere] sm:text-5xl">{target.host}</h1>
+          <p className="text-xs text-muted-foreground">{KIND_INFO[kind].label} measurement</p>
+          <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-4xl">{target.host}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MeasurementStatus status={measurement.status} />
             {running && !live && <Badge variant="outline">Reconnecting…</Badge>}

@@ -182,7 +182,7 @@ export function RangeStrip({
                     </>
                   )}
 
-                  <text x={width - 4} y={cy + 4} textAnchor="end" className="num" fontSize="12" fontWeight="600" fill="var(--foreground)">
+                  <text x={width - 4} y={cy + 4} textAnchor="end" className="tabular-nums" fontSize="12" fontWeight="600" fill="var(--foreground)">
                     {med == null ? "–" : ms(med)}
                     {med != null && (
                       <tspan fontSize="10" fontWeight="400" fill="var(--muted-foreground)">
@@ -211,7 +211,7 @@ export function RangeStrip({
                 <TipRow k="Replies" v={`${tip.ok.length} of ${tip.row.expected}`} />
               </>
             ) : (
-              <div className="label normal-case tracking-normal">{tip.row.note ?? (tip.row.state === "failed" ? "No answer from this node" : "Waiting for this node")}</div>
+              <div className="text-xs text-muted-foreground">{tip.row.note ?? (tip.row.state === "failed" ? "No answer from this node" : "Waiting for this node")}</div>
             )}
             {tip.row.lost > 0 && <TipRow k="Lost" v={tip.row.lost} />}
             {tip.row.previous != null && (

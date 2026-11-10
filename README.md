@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.7.0** (application), installing backend **v0.7.0**. Nodes of any earlier version
+Current release: **v0.8.1** (application), installing backend **v0.7.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -49,10 +49,12 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 
 ## The interface
 
-The interface is built like a survey chart, not like a dashboard template: warm paper and ink in light
-mode, a deep "night chart" in dark mode, one vermilion signal colour for what is live or selected,
-Bricolage Grotesque for text and IBM Plex Mono for labels, axes and units. Everything sits in a ruled
-frame with registration ticks in its corners.
+The interface is built from **shadcn/ui components only** (`src/components/ui`, added with the shadcn CLI and never edited
+by hand; no second component library). Cards, tabs, tables, dialogs, accordions, toggles, badges, selects and the
+rest are the stock components with the stock neutral theme and Geist. What is its own is the live data: the world map
+and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a small set of colour tokens for them in
+`globals.css`. A lint rule fails the build on a raw `<button>`, `<input>`, `<table>`, `<label>` and the like outside
+`src/components/ui`.
 
 * **Live map.** The world as dotted land over a graticule, drawn in SVG (no map library, nothing
   fetched). Every node is a station that pulses while it is connected and sends a ring out for each
@@ -279,6 +281,8 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.8.1 | v0.7.0 | migration `0010` | as v0.8.0 (an interface change only: shadcn/ui components only) |
+| v0.8.0 | v0.7.0 | migration `0010` | as v0.7.0 (the installer learns about a proxy of your own and a CDN in front of it) |
 | v0.7.0 | v0.7.0 | migration `0010` | as v0.6.0, and **v0.7.0+** for DNS over HTTPS to Quad9 (older nodes are left out of that question) |
 | v0.6.1 | v0.6.1 | migration `0010` | as v0.6.0 (a measurement that asks for DNS over HTTPS or QUIC goes only to nodes that have them) |
 | v0.6.0 | v0.6.0 | migration `0010` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS; **v0.5.0+** for traceroute in rounds and certificate checks; **v0.6.0+** for DNS over HTTPS and QUIC |
@@ -340,12 +344,12 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1 and v0.7.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0 and v0.8.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
 - [x] Per-node latency circles on the live map, and live SVG graphs per kind (range strip, phase waterfall, route ladder)
-- [x] An interface of its own: chart-sheet design, live fleet map, nodes page with a roster, restyled admin
+- [x] An interface built from shadcn/ui components only (stock components and theme), with a live fleet map, a nodes page with a roster and the admin
 - [x] Compare DNS answers across nodes (A, AAAA, CNAME, MX, NS, TXT, SOA; the node's own resolver or a public one)
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
 - [x] QUIC (HTTP/3) as a transport of the certificate check
@@ -359,9 +363,9 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 ## Credits
 
 The world outline in `src/lib/geo/world-path.ts` is generated from [Natural Earth](https://www.naturalearthdata.com)
-110m land (public domain) by `scripts/build-world-map.mjs`. The typefaces, Bricolage Grotesque and
-IBM Plex Mono, are open source (SIL Open Font License); `next/font` downloads them at build time and the
-application serves them itself, so a visitor's browser never contacts a font host.
+110m land (public domain) by `scripts/build-world-map.mjs`. The typefaces, Geist and Geist Mono, are open source (SIL
+Open Font License); `next/font` downloads them at build time and the application serves them itself, so a visitor's
+browser never contacts a font host.
 
 ## License
 

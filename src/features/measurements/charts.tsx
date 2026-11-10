@@ -21,6 +21,7 @@ import { lossKinds } from "./hops";
 import { asPath, networkName, placeRoute } from "./route-geo";
 import { AsPathStrip, RouteMapSection } from "./route-extras";
 import { usePath } from "./use-path";
+import { Toggle } from "@/components/ui/toggle";
 
 const SEE_TABLE = "Every number is in the table below.";
 
@@ -153,18 +154,15 @@ function Route({ measurement, focus }: { measurement: Measurement; focus: Focus 
           const selected = t.id === task?.id;
           const lit = focus.hover === t.node.id;
           return (
-            <button
+            <Toggle
               key={t.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => focus.pin(selected && focus.pinned === t.node.id ? null : t.node.id)}
+              variant="outline"
+              size="sm"
+              pressed={selected}
+              onPressedChange={() => focus.pin(selected && focus.pinned === t.node.id ? null : t.node.id)}
               onPointerEnter={() => focus.setHover(t.node.id)}
               onPointerLeave={() => focus.setHover(null)}
-              className={cn(
-                "label inline-flex min-h-8 items-center gap-1.5 border px-2.5 normal-case tracking-normal transition-colors",
-                selected ? "border-foreground bg-foreground text-background" : "hover:border-foreground/60",
-                lit && !selected && "border-signal bg-signal-soft",
-              )}
+              className={cn(lit && !selected && "border-signal bg-signal-soft")}
             >
               <span
                 aria-hidden
@@ -174,7 +172,7 @@ function Route({ measurement, focus }: { measurement: Measurement; focus: Focus 
                 )}
               />
               {t.node.name}
-            </button>
+            </Toggle>
           );
         })}
       </div>

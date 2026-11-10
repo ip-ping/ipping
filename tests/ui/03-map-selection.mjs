@@ -19,7 +19,7 @@ export default async function check(t) {
   await page.waitForTimeout(40);
   await page.mouse.up();
   await page.waitForTimeout(250);
-  t.ok(/1 chosen of/.test(await page.locator("section header").first().innerText()), "a click should choose one station");
+  t.ok(/1 chosen of/.test(await page.locator("[data-slot=card-header]").first().innerText()), "a click should choose one station");
   t.ok(/Selected \(1\)/.test(await page.getByRole("combobox").last().innerText()), "the form should say Selected (1)");
 
   // shift-drag over the United States replaces the choice
@@ -33,7 +33,7 @@ export default async function check(t) {
   await page.mouse.up();
   await page.keyboard.up("Shift");
   await page.waitForTimeout(300);
-  const meta = await page.locator("section header").first().innerText();
+  const meta = await page.locator("[data-slot=card-header]").first().innerText();
   const chosen = Number(/(\d+) chosen of/.exec(meta)?.[1] ?? 0);
   t.ok(chosen >= 3, `the region should hold several US stations: ${meta}`);
 
