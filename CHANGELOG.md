@@ -2,10 +2,10 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.11.0 (2026-11-10, not released yet)
+## v0.11.0 (2026-11-10)
 
 IP info from the site's own lookup API, the location evidence with the nodes' places and networks, and the map in the theme's
-own colours. Interface only: backend v0.9.0 is unchanged and `release.env` still pins it.
+own colours. Interface only: it installs backend **v0.9.0**, unchanged (database migration `0012`).
 
 ### IP info
 - **Tested addresses** card on a measurement: a row for every address the nodes really tested, with the node count, where the
