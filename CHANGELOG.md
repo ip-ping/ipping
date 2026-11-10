@@ -2,7 +2,29 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.7.0 (2026-11-10)
+
+Installs backend v0.7.0. New: **DNS over HTTPS to Quad9** (needs nodes of v0.7.0, which speak HTTP/2) and **geofeeds** in the
+location panel. Nodes of v0.6.x keep working; the backend leaves them out of a Quad9 DoH question.
+
+### DNS over HTTPS to Quad9
+- Quad9 joins Cloudflare and Google in the DoH choice (form and watch form); the simulated fleet announces v0.7.0 and the
+  browser check asks Quad9 over HTTPS. Against nodes that are older the backend says "None of the N online nodes can run a dns
+  measurement over DoH to quad9 (it needs HTTP/2, which nodes speak from v0.7.0) yet".
+
+### Geofeeds in the location panel
+- When a feed the administrator listed covers the address, the panel says what the network's own geofeed says ("Geofeed from
+  feeds.test says Tokyo, JP for 93.184.216.0/24") with the same verdict as the database's: **the measurements rule that
+  out** (naming the node that heard from the address too quickly), no measurement contradicts it, or that it could not be
+  checked (no verified node took part, or the town is not one the site knows, in which case it is shown as the feed wrote it).
+  The map draws the claim the way it draws a GeoIP one. It never changes the estimate.
+- `ipping.sh geofeed-update --feed https://... [--feed ...]` fetches the listed feeds, in Docker or direct mode, and
+  remembers the list in `/etc/ipping/geofeeds` so a cron job needs no arguments; an address that is not https is refused
+  before anything is fetched. The direct-mode step that tells the sandboxed backend where the GeoIP directory is is now shared
+  with `geoip-update`. 23 checks more in `tests/installer.sh`, ShellCheck (stable and v0.10.0) clean, run on macOS and Debian.
+- Browser check `tests/ui/12-geofeed.mjs` (writes a feed into the directory named by `IPPING_UI_GEOIP_DIR`): a claim the
+  measurements rule out, one that is consistent, a town the site does not know and an address no feed covers. It stops with a
+  note when the directory is not given or the backend has no geofeeds.
 
 ### What was verified on the released v0.6.1 (the files, not the repository)
 - All 9 attestations of the application and backend releases verify and every checksum matches; the application and backend

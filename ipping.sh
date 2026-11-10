@@ -44,6 +44,8 @@ HTTPS_PORT="443"
 BACKEND_WORKERS="1"
 DATABASE_URL=""
 PURGE=0
+# geofeed-update: the addresses of the geofeeds to fetch (--feed, repeatable); remembered in ${CONF_DIR}/geofeeds
+GEOFEEDS=()
 SETUP_TOKEN=""
 
 # ------------------------------------------------------------------------------------------------
@@ -1050,6 +1052,27 @@ cmd_backup() {
   BACKUP_FILE="$out"
 }
 
+# Direct mode: the directory the GeoIP databases and geofeeds live in, and the drop-in that tells the sandboxed
+# backend about it. Sets GEOIP_DIR, and GEOIP_RESTART=1 when the backend has to be restarted to learn of it.
+prepare_geoip_dir() {
+  local dropin_dir=/etc/systemd/system/ipping-backend.service.d
+  GEOIP_DIR=/var/lib/ipping-backend/geoip
+  GEOIP_RESTART=0
+  install -d -m 0750 -o ipping-backend -g ipping-backend /var/lib/ipping-backend "$GEOIP_DIR"
+  if [ ! -f "${dropin_dir}/geoip.conf" ]; then
+    # A drop-in, so the unit the installer wrote is left alone: it names the directory (and gives the
+    # sandboxed service somewhere it may read it).
+    install -d "$dropin_dir"
+    cat >"${dropin_dir}/geoip.conf" <<EOF
+[Service]
+Environment=IPPING_GEOIP_DIR=${GEOIP_DIR}
+StateDirectory=ipping-backend
+EOF
+    run "Telling the backend where the databases are" systemctl daemon-reload
+    GEOIP_RESTART=1
+  fi
+}
+
 # Download the free DB-IP Lite city and ASN databases for the location cross-check. Optional: without them
 # results are exactly as before. Safe to repeat (monthly); the backend reads a replaced file without a restart.
 cmd_geoip_update() {
@@ -1062,26 +1085,51 @@ cmd_geoip_update() {
     run "Downloading and checking the databases" compose run --rm --no-deps backend geoip-update
   else
     need_systemd
-    local dir=/var/lib/ipping-backend/geoip dropin_dir=/etc/systemd/system/ipping-backend.service.d restart=0
-    install -d -m 0750 -o ipping-backend -g ipping-backend /var/lib/ipping-backend "$dir"
-    if [ ! -f "${dropin_dir}/geoip.conf" ]; then
-      # A drop-in, so the unit the installer wrote is left alone: it names the directory (and gives the
-      # sandboxed service somewhere it may read it).
-      install -d "$dropin_dir"
-      cat >"${dropin_dir}/geoip.conf" <<EOF
-[Service]
-Environment=IPPING_GEOIP_DIR=${dir}
-StateDirectory=ipping-backend
-EOF
-      run "Telling the backend where the databases are" systemctl daemon-reload
-      restart=1
-    fi
-    run "Downloading and checking the databases" runuser -u ipping-backend -- env "IPPING_GEOIP_DIR=${dir}" \
+    prepare_geoip_dir
+    run "Downloading and checking the databases" runuser -u ipping-backend -- env "IPPING_GEOIP_DIR=${GEOIP_DIR}" \
       "${APP_DIR}/backend/current/venv/bin/ipping-backend" geoip-update
-    [ "$restart" -eq 0 ] || run "Restarting the backend so it reads them" systemctl restart ipping-backend
+    [ "$GEOIP_RESTART" -eq 0 ] || run "Restarting the backend so it reads them" systemctl restart ipping-backend
   fi
   ok "Done. Results now name the network of an address and check a database's place against the measurements."
   note "Repeat it each month, for example with cron:  0 4 3 * *  root  bash $0 geoip-update"
+}
+
+# Fetch the geofeeds (RFC 8805) the administrator lists: files in which a network says where its addresses are.
+# Opt-in and bounded: only these addresses, only now, https only, never because a measurement named an address.
+# The list is remembered, so repeating it (cron) needs no arguments; naming feeds again replaces the list.
+cmd_geofeed_update() {
+  need_root geofeed-update
+  banner "ipping" "Geofeeds"
+  local mode file="${CONF_DIR}/geofeeds" url
+  mode="$(require_mode)"
+  if [ "${#GEOFEEDS[@]}" -gt 0 ]; then
+    for url in "${GEOFEEDS[@]}"; do
+      case "$url" in
+        https://?*) ;;
+        *) die "A geofeed address must start with https:// (got '${url}')." ;;
+      esac
+    done
+    install -d -m 0755 "$CONF_DIR"
+    printf '%s\n' "${GEOFEEDS[@]}" >"$file"
+    chmod 0644 "$file"
+  fi
+  [ -s "$file" ] || die "Name a geofeed: geofeed-update --feed https://example.net/geofeed.csv (repeat --feed for more; the list is remembered)."
+  local args=()
+  while IFS= read -r url; do
+    if [ -n "$url" ]; then args+=(--url "$url"); fi
+  done <"$file"
+  note "A geofeed is where a network says its addresses are. Only the ${#args[@]} address(es) you listed are fetched, now."
+  if [ "$mode" = "docker" ]; then
+    run "Fetching the geofeeds" compose run --rm --no-deps backend geofeed-update "${args[@]}"
+  else
+    need_systemd
+    prepare_geoip_dir
+    run "Fetching the geofeeds" runuser -u ipping-backend -- env "IPPING_GEOIP_DIR=${GEOIP_DIR}" \
+      "${APP_DIR}/backend/current/venv/bin/ipping-backend" geofeed-update "${args[@]}"
+    [ "$GEOIP_RESTART" -eq 0 ] || run "Restarting the backend so it reads them" systemctl restart ipping-backend
+  fi
+  ok "Done. A result now shows what a network's own geofeed says about its address, checked against the measurements."
+  note "Repeat it when the feeds change, for example with cron:  0 5 * * 1  root  bash $0 geofeed-update"
 }
 
 stop_app_for_restore() {
@@ -1260,6 +1308,8 @@ Commands:
   backup         Dump the database to ${BACKUP_DIR}
   geoip-update   Download the free DB-IP Lite databases (optional: names the network of an address and
                  cross-checks a GeoIP place against the measurements); repeat monthly
+  geofeed-update Fetch the geofeeds you list with --feed https://... (repeatable, remembered): where a network
+                 says its addresses are, shown next to the GeoIP place and checked the same way
   restore FILE   Replace the database with a backup
   uninstall      Remove it (data is kept unless --purge)
 
@@ -1425,7 +1475,7 @@ main() {
   SETUP_TOKEN="${IPPING_SETUP_TOKEN:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
-      install | update | start | stop | restart | status | logs | doctor | access | backup | geoip-update | uninstall) command="$1" ;;
+      install | update | start | stop | restart | status | logs | doctor | access | backup | geoip-update | geofeed-update | uninstall) command="$1" ;;
       restore) command=restore; restore_file="${2:-}"; [ $# -gt 1 ] && shift ;;
       --mode) MODE="${2:?--mode needs a value}"; shift ;;
       --version)
@@ -1440,6 +1490,7 @@ main() {
       --https-port) HTTPS_PORT="${2:?--https-port needs a value}"; shift ;;
       --backend-workers) BACKEND_WORKERS="${2:?--backend-workers needs a value}"; shift ;;
       --database-url) DATABASE_URL="${2:?--database-url needs a value}"; shift ;;
+      --feed) GEOFEEDS+=("${2:?--feed needs an https address}"); shift ;;
       --purge) PURGE=1 ;;
       -y | --yes) ASSUME_YES=1 ;;
       -h | --help) usage; exit 0 ;;
@@ -1466,6 +1517,7 @@ main() {
     doctor) cmd_doctor ;;
     backup) ui_log_init /var/log/ipping-install.log; cmd_backup ;;
     geoip-update) ui_log_init /var/log/ipping-install.log; cmd_geoip_update ;;
+    geofeed-update) ui_log_init /var/log/ipping-install.log; cmd_geofeed_update ;;
     restore) ui_log_init /var/log/ipping-install.log; cmd_restore "$restore_file" ;;
     uninstall) ui_log_init /var/log/ipping-install.log; cmd_uninstall ;;
   esac

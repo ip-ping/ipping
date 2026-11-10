@@ -945,7 +945,7 @@ export interface components {
             target: string;
             /**
              * Transport
-             * @description dns: udp (the default) or doh, DNS over HTTPS (cloudflare and google; not the nodes' own resolvers, and not quad9, which answers only over HTTP/2). tls: tcp (the default) or quic, a QUIC handshake offering h3 over UDP
+             * @description dns: udp (the default) or doh, DNS over HTTPS (cloudflare, google and quad9; not the nodes' own resolvers; quad9 answers only over HTTP/2, which nodes speak from v0.7.0). tls: tcp (the default) or quic, a QUIC handshake offering h3 over UDP
              */
             transport?: ("udp" | "doh" | "tcp" | "quic") | null;
         };
@@ -1099,11 +1099,21 @@ export interface components {
             /** Attribution */
             attribution?: string | null;
             /**
+             * Claim
+             * @description geofeed only: what the feed says, in its own words, when no place could be checked
+             */
+            claim?: string | null;
+            /**
              * Distance To Estimate Km
              * @description From the place the database names to the likely place
              */
             distance_to_estimate_km?: number | null;
             place?: components["schemas"]["PlaceOut"] | null;
+            /**
+             * Prefix
+             * @description geofeed only: the prefix the line is for
+             */
+            prefix?: string | null;
             ruled_out_by?: components["schemas"]["RuledOutOut"] | null;
             /** Source */
             source: string;
@@ -1119,6 +1129,11 @@ export interface components {
             asn: boolean;
             /** City */
             city: boolean;
+            /**
+             * Geofeed Entries
+             * @default 0
+             */
+            geofeed_entries: number;
             /** Source */
             source?: string | null;
         };
@@ -1233,6 +1248,8 @@ export interface components {
              * @default []
              */
             evidence: components["schemas"]["EvidenceOut"][];
+            /** @description What the network's operator says in a geofeed (RFC 8805) the administrator listed, checked the same way */
+            geofeed?: components["schemas"]["GeoIpOut"] | null;
             /** @description A configured GeoIP database's answer, checked against the nodes */
             geoip?: components["schemas"]["GeoIpOut"] | null;
             likely?: components["schemas"]["PlaceOut"] | null;

@@ -31,8 +31,8 @@ export const DNS_TRANSPORTS: { value: DnsTransport; label: string }[] = [
   { value: "doh", label: "DNS over HTTPS" },
 ];
 
-/** The resolvers that can be asked over HTTPS: Quad9 answers only over HTTP/2, which the nodes do not speak, and a node's own resolvers are not public. */
-export const DOH_RESOLVERS: readonly DnsResolver[] = ["cloudflare", "google"];
+/** The resolvers that can be asked over HTTPS: the public ones (Quad9 needs HTTP/2, which nodes speak from v0.7.0; the backend leaves older nodes out), not a node's own. */
+export const DOH_RESOLVERS: readonly DnsResolver[] = ["cloudflare", "google", "quad9"];
 export const canUseDoh = (resolver: DnsResolver) => DOH_RESOLVERS.includes(resolver);
 
 export type KindInfo = {

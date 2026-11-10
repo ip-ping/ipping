@@ -160,7 +160,7 @@ async def run_node(name, cc, lat, lon, credential):
             while True:
                 await asyncio.sleep(8); await ws.send(json.dumps({"type": "ping"}))
         asyncio.create_task(beat())
-        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.6.0", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns", "tls"], "ipv4": True, "ipv6": True}}))
+        await ws.send(json.dumps({"type": "hello", "protocol_versions": [1], "node_version": "0.7.0", "capabilities": {"kinds": ["ping", "tcp", "http", "traceroute", "dns", "tls"], "ipv4": True, "ipv6": True}}))
         async for raw in ws:
             f = json.loads(raw)
             if f["type"] == "task": asyncio.create_task(run_task(ws, (lat, lon), f, rnd))

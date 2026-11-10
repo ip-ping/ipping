@@ -20,9 +20,10 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.6.1** (application), installing backend **v0.6.1**. Nodes of any earlier version
+Current release: **v0.7.0** (application), installing backend **v0.7.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
-**v0.5.0** to repeat a traceroute in rounds and to check certificates, and **v0.6.0** for DNS over HTTPS and QUIC.
+**v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
+for DNS over HTTPS to Quad9 (which needs HTTP/2).
 
 ## What you can do with it
 
@@ -31,7 +32,7 @@ keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and trac
 | **Ping** | ICMP echo requests (1 to 10) | a range strip (a dot per reply, fastest to slowest, the median, lost probes), min / median / avg / max and loss per node |
 | **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
 | **HTTP** | one `GET` (headers only, body never read) | status, a **phase waterfall** of DNS / connect / TLS / first-byte time per node, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
-| **DNS** | one question to one resolver: a node's own, or Cloudflare, Google or Quad9 | whether the nodes **agree**: stations on the map coloured by the answer they got, every distinct answer with the nodes that got it, response code, TTL and every record. A name that does not exist can be checked. Answers that are private addresses from a node's own resolver are never shown. Cloudflare and Google can also be asked **over HTTPS (DoH)**; a result says so. Quad9 cannot (it answers DoH only over HTTP/2, which the nodes do not speak) |
+| **DNS** | one question to one resolver: a node's own, or Cloudflare, Google or Quad9 | whether the nodes **agree**: stations on the map coloured by the answer they got, every distinct answer with the nodes that got it, response code, TTL and every record. A name that does not exist can be checked. Answers that are private addresses from a node's own resolver are never shown. Cloudflare, Google and Quad9 can also be asked **over HTTPS (DoH)**; a result says so. Quad9 answers DoH only over HTTP/2, which nodes speak from v0.7.0, so older nodes are left out of that question |
 | **Certificate** | a TLS handshake with no request after it (any TLS service on an allowed port; 443 unless given) | one card for each **distinct certificate** the nodes were shown: trusted or not (and why not), days left on a timeline with today marked, the names it is valid for, who issued it and which nodes saw it. Several cards mean the nodes were not talking to one server, or a certificate is being replaced. Stations on the map are coloured by the certificate they saw. A watch on it alerts when a certificate has under 14 days left, before it fails. It can also be a **QUIC handshake** (the transport of HTTP/3), which names the protocol agreed |
 | **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address. With **rounds** (like `mtr`, up to 10) every hop shows its loss and best / average / worst time, and tells a router that is merely slow to answer probes aimed at it from loss that really carries on to the destination. With a GeoIP database on the backend, the **networks** the route crosses are listed and the route is drawn on a map; a router whose registered place light could not have reached in the time it answered is left off the map and counted |
 
@@ -69,6 +70,8 @@ frame with registration ticks in its corners.
 * **A second opinion that is checked.** With a GeoIP / ASN database set up on the backend, the location panel
   names the network and says whether the database's place is ruled out by the measurements (a node heard from
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
+  The same goes for a **geofeed** (RFC 8805): where the address's own network says its addresses are, from the
+  feeds an administrator lists (`ipping.sh geofeed-update --feed https://...`); only those are fetched, only then.
 * **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
   when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
 * **From a terminal.** An administrator can create API keys (with quotas) and scripts can use them; `ipping-cli`
@@ -121,7 +124,7 @@ On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a
 same information is plain text, and the layout follows the width of the terminal.
 
 Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
-`access`, `logs`, `backup`, `restore FILE`, `update`, `geoip-update`, `uninstall`.
+`access`, `logs`, `backup`, `restore FILE`, `update`, `geoip-update`, `geofeed-update --feed URL`, `uninstall`.
 
 An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
 settings it already saved instead of refusing, and nothing is marked "installed" until the
@@ -139,9 +142,9 @@ sudo bash ipping.sh install --mode docker
 sudo bash ipping.sh install --mode direct --domain ping.example.com
 
 # A specific release instead of the newest, a different port, several backend processes:
-sudo bash ipping.sh install --mode docker --version v0.6.1 --http-port 8088 --backend-workers 4
+sudo bash ipping.sh install --mode docker --version v0.7.0 --http-port 8088 --backend-workers 4
 
-sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | geoip-update | uninstall
+sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | geoip-update | geofeed-update | uninstall
 ```
 
 That link always serves the installer of the newest *tagged* release. The unreleased installer from
@@ -226,6 +229,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.7.0 | v0.7.0 | migration `0010` | as v0.6.0, and **v0.7.0+** for DNS over HTTPS to Quad9 (older nodes are left out of that question) |
 | v0.6.1 | v0.6.1 | migration `0010` | as v0.6.0 (a measurement that asks for DNS over HTTPS or QUIC goes only to nodes that have them) |
 | v0.6.0 | v0.6.0 | migration `0010` | any node for ping; **v0.3.0+** for TCP, HTTP, traceroute; **v0.4.0+** for DNS; **v0.5.0+** for traceroute in rounds and certificate checks; **v0.6.0+** for DNS over HTTPS and QUIC |
 | v0.5.1 | v0.5.1 | migration `0009` | as v0.5.0 |
@@ -284,9 +288,9 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] First-run `/setup` and `/admin` (nodes, enrollment tokens, limits, emergency stop, audit)
 - [x] Dockerfile and Docker Hub publishing
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
-- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update, a guided interface, retry-safety, narrow-terminal layout
+- [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0 and v0.6.1 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1 and v0.7.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

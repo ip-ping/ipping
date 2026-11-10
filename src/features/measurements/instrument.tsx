@@ -143,7 +143,7 @@ export function Instrument({
   const items = useMemo(() => readouts(measurement), [measurement]);
   // what a GeoIP database claims, drawn so the claim can be seen against the rings
   const claim = useMemo<MapClaim | null>(() => {
-    const g = estimate?.geoip;
+    const g = estimate?.geoip?.place ? estimate.geoip : estimate?.geofeed;
     return g?.place
       ? {
           lat: g.place.latitude,

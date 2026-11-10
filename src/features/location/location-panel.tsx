@@ -93,15 +93,50 @@ function Limitations({ estimate }: { estimate: LocationEstimate }) {
 
 const km = (n: number) => `${n.toLocaleString()} km`;
 
+type Claim = NonNullable<LocationEstimate["geoip"]>;
+
 /**
- * What a GeoIP database says, set against what the nodes measured. A database never moves the estimate;
- * it can only be shown wrong (a place no node's round trip allows) or not contradicted.
+ * One claim about where the address is (a GeoIP database's, or the network's own geofeed), set against what the nodes
+ * measured. A claim never moves the estimate; it can only be shown wrong (a place no node's round trip allows) or
+ * not contradicted.
  */
+function ClaimLine({ claim, own }: { claim: Claim; own: boolean }) {
+  const place = claim.place;
+  const where = place ? `${place.name}, ${place.country}` : claim.claim;
+  if (!where) return null;
+  return (
+    <p>
+      <span className="text-muted-foreground">{claim.source} says </span>
+      <strong>{where}</strong>
+      {own && claim.prefix && <span className="text-muted-foreground"> for {claim.prefix}</span>}
+      {!place ? (
+        <>. That is not a place this site can check against the measurements.</>
+      ) : claim.verdict === "ruled_out" && claim.ruled_out_by ? (
+        <>
+          . <strong>The measurements rule that out:</strong> {claim.ruled_out_by.node_name} heard from this address in{" "}
+          {ms(claim.ruled_out_by.rtt_ms)} ms, so it is at most {km(claim.ruled_out_by.max_distance_km)} from that node, but{" "}
+          {where} is {km(claim.ruled_out_by.distance_km)} away.{" "}
+          {own
+            ? "A geofeed is what the network's operator says; an anycast address answers from many places."
+            : "A database names one place for an address; an anycast address answers from many."}
+        </>
+      ) : claim.verdict === "consistent" ? (
+        <>
+          {claim.distance_to_estimate_km != null && (
+            <span className="text-muted-foreground"> ({km(claim.distance_to_estimate_km)} from the estimate)</span>
+          )}
+          . No measurement contradicts that.
+        </>
+      ) : (
+        <>. No node with a verified position took part, so it could not be checked against the measurements.</>
+      )}
+    </p>
+  );
+}
+
 function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
-  const { geoip, asn } = estimate;
-  if (!geoip && !asn) return null;
-  const place = geoip?.place;
-  const where = place ? `${place.name}, ${place.country}` : null;
+  const { geoip, geofeed, asn } = estimate;
+  if (!geoip && !geofeed && !asn) return null;
   return (
     <div className="space-y-2 border-l-2 border-foreground/30 pl-3 text-sm">
       {asn && (
@@ -110,29 +145,8 @@ function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
           <span className="font-mono">AS{asn.number}</span> {asn.organization}
         </p>
       )}
-      {geoip && where && (
-        <p>
-          <span className="text-muted-foreground">{geoip.source} says </span>
-          <strong>{where}</strong>
-          {geoip.verdict === "ruled_out" && geoip.ruled_out_by ? (
-            <>
-              . <strong>The measurements rule that out:</strong> {geoip.ruled_out_by.node_name} heard from this address in{" "}
-              {ms(geoip.ruled_out_by.rtt_ms)} ms, so it is at most {km(geoip.ruled_out_by.max_distance_km)} from that node, but{" "}
-              {where} is {km(geoip.ruled_out_by.distance_km)} away. A database names one place for an address; an
-              anycast address answers from many.
-            </>
-          ) : geoip.verdict === "consistent" ? (
-            <>
-              {geoip.distance_to_estimate_km != null && (
-                <span className="text-muted-foreground"> ({km(geoip.distance_to_estimate_km)} from the estimate)</span>
-              )}
-              . No measurement contradicts that.
-            </>
-          ) : (
-            <>. No node with a verified position took part, so it could not be checked against the measurements.</>
-          )}
-        </p>
-      )}
+      {geoip && <ClaimLine claim={geoip} own={false} />}
+      {geofeed && <ClaimLine claim={geofeed} own />}
       {geoip?.attribution && <p className="text-xs text-muted-foreground">{geoip.attribution}</p>}
     </div>
   );

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2329,SC2317  # test doubles that the sourced script calls; shellcheck cannot see that
+# shellcheck disable=SC2329,SC2317,SC2034  # test doubles and variables that the sourced script uses; shellcheck cannot see that
 # Tests for the installer's own logic (no root, no network, nothing installed).
 #   bash tests/installer.sh
 set -u
@@ -115,6 +115,41 @@ out="$(bash "$SCRIPT" --help 2>&1)"
 case "$out" in *geoip-update*) check "--help lists geoip-update" ok ok ;; *) check "--help lists geoip-update" ok "$out" ;; esac
 check "the compose file gives the backend a volume for the databases" 1 "$(grep -c 'geoip:/data/geoip' compose.yaml)"
 check "...and declares it" 1 "$(grep -c '^  geoip:' compose.yaml)"
+case "$out" in *geofeed-update*) check "--help lists geofeed-update" ok ok ;; *) check "--help lists geofeed-update" ok "$out" ;; esac
+
+echo "geofeed-update remembers the feeds it was given and passes them on"
+gf="$(mktemp -d)"
+CONF_DIR="$gf/conf"
+need_root() { :; }; banner() { :; }; note() { :; }; ok() { :; }
+require_mode() { echo docker; }
+run() { shift; "$@"; }
+compose() { printf '%s\n' "$*" >"$gf/compose.args"; }
+GEOFEEDS=(https://a.example/geofeed.csv https://b.example/g.csv)
+(cmd_geofeed_update) >/dev/null 2>&1
+check "the feeds go to the backend, each as --url" "run --rm --no-deps backend geofeed-update --url https://a.example/geofeed.csv --url https://b.example/g.csv" "$(cat "$gf/compose.args")"
+check "and are remembered, one a line" "https://a.example/geofeed.csv https://b.example/g.csv" "$(tr '\n' ' ' <"$CONF_DIR/geofeeds" | sed 's/ $//')"
+rm -f "$gf/compose.args"
+GEOFEEDS=()
+(cmd_geofeed_update) >/dev/null 2>&1
+check "with none named, the remembered ones are used" "run --rm --no-deps backend geofeed-update --url https://a.example/geofeed.csv --url https://b.example/g.csv" "$(cat "$gf/compose.args")"
+GEOFEEDS=(https://c.example/only.csv)
+(cmd_geofeed_update) >/dev/null 2>&1
+check "naming feeds again replaces the list" "run --rm --no-deps backend geofeed-update --url https://c.example/only.csv" "$(cat "$gf/compose.args")"
+rm -f "$gf/compose.args"
+for bad in http://insecure.example/x.csv ftp://x.example/y file:///etc/passwd https:// "x.example/geofeed.csv"; do
+  GEOFEEDS=("$bad")
+  out="$( (cmd_geofeed_update) 2>&1 )"; rc=$?
+  check "'$bad' is refused" 1 "$rc"
+  case "$out" in *"must start with https://"*) check "...with a message that says so" ok ok ;; *) check "...with a message that says so" ok "$out" ;; esac
+  check "...and nothing is fetched" "" "$(cat "$gf/compose.args" 2>/dev/null)"
+done
+GEOFEEDS=(); CONF_DIR="$gf/empty"
+out="$( (cmd_geofeed_update) 2>&1 )"; rc=$?
+check "with nothing named or remembered it asks for a feed" 1 "$rc"
+case "$out" in *"--feed https://"*) check "...and shows how" ok ok ;; *) check "...and shows how" ok "$out" ;; esac
+out="$(bash "$SCRIPT" --feed 2>&1)"
+case "$out" in *"--feed needs an https address"*) check "--feed without an address is refused" ok ok ;; *) check "--feed without an address is refused" ok "$out" ;; esac
+rm -rf "$gf"
 
 echo
 if [ "$failures" -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi
