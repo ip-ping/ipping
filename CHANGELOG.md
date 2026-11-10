@@ -2,6 +2,22 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+### What was verified on the released v0.8.0 (the files, not the repository)
+- All 6 attestations of the release verify, every checksum matches, and the image exists for amd64 and arm64.
+- The reported situation replayed on a fresh Debian 13 with only released files: the released v0.7.0 installed with a domain
+  answers plain HTTP with `308 -> https://ping.test/` (the cause); the latest `ipping.sh` says `proxy` needs an `update` first;
+  after `update` (v0.8.0) and `proxy --behind-proxy --domain ping.test --cloudflare --http-port 8080` ipping answers plain
+  HTTP with 200, and real nginx using the printed snippet serves the site with 0 redirects, the administrator is created over
+  https, and visitors are counted separately (1.1.1.1 limited after 10 attempts while 2.2.2.2 is not, a forged
+  `X-Forwarded-For` shifting nothing).
+- Docker mode (Docker inside the container, `vfs` storage): the install behind nginx and Cloudflare, 443 published on 127.0.0.1
+  only so nginx keeps it, 0 redirects, per-visitor limits; `proxy --no-proxy` after stopping nginx (ipping then holds 443 and
+  8080 itself) and back; a change that cannot be applied (compose.yaml broken on purpose) is undone and the site is not touched.
+- Found on the way, fixed before the release: an address like `1.2.3.4/` was accepted; `update` in direct mode never rewrote
+  the Caddyfile; a failed `proxy` left a half-changed configuration.
+
 ## v0.8.0 (2026-11-10)
 
 The installer knows about a proxy of your own (nginx, Apache, Traefik ...) and a CDN (Cloudflare ...) in front of ipping. Still
