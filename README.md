@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.9.0** (application), installing backend **v0.8.0**. Nodes of any earlier version
+Current release: **v0.9.1** (application), installing backend **v0.8.1**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -307,7 +307,12 @@ provider, AS number) are filled from the address it connected from:
 | reported by the node, or typed by you | **never overwritten**; the edit dialog sends only what you changed |
 | cleared by you | handed back: it is filled from the data again |
 
-A position from the databases is a city's, not the node's, so it is never marked *verified*; that stays your decision.
+The data's *place* (country, region, city, position) is used only where it **agrees** with the place the node reported or you
+typed: a different country, a typed position more than 300 km away, or a city the gazetteer puts that far away means the data is
+not used for the place (the provider and the AS number, which belong to the address, still are), because the location
+estimate trusts a node's position and a hosting address is often placed at its provider's headquarters. A record with no city
+(a country's centre) is never a position. A position from the databases is a city's, not the node's, so it is never marked
+*verified*; that stays your decision.
 *Admin > IP data > Node details* turns all of this off. Behind a proxy of your own, the address a node connects from is the
 one the proxy reports (see `ipping.sh proxy`).
 
@@ -341,6 +346,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.9.1 | v0.8.1 | migration `0011` | as v0.9.0 (a node's place from the IP data is only used where it agrees with the place the node reported or you typed) |
 | v0.9.0 | v0.8.0 | migration `0011` | as v0.8.0 (IP data: MaxMind from the admin page, an IP lookup API, nodes filled in from their address; the installer gives a direct install somewhere to keep the databases) |
 | v0.8.1 | v0.7.0 | migration `0010` | as v0.8.0 (an interface change only: shadcn/ui components only) |
 | v0.8.0 | v0.7.0 | migration `0010` | as v0.7.0 (the installer learns about a proxy of your own and a CDN in front of it) |
@@ -405,7 +411,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1 and v0.9.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0 and v0.9.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

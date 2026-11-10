@@ -2,6 +2,22 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.9.1 (2026-11-10)
+
+Installs backend **v0.8.1**, which fixes the node auto-fill of v0.9.0. No change to the database (`0011`) or to nodes.
+
+### The fix (backend v0.8.1)
+Found by trying the released v0.9.0 on a fresh Debian 13 with a real node: a node that reported DE / Falkenstein, at an address
+the database places in California, was filled in with a Californian region and position. The location estimate treats a node's
+position as a fact, so the data's place is now used only where it **agrees** with the place the node reported or an
+administrator typed (a different country, a typed position more than 300 km away, or a known city that far away is a conflict;
+the provider and AS number are still filled in; a record with no city is never a position). What the data supplied earlier is taken
+back when a conflict appears, and comes back when the disagreeing value is fixed or cleared.
+
+### In this repository
+- The *Node details* text on the IP data page says so, the README explains it, and `release.env` and the API contract are pinned
+  to backend v0.8.1.
+
 ## v0.9.0 (2026-11-10)
 
 IP data: MaxMind GeoLite2 from the admin page, an IP lookup API with its own settings, and nodes that fill themselves in

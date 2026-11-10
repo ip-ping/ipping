@@ -375,7 +375,9 @@ function IpDataForms({ data, reload }: { data: IpData; reload: () => Promise<voi
           <CardDescription>
             A node&apos;s country, region, city, position, provider and AS number are filled in from the address it connects from.
             Anything you type in a node&apos;s edit dialog (or the node reported when it enrolled) is kept as it is; clear a field to
-            go back to the automatic value. A position from the databases is a city&apos;s, so it is never marked verified.
+            go back to the automatic value. The place from the databases is used only where it agrees with the place you or the node
+            gave (another country, or a city about 300 km away, and the databases are not used for the place; the provider and AS
+            number still are), and a position from them is a city&apos;s, so it is never marked verified.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
