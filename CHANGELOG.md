@@ -2,10 +2,10 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.10.0 (2026-11-10, not released yet)
+## v0.10.0 (2026-11-10)
 
-Who resolves a hostname: **each node by default**, or **one node you choose**. The API contract is pinned to backend `6b24000`
-(the v0.9.0 work, migration `0012`); `release.env` keeps pointing at backend v0.8.1 until that is released and tagged.
+Who resolves a hostname: **each node by default**, or **one node you choose**. Installs backend **v0.9.0**
+(database migration `0012`); the API contract and `release.env` are pinned to it.
 
 ### What changed
 - The measure form starts with **Each node resolves it** (it used to be "Same IP for every node"). **One node resolves it**
