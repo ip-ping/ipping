@@ -2,6 +2,24 @@
 #
 #   IPPING_SITE_ADDRESS=:80                  plain HTTP (the default; fine behind another proxy or on a LAN)
 #   IPPING_SITE_ADDRESS=ping.example.com     Caddy obtains and renews a TLS certificate by itself
+#
+# Behind a proxy of your own (nginx ...), and maybe a CDN (Cloudflare ...), which `ipping.sh proxy` sets up:
+#
+#   IPPING_TRUSTED_PROXIES      addresses the proxy connects from (spaces between them; private_ranges is this
+#                               machine and private networks). Only from these is X-Forwarded-For, X-Forwarded-Proto
+#                               and the headers below believed; from anyone else they are ignored.
+#   IPPING_CLIENT_IP_HEADER     where the visitor's address is, first one found wins (CF-Connecting-IP X-Forwarded-For)
+#
+# Whatever is decided, the backend is handed one clean X-Forwarded-For: the visitor's address.
+{
+	servers {
+		trusted_proxies static {$IPPING_TRUSTED_PROXIES:127.0.0.1/32}
+		# Read X-Forwarded-For from the right, skipping proxies we trust, so a visitor cannot put their own address first.
+		trusted_proxies_strict
+		client_ip_headers {$IPPING_CLIENT_IP_HEADER:X-Forwarded-For}
+	}
+}
+
 {$IPPING_SITE_ADDRESS::80} {
 	header {
 		X-Content-Type-Options nosniff
@@ -16,11 +34,14 @@
 	handle /api/* {
 		reverse_proxy backend:8000 {
 			flush_interval -1
+			header_up X-Forwarded-For {client_ip}
 		}
 	}
 
 	handle {
 		encode zstd gzip
-		reverse_proxy frontend:3000
+		reverse_proxy frontend:3000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 }

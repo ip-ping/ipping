@@ -116,7 +116,8 @@ menu when given no arguments):
 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/ip-ping/ipping/releases/latest/download/ipping.sh -o ipping.sh && chmod +x ipping.sh && bash ipping.sh
 ```
 
-Run with no options and it guides you: how to run ipping (Docker or directly), whether you have a
+Run with no options and it guides you: how to run ipping (Docker or directly), whether another web
+server such as nginx (and maybe a CDN such as Cloudflare) sits in front of it, whether you have a
 domain for HTTPS, then a summary to confirm before anything is changed. Each step shows progress; the
 output of the commands behind it goes to `/var/log/ipping-install.log` and is shown only if a step
 fails. At the end a box shows the address and the one-time setup token (`access` shows it again).
@@ -124,7 +125,7 @@ On a terminal that cannot show colour or symbols (or with `NO_COLOR=1`), or in a
 same information is plain text, and the layout follows the width of the terminal.
 
 Useful commands: `status` (what is running), `doctor` (checks, each with a hint if it fails),
-`access`, `logs`, `backup`, `restore FILE`, `update`, `geoip-update`, `geofeed-update --feed URL`, `uninstall`.
+`access`, `logs`, `backup`, `restore FILE`, `update`, `proxy`, `geoip-update`, `geofeed-update --feed URL`, `uninstall`.
 
 An install that stops part-way (a typo, a lost connection) can simply be run again: it picks up the
 settings it already saved instead of refusing, and nothing is marked "installed" until the
@@ -144,7 +145,11 @@ sudo bash ipping.sh install --mode direct --domain ping.example.com
 # A specific release instead of the newest, a different port, several backend processes:
 sudo bash ipping.sh install --mode docker --version v0.7.0 --http-port 8088 --backend-workers 4
 
-sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | geoip-update | geofeed-update | uninstall
+# Behind your own nginx (or Apache, Traefik ...) that holds the certificate; ipping listens on 8080:
+sudo bash ipping.sh install --mode docker --behind-proxy --domain ping.example.com --http-port 8080
+#   ... and Cloudflare in front of nginx:   add --cloudflare
+
+sudo bash ipping.sh status | logs | doctor | backup | restore FILE | update | proxy | geoip-update | geofeed-update | uninstall
 ```
 
 That link always serves the installer of the newest *tagged* release. The unreleased installer from
@@ -156,6 +161,51 @@ node-protocol combination that was tested together; the installer installs exact
 fetches the "latest" of each part. Without `--domain` the site is plain HTTP on port 80 (fine on a
 LAN or behind another proxy) and nodes on other hosts need `--allow-insecure`; with a domain Caddy
 obtains a certificate. `--version main` is the edge channel (Docker only: images tagged `latest`).
+
+### Behind nginx, Cloudflare or another proxy
+
+If you already run a web server that holds the certificate (nginx, Apache, Traefik, Caddy ...), tell the installer: answer
+"yes" to *Will another web server or proxy sit in front of ipping?*, or give `--behind-proxy --domain NAME`. ipping then
+serves plain HTTP on the port you choose (it does **not** ask for a certificate or redirect to HTTPS, which is what makes a
+proxy that talks plain HTTP to it loop with `ERR_TOO_MANY_REDIRECTS`), still uses `https://NAME` for its links and cookies,
+and believes the visitor addresses the proxy forwards, but only from the proxy: `--proxy-ip` names where it connects from
+(by default this machine and private networks), and anything from anywhere else is ignored. The installer prints the nginx
+settings at the end (pass the host, allow WebSockets because nodes connect that way, no buffering because results stream live):
+
+```nginx
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+server {
+    listen 443 ssl;
+    server_name ping.example.com;
+    # ssl_certificate and ssl_certificate_key as for any other site
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+}
+```
+
+* **Cloudflare (or another CDN) in front of nginx:** add `--cloudflare` (or `--client-ip-header NAME` for another service's
+  header) so each visitor is counted on their own address (rate limits and the audit log) instead of all being nginx.
+  Set Cloudflare's SSL/TLS mode to **Full (strict)**: *Flexible* sends plain HTTP to the origin, which is another way to
+  get a redirect loop. Cloudflare's header can be forged by anyone who reaches your proxy without going through Cloudflare,
+  so let only Cloudflare's address ranges reach nginx, and only nginx reach ipping's port.
+* **Nodes** enroll with `https://ping.example.com`, through the proxy.
+* **Already installed?** `sudo bash ipping.sh update`, then `sudo bash ipping.sh proxy` (it asks the same questions; or
+  `proxy --behind-proxy --domain NAME [--proxy-ip ADDRESS] [--cloudflare]`; `proxy --no-proxy` puts it back). It changes
+  the settings and restarts ipping. Update first: a release from before this cannot be told about a proxy.
+* **`ERR_TOO_MANY_REDIRECTS` behind a proxy** usually means ipping was installed with `--domain` alone: its own web
+  server then answers plain HTTP with a redirect to HTTPS, and the proxy sends it plain HTTP again. `curl -sI -H "Host: NAME"
+  http://IP:PORT/` shows `308 Location: https://...` when that is so; the `proxy` command above fixes it.
+* Only the port ipping listens on needs to be free (not 80 and 443): if the proxy is on the same machine it keeps those.
+  Nothing listens on 443 in ipping's own stack then, and in Docker mode 443 is not taken.
 
 * **Updates** back up the database first, run the migration as an explicit step, keep the previous
   release on disk, and go back to it if the migration fails. Nodes reconnect by themselves within a
@@ -169,7 +219,7 @@ obtains a certificate. `--version main` is the edge channel (Docker only: images
   service) can read.
 * **Requirements:** Docker mode needs only Docker (the installer can install it). Direct mode needs
   systemd and apt (Debian 13, Ubuntu 24.04 tested). Both need outbound HTTPS to GitHub, and ports 80
-  and 443 (or the ones you choose) free.
+  and 443 (or the ones you choose) free; behind a proxy of your own, only the one ipping listens on.
 
 Tested for real on fresh Debian 13 machines with systemd: Docker and direct installs from the
 published releases, an update from v0.2.0 (database migrations included), backup and restore,

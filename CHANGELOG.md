@@ -2,7 +2,54 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.8.0 (2026-11-10)
+
+The installer knows about a proxy of your own (nginx, Apache, Traefik ...) and a CDN (Cloudflare ...) in front of ipping. Still
+installs backend v0.7.0; no change to the interface.
+
+### Why
+Reported: behind nginx, over Cloudflare, `ERR_TOO_MANY_REDIRECTS`. Reproduced: installed with `--domain`, ipping's own Caddy
+takes the domain as its site address and answers every plain-HTTP request with `308 → https://domain/`, even when the proxy
+says `X-Forwarded-Proto: https`; nginx, which talks plain HTTP to ipping, sends the browser around the loop. There was no way
+to say "I have my own proxy", and the visitors' addresses would have been lost too: behind another proxy every visitor looked
+like the proxy, so the per-address limits (sign-in, measurements a minute) were shared by everyone.
+
+### What was added
+- **Guided questions** (and options for a script): *Will another web server or proxy, such as nginx, sit in front of ipping?*
+  (`--behind-proxy`, needs `--domain`), which port ipping should listen on (nginx on the same machine keeps 80 and 443, so the
+  default offered is 8080 when 80 is taken), where the proxy connects from (`--proxy-ip`, default this machine and private
+  networks), and *is a CDN such as Cloudflare in front of it?* (`--cloudflare`, or `--client-ip-header NAME` for another
+  service). Behind a proxy ipping serves plain HTTP, asks for no certificate and does not redirect, keeps `https://NAME` as
+  its public address and its cookies Secure, does not take port 443 (Docker mode publishes it on 127.0.0.1 only, any port),
+  and the finish message prints the nginx settings to use (pass the host, WebSockets, no buffering) and the CDN's part.
+- **`ipping.sh proxy`** changes an installation that exists (`--behind-proxy ...`, or `--no-proxy` to put it back), in both
+  modes, with the same questions; it also appears in the menu. An installation from a release before this one is told to
+  `update` first.
+- **The visitor's address survives the proxies.** Caddy now trusts forwarded headers only from the proxies named
+  (`IPPING_TRUSTED_PROXIES`), reads `X-Forwarded-For` from the right so a visitor cannot put their own address first, takes the
+  CDN's header first when one is named (`IPPING_CLIENT_IP_HEADER`), and hands the backend one clean `X-Forwarded-For`. With
+  nothing set it behaves as before: a forged header from anyone is ignored.
+- `proxy` keeps the previous settings aside and, if the change cannot be applied or ipping does not answer after it, puts them
+  back and starts the site as it was; it also checks the ports first (leaving a proxy gives ipping port 443 back, so whatever
+  holds it must be stopped, and it says which program).
+- `update` in direct mode now rewrites `/etc/ipping/Caddyfile` from the release it installs (Docker mode always did); before,
+  a new release's proxy settings never reached a direct install.
+- 148 checks more in `tests/installer.sh` (the validators, the settings for each combination, the questions fed scripted
+  answers including wrong ones, the config-file helpers, the hints, and `proxy` in both modes with stubs); ShellCheck (stable
+  and v0.10.0) clean; run on macOS and Debian.
+
+### Tested for real
+- Caddy in Docker with a header-echoing upstream: untrusted peers' `X-Forwarded-For`, `X-Forwarded-Proto` and
+  `CF-Connecting-IP` are ignored; from a trusted proxy `X-Forwarded-For 6.6.6.6, 9.9.9.9` is read as 9.9.9.9; the Cloudflare
+  header wins when present and `X-Forwarded-For` is the fallback; `private_ranges` and several addresses in one setting work.
+- A fresh Debian 13 with systemd and real nginx using the snippet the installer printed, unchanged: the guided install (scripted
+  answers in a real terminal) and the same by options; the page and the API with 0 redirects, and plain HTTP straight to
+  ipping with the domain as Host answers 200 where it used to answer 308; the first administrator created and a sign-in over
+  https (Secure cookie, origin check, CSRF); a node enrolled and a WebSocket session held through nginx (`welcome`, `pong`);
+  visitor 1.1.1.1 limited after 10 wrong passwords while 2.2.2.2 and 3.3.3.3 were not, a forged `X-Forwarded-For` neither
+  evading nor shifting the blame, and the audit log holding the real addresses. With the proxy's address named wrongly,
+  headers are ignored and everyone counts as nginx, as intended.
+- An install of the released v0.7.0 (old Caddyfile): `proxy` says to update; `update` refreshes the Caddyfile; `proxy` then works.
 
 ### What was verified on the released v0.7.0 (the files, not the repository)
 - All 12 attestations of the three releases verify (application 6, backend 3, node 3), every checksum matches, and the three

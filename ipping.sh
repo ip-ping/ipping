@@ -41,6 +41,12 @@ VERSION=""
 DOMAIN=""
 HTTP_PORT="80"
 HTTPS_PORT="443"
+HTTP_PORT_GIVEN=0
+# Another web server or proxy (nginx, Apache, Traefik ...) in front of ipping that holds the certificate:
+# "" = not said yet (the guided install asks), 1 = there is one, 0 = there is not.
+BEHIND_PROXY=""
+PROXY_IP=""            # where that proxy connects to ipping from (addresses or networks); empty = this machine and private networks
+CLIENT_IP_HEADER=""    # the header a CDN in front of it uses for the visitor's address (Cloudflare: CF-Connecting-IP)
 BACKEND_WORKERS="1"
 DATABASE_URL=""
 PURGE=0
@@ -290,6 +296,69 @@ valid_domain() {
   local pattern='^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$'
   [[ ${#1} -le 253 && $1 =~ $pattern ]]
 }
+valid_domain_required() { [ -n "$1" ] && valid_domain "$1"; }
+valid_port() { [[ $1 =~ ^[0-9]{1,5}$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]; }
+
+# Lists are written with spaces or commas; they are stored with spaces (which is what the proxy settings take).
+normalize_list() {
+  local text="${1//,/ }" word out=""
+  set -f
+  for word in $text; do out="${out:+$out }${word}"; done
+  set +f
+  printf '%s' "$out"
+}
+
+valid_ipv6() {
+  local address="$1" part
+  [[ $address =~ ^[0-9A-Fa-f:]+$ && $address == *:*:* && $address != *:::* ]] || return 1
+  local without="${address/::/}"
+  [[ $without != *::* ]] || return 1
+  local IFS=:
+  # shellcheck disable=SC2206  # splitting on : is the point
+  local parts=($address)
+  [ "${#parts[@]}" -le 8 ] || return 1
+  for part in "${parts[@]}"; do [ "${#part}" -le 4 ] || return 1; done
+  [[ $address == *::* ]] || [ "${#parts[@]}" -eq 8 ]
+}
+
+# An IPv4 or IPv6 address, with an optional /length.
+valid_ip_or_network() {
+  local address="${1%%/*}" length="" octet
+  case "$1" in */*) length="${1#*/}"; [ -n "$length" ] || return 1 ;; esac
+  if [[ $address =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]]; then
+    for octet in "${BASH_REMATCH[@]:1}"; do [ "$((10#$octet))" -le 255 ] || return 1; done
+    [ -z "$length" ] || { [[ $length =~ ^[0-9]{1,2}$ ]] && [ "$((10#$length))" -le 32 ]; }
+  elif valid_ipv6 "$address"; then
+    [ -z "$length" ] || { [[ $length =~ ^[0-9]{1,3}$ ]] && [ "$((10#$length))" -le 128 ]; }
+  else
+    return 1
+  fi
+}
+
+# Where the proxy connects from: addresses and networks, or the word private_ranges (this machine and private networks).
+valid_proxy_list() {
+  local text="${1//,/ }" word count=0
+  set -f
+  for word in $text; do
+    count=$((count + 1))
+    if [ "$count" -gt 16 ]; then set +f; return 1; fi
+    if [ "$word" != private_ranges ] && ! valid_ip_or_network "$word"; then set +f; return 1; fi
+  done
+  set +f
+  [ "$count" -gt 0 ]
+}
+
+# Names of HTTP headers (at most four).
+valid_header_list() {
+  local text="${1//,/ }" word count=0
+  set -f
+  for word in $text; do
+    count=$((count + 1))
+    if [ "$count" -gt 4 ] || ! [[ $word =~ ^[A-Za-z][A-Za-z0-9-]{0,40}$ ]]; then set +f; return 1; fi
+  done
+  set +f
+  [ "$count" -gt 0 ]
+}
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 need_root() { [ "$(id -u)" -eq 0 ] || die "Run this as root (for example: sudo bash $0 $*)."; }
@@ -482,6 +551,29 @@ compose() {
 
 env_get() { grep -E "^$1=" "${APP_DIR}/.env" 2>/dev/null | head -n 1 | cut -d= -f2- || true; }
 
+# conf_get FILE KEY: the value of KEY=... in an env file, without the quotes that protect spaces in it.
+conf_get() {
+  local value
+  value="$(sed -n "s/^$2=//p" "$1" 2>/dev/null | head -n 1)"
+  value="${value#\"}"
+  printf '%s' "${value%\"}"
+}
+
+# conf_set FILE KEY VALUE (VALUE as it is to be written, quotes included) and conf_unset FILE KEY change one line and
+# leave the file's owner and mode alone.
+conf_set() {
+  local file="$1" key="$2" value="$3" tmp
+  tmp="$(mktemp)"
+  awk -v k="$key" -v v="$value" 'BEGIN { FS = OFS = "="; done = 0 } $1 == k { if (!done) print k "=" v; done = 1; next } { print } END { if (!done) print k "=" v }' "$file" >"$tmp"
+  cat "$tmp" >"$file"; rm -f "$tmp"
+}
+conf_unset() {
+  local file="$1" key="$2" tmp
+  tmp="$(mktemp)"
+  awk -v k="$key" 'BEGIN { FS = "=" } $1 != k { print }' "$file" >"$tmp"
+  cat "$tmp" >"$file"; rm -f "$tmp"
+}
+
 env_set() {
   # env_set KEY VALUE: replace the line or append it, keeping the file private.
   local key="$1" value="$2" file="${APP_DIR}/.env"
@@ -496,8 +588,18 @@ env_set() {
 }
 
 site_settings() {
-  # DOMAIN -> site address, public URL and cookie flag.
-  if [ -n "$DOMAIN" ]; then
+  # DOMAIN (and whether a proxy of your own is in front) -> site address, public URL, cookie flag, and what Caddy
+  # needs to know about the proxy and CDN in front of it.
+  TRUSTED_PROXIES=""; CLIENT_IP_HEADERS=""; HTTPS_PUBLISH=""
+  if [ "$BEHIND_PROXY" = 1 ]; then
+    [ -n "$DOMAIN" ] || die "Behind a proxy of your own, ipping needs the name visitors use: add --domain ping.example.com."
+    # The proxy holds the certificate and talks to ipping over plain HTTP, so ipping must not redirect to HTTPS
+    # (that is what loops) or ask for a certificate; the public address is still the https one.
+    SITE_ADDRESS=":80"; PUBLIC_URL="https://${DOMAIN}"; COOKIE_SECURE=true
+    TRUSTED_PROXIES="$(normalize_list "${PROXY_IP:-private_ranges}")"
+    CLIENT_IP_HEADERS="$(normalize_list "${CLIENT_IP_HEADER:+$CLIENT_IP_HEADER }X-Forwarded-For")"
+    HTTPS_PUBLISH="127.0.0.1::443"   # nothing listens on 443 here; do not take the port from the proxy
+  elif [ -n "$DOMAIN" ]; then
     SITE_ADDRESS="$DOMAIN"; PUBLIC_URL="https://${DOMAIN}"; COOKIE_SECURE=true
   else
     SITE_ADDRESS=":80"; PUBLIC_URL=""; COOKIE_SECURE=false
@@ -547,6 +649,11 @@ IPPING_FRONTEND_IMAGE=${FRONTEND_IMAGE}
 IPPING_BACKEND_IMAGE=${BACKEND_IMAGE}
 EOF
     )
+    if [ "$BEHIND_PROXY" = 1 ]; then
+      env_set IPPING_TRUSTED_PROXIES "\"${TRUSTED_PROXIES}\""
+      env_set IPPING_CLIENT_IP_HEADER "\"${CLIENT_IP_HEADERS}\""
+      env_set IPPING_HTTPS_PUBLISH "$HTTPS_PUBLISH"
+    fi
     tick "Generated the database password and setup token (${APP_DIR}/.env, root only)"
   fi
 
@@ -620,6 +727,14 @@ install_postgres() {
   [ "$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='ipping'")" = "1" ] \
     || runuser -u postgres -- psql -qc "CREATE DATABASE ipping OWNER ipping"
   tick "The ipping database and its user are ready"
+}
+
+# The Caddyfile of a direct install: the release's, with the backend and frontend at their local addresses. Written
+# again on every update, so a new release's proxy settings reach it.
+write_direct_caddyfile() {
+  sed -e 's#reverse_proxy backend:8000#reverse_proxy 127.0.0.1:8000#' \
+      -e 's#reverse_proxy frontend:3000#reverse_proxy 127.0.0.1:3000#' "${REL_DIR}/Caddyfile" >"${CONF_DIR}/Caddyfile"
+  chmod 644 "${CONF_DIR}/Caddyfile"
 }
 
 write_direct_units() {
@@ -868,9 +983,7 @@ install_direct_mode() {
 
   # Saved as soon as the database exists, so that an install that stops here can be run again
   # (the database password lives only in this file).
-  sed -e 's#reverse_proxy backend:8000#reverse_proxy 127.0.0.1:8000#' \
-      -e 's#reverse_proxy frontend:3000#reverse_proxy 127.0.0.1:3000#' "${REL_DIR}/Caddyfile" >"${CONF_DIR}/Caddyfile"
-  chmod 644 "${CONF_DIR}/Caddyfile"
+  write_direct_caddyfile
   if [ "$reuse" -eq 0 ]; then
     step "Writing the configuration"
     (
@@ -886,8 +999,12 @@ IPPING_WORKERS=${BACKEND_WORKERS}
 EOF
     )
     chown root:ipping-backend "${CONF_DIR}/backend.env"; chmod 640 "${CONF_DIR}/backend.env"
-    if [ "$HTTP_PORT" != "80" ] && [ -z "$DOMAIN" ]; then SITE_ADDRESS=":${HTTP_PORT}"; fi
-    echo "IPPING_SITE_ADDRESS=${SITE_ADDRESS}" >"${CONF_DIR}/caddy.env"
+    if [ "$HTTP_PORT" != "80" ] && { [ -z "$DOMAIN" ] || [ "$BEHIND_PROXY" = 1 ]; }; then SITE_ADDRESS=":${HTTP_PORT}"; fi
+    {
+      echo "IPPING_SITE_ADDRESS=${SITE_ADDRESS}"
+      if [ -n "$TRUSTED_PROXIES" ]; then echo "IPPING_TRUSTED_PROXIES=\"${TRUSTED_PROXIES}\""; fi
+      if [ -n "$CLIENT_IP_HEADERS" ]; then echo "IPPING_CLIENT_IP_HEADER=\"${CLIENT_IP_HEADERS}\""; fi
+    } >"${CONF_DIR}/caddy.env"
     chmod 644 "${CONF_DIR}/caddy.env"
     tick "Wrote ${CONF_DIR} (the secrets are readable by root and the backend only)"
   fi
@@ -927,8 +1044,23 @@ http_port() {
   fi
 }
 
+# The address visitors use, when one was configured (a domain; with your own proxy in front, https although ipping
+# itself speaks plain HTTP).
+public_url_value() {
+  if [ "$(require_mode)" = "docker" ]; then env_get IPPING_PUBLIC_URL
+  else sed -n 's/^IPPING_PUBLIC_URL=//p' "${CONF_DIR}/backend.env" | head -n 1; fi
+}
+
+# What is set for a proxy of your own in front of ipping: its KEY from caddy.env (direct) or .env (Docker).
+proxy_setting() {
+  if [ "$(require_mode)" = "docker" ]; then conf_get "${APP_DIR}/.env" "$1"
+  else conf_get "${CONF_DIR}/caddy.env" "$1"; fi
+}
+
 public_address() {
-  local site port host
+  local site port host url
+  url="$(public_url_value)"
+  if [ -n "$url" ]; then echo "${url%/}"; return; fi
   site="$(site_address)"; port="$(http_port)"
   case "$site" in
     :*)
@@ -942,6 +1074,50 @@ public_address() {
 setup_token_value() {
   if [ "$(require_mode)" = "docker" ]; then env_get IPPING_SETUP_TOKEN
   else sed -n 's/^IPPING_SETUP_TOKEN=//p' "${CONF_DIR}/backend.env" | head -n 1; fi
+}
+
+# What to set up on the proxy in front of ipping: where to send requests, an nginx example, and the CDN's part.
+proxy_hints() {
+  local url="$1" port host headers
+  port="$(http_port)"
+  host="$(hostname -I 2>/dev/null | awk '{ print $1 }')"; host="${host:-this-machine}"
+  headers="$(proxy_setting IPPING_CLIENT_IP_HEADER)"
+  printf '\n%sYour proxy%s\n' "$C_BOLD" "$C_RESET"
+  info "ipping listens on port ${port} (plain HTTP) for your proxy, and believes the visitor addresses it forwards."
+  info "It must pass the host and allow WebSockets (nodes connect that way) and live streaming. For nginx:"
+  cat <<NGINX
+$C_DIM
+    map \$http_upgrade \$connection_upgrade { default upgrade; '' close; }
+    server {
+        listen 443 ssl;
+        server_name ${url#https://};
+        # ssl_certificate and ssl_certificate_key as for any other site
+        location / {
+            proxy_pass http://${host}:${port};
+            proxy_http_version 1.1;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection \$connection_upgrade;
+            proxy_buffering off;
+            proxy_read_timeout 1h;
+        }
+    }
+$C_RESET
+NGINX
+  case " $headers " in
+    *" CF-Connecting-IP "*)
+      info "Cloudflare: set SSL/TLS to Full (strict); Flexible makes visitors loop. Visitors' addresses are read from"
+      info "CF-Connecting-IP, which anyone can send to a proxy that Cloudflare does not protect: let only Cloudflare's"
+      info "address ranges reach nginx, and only nginx reach port ${port}." ;;
+    *)
+      if [ -n "$headers" ] && [ "$headers" != "X-Forwarded-For" ]; then
+        info "Visitors' addresses are read from ${headers%% *}; make sure only your CDN can reach the proxy, and only the proxy port ${port}."
+      else
+        info "Let only the proxy reach port ${port}: ipping believes the visitor addresses it forwards."
+      fi ;;
+  esac
 }
 
 finish_message() {
@@ -958,7 +1134,8 @@ finish_message() {
   info "2  In Admin > Enrollment create a token, then on each measurement host run:"
   note "     sudo bash ipping-node.sh install --server ${url} --token <token>"
   case "$url" in http://*) note "     (this site is plain HTTP: add --allow-insecure, or give it a domain for HTTPS)" ;; esac
-  printf '\n%sLater%s   sudo bash %s status | doctor | backup | update | access\n' "$C_BOLD" "$C_RESET" "$(basename "$0")"
+  if [ -n "$(proxy_setting IPPING_TRUSTED_PROXIES)" ]; then proxy_hints "$url"; fi
+  printf '\n%sLater%s   sudo bash %s status | doctor | backup | update | access | proxy\n' "$C_BOLD" "$C_RESET" "$(basename "$0")"
 }
 
 cmd_start() {
@@ -1132,6 +1309,85 @@ cmd_geofeed_update() {
   note "Repeat it when the feeds change, for example with cron:  0 5 * * 1  root  bash $0 geofeed-update"
 }
 
+# The settings files that `proxy` changes, kept aside so a change that does not work can be undone.
+proxy_files() { if [ "$1" = docker ]; then echo "${APP_DIR}/.env"; else echo "${CONF_DIR}/caddy.env ${CONF_DIR}/backend.env"; fi; }
+save_proxy_files() { local f; for f in $(proxy_files "$1"); do cp -p "$f" "$2/${f##*/}"; done; }
+restore_proxy_files() { local f saved; for f in $(proxy_files "$1"); do saved="$2/${f##*/}"; cat "$saved" >"$f"; done; }
+apply_proxy_settings() {
+  if [ "$1" = docker ]; then compose up -d
+  else systemctl restart ipping-backend ipping-caddy; fi
+}
+
+# Change how ipping sits behind a proxy of your own (nginx ...) and a CDN (Cloudflare ...), on an installation that exists.
+cmd_proxy() {
+  need_root proxy
+  banner "ipping" "A proxy in front"
+  local mode caddyfile current_port
+  mode="$(require_mode)"
+  if [ "$mode" = docker ]; then caddyfile="${APP_DIR}/deploy/Caddyfile"; else caddyfile="${CONF_DIR}/Caddyfile"; fi
+  grep -q IPPING_TRUSTED_PROXIES "$caddyfile" 2>/dev/null \
+    || die "This installation runs a release that cannot be told about a proxy yet. Run 'update' first, then this again."
+  current_port="$(http_port)"
+  [ "$HTTP_PORT_GIVEN" -eq 1 ] || HTTP_PORT="$current_port"
+  proxy_questions "$current_port"
+  [ -n "$BEHIND_PROXY" ] || die "Say what you want: --behind-proxy --domain NAME [--proxy-ip ADDRESS] [--cloudflare], or --no-proxy [--domain NAME]."
+  if [ "$BEHIND_PROXY" = 0 ] && [ -z "$DOMAIN" ]; then
+    prompt DOMAIN "Do you have a domain name for this site?" "" valid_domain \
+      "Enter it (for example ping.example.com) for automatic HTTPS. It must already point at this machine, with ports 80 and 443 open. Leave empty to use plain HTTP."
+  fi
+  # ipping serving a domain itself needs ports 80 and 443 for its certificate, not the one a proxy was given.
+  if [ "$BEHIND_PROXY" = 0 ] && [ -n "$DOMAIN" ] && [ "$HTTP_PORT_GIVEN" -eq 0 ]; then HTTP_PORT=80; fi
+  check_proxy_options
+  if [ "$HTTP_PORT" != "$current_port" ] && port_in_use "$HTTP_PORT"; then die "Port ${HTTP_PORT} is already in use$(port_owner_text "$HTTP_PORT")."; fi
+  if [ "$BEHIND_PROXY" = 0 ] && [ -n "$(proxy_setting IPPING_TRUSTED_PROXIES)" ] && { [ "$mode" = docker ] || [ -n "$DOMAIN" ]; }; then
+    # Leaving the proxy: ipping takes the HTTPS port back (it was not holding it), so whatever has it now must be gone.
+    local https_port="443"
+    if [ "$mode" = docker ]; then https_port="$(env_get IPPING_HTTPS_PORT)"; https_port="${https_port:-443}"; fi
+    if port_in_use "$https_port"; then
+      die "Port ${https_port} is in use$(port_owner_text "$https_port"). Without the proxy ipping serves HTTPS itself and needs it: stop that first, or keep the proxy."
+    fi
+  fi
+  site_settings
+  local saved; saved="$(make_temp_dir)"
+  save_proxy_files "$mode" "$saved"
+  if [ "$mode" = docker ]; then
+    env_set IPPING_SITE_ADDRESS "$SITE_ADDRESS"
+    env_set IPPING_PUBLIC_URL "$PUBLIC_URL"
+    env_set IPPING_COOKIE_SECURE "$COOKIE_SECURE"
+    env_set IPPING_HTTP_PORT "$HTTP_PORT"
+    if [ "$BEHIND_PROXY" = 1 ]; then
+      env_set IPPING_TRUSTED_PROXIES "\"${TRUSTED_PROXIES}\""
+      env_set IPPING_CLIENT_IP_HEADER "\"${CLIENT_IP_HEADERS}\""
+      env_set IPPING_HTTPS_PUBLISH "$HTTPS_PUBLISH"
+    else
+      local key
+      for key in IPPING_TRUSTED_PROXIES IPPING_CLIENT_IP_HEADER IPPING_HTTPS_PUBLISH; do conf_unset "${APP_DIR}/.env" "$key"; done
+    fi
+  else
+    need_systemd
+    if [ "$HTTP_PORT" != 80 ] && { [ -z "$DOMAIN" ] || [ "$BEHIND_PROXY" = 1 ]; }; then SITE_ADDRESS=":${HTTP_PORT}"; fi
+    conf_set "${CONF_DIR}/backend.env" IPPING_PUBLIC_URL "$PUBLIC_URL"
+    conf_set "${CONF_DIR}/backend.env" IPPING_COOKIE_SECURE "$COOKIE_SECURE"
+    conf_set "${CONF_DIR}/caddy.env" IPPING_SITE_ADDRESS "$SITE_ADDRESS"
+    if [ "$BEHIND_PROXY" = 1 ]; then
+      conf_set "${CONF_DIR}/caddy.env" IPPING_TRUSTED_PROXIES "\"${TRUSTED_PROXIES}\""
+      conf_set "${CONF_DIR}/caddy.env" IPPING_CLIENT_IP_HEADER "\"${CLIENT_IP_HEADERS}\""
+    else
+      conf_unset "${CONF_DIR}/caddy.env" IPPING_TRUSTED_PROXIES
+      conf_unset "${CONF_DIR}/caddy.env" IPPING_CLIENT_IP_HEADER
+    fi
+  fi
+  if ! run_soft "Applying the settings" apply_proxy_settings "$mode" \
+    || ! run_soft "Waiting for ipping to answer" wait_for_ready "http://127.0.0.1:$(http_port)/api/v1/health/ready" 90; then
+    # Do not leave a site that does not start: put the settings back and start it as it was.
+    restore_proxy_files "$mode" "$saved"
+    run_soft "Putting the previous settings back" apply_proxy_settings "$mode" || true
+    die "The change did not work, so the previous settings were put back. What failed is in ${UI_LOG:-/var/log/ipping-install.log}."
+  fi
+  ok "Done. ipping is now reached at $(public_address)."
+  if [ "$BEHIND_PROXY" = 1 ]; then proxy_hints "$(public_address)"; fi
+}
+
 stop_app_for_restore() {
   if [ "$1" = docker ]; then compose stop frontend backend proxy; else systemctl stop ipping-caddy ipping-backend ipping-frontend; fi
 }
@@ -1187,6 +1443,7 @@ cmd_update() {
     direct_prepare_runtimes
     DATABASE_URL="$(sed -n 's/^IPPING_DATABASE_URL=//p' "${CONF_DIR}/backend.env" | head -n 1)"
     install_direct_artifacts
+    write_direct_caddyfile
     run "Stopping the backend and frontend" systemctl stop ipping-backend ipping-frontend
     switch_direct_releases
     if ! run_soft "Updating the database schema" run_migration; then
@@ -1306,6 +1563,8 @@ Commands:
   doctor         Check the installation
   access         Show the address and the setup token
   backup         Dump the database to ${BACKUP_DIR}
+  proxy          Set up (or change) a proxy of your own in front of ipping, such as nginx, and a CDN such as
+                 Cloudflare: ipping stays on plain HTTP, trusts them, and sees each visitor's address
   geoip-update   Download the free DB-IP Lite databases (optional: names the network of an address and
                  cross-checks a GeoIP place against the measurements); repeat monthly
   geofeed-update Fetch the geofeeds you list with --feed https://... (repeatable, remembered): where a network
@@ -1319,6 +1578,15 @@ Options:
   --version vX.Y.Z       Release to install (default: latest). "main" is the edge channel (Docker only).
   --domain NAME          Serve HTTPS for this domain (Caddy gets a certificate). Default: plain HTTP.
                          Run without options for a guided install.
+  --behind-proxy         A proxy of your own (nginx, Apache, Traefik ...) holds the certificate for --domain and
+                         passes requests to ipping over plain HTTP: ipping asks for no certificate, does not
+                         redirect to HTTPS, and trusts the proxy. Also for the 'proxy' command.
+  --proxy-ip LIST        With --behind-proxy: the proxy's address or network(s), if it is not on this machine or a
+                         private network (spaces or commas)
+  --cloudflare           With --behind-proxy: Cloudflare is in front of the proxy; read visitors' addresses from
+                         CF-Connecting-IP
+  --client-ip-header H   With --behind-proxy: another CDN's header that carries the visitor's address
+  --no-proxy             With the 'proxy' command: ipping serves the site itself again
   --http-port N          Host port for HTTP (default 80)
   --https-port N         Host port for HTTPS (default 443)
   --backend-workers N    Backend processes (default 1). They share PostgreSQL, so any of them can serve
@@ -1334,6 +1602,11 @@ port_in_use() { # port_in_use PORT
   [ -n "$(ss -H -ltn "sport = :$1" 2>/dev/null)" ]
 }
 
+port_owner_text() { # " by nginx", or nothing
+  local owner; owner="$(port_owner "$1")"
+  printf '%s' "${owner:+ by ${owner}}"
+}
+
 port_owner() { # the program listening on PORT, when ss can tell us
   ss -H -ltnp "sport = :$1" 2>/dev/null | sed -n 's/.*users:(("\([^"]*\)".*/\1/p' | head -n 1
 }
@@ -1342,19 +1615,65 @@ preflight() {
   # Catch the common mistakes before anything is installed.
   [ "$(uname -s)" = Linux ] || die "ipping installs on Linux; this is $(uname -s)."
   local ports="$HTTP_PORT" port owner
-  if [ "$MODE" = docker ] || [ -n "$DOMAIN" ]; then ports="$ports $HTTPS_PORT"; fi
+  if [ "$BEHIND_PROXY" != 1 ] && { [ "$MODE" = docker ] || [ -n "$DOMAIN" ]; }; then ports="$ports $HTTPS_PORT"; fi
   for port in $ports; do
     if port_in_use "$port"; then
       owner="$(port_owner "$port")"
+      if [ "$BEHIND_PROXY" = 1 ]; then
+        die "Port ${port} is already in use${owner:+ by ${owner}}. If your proxy runs on this machine it uses that port itself: give ipping another one with --http-port (for example 8080) and point the proxy at it."
+      fi
       die "Port ${port} is already in use${owner:+ by ${owner}}. Stop that program, or pick other ports with --http-port and --https-port."
     fi
   done
 }
 
 describe_address() {
-  if [ -n "$DOMAIN" ]; then printf 'https://%s  (a certificate is requested automatically)' "$DOMAIN"
+  if [ "$BEHIND_PROXY" = 1 ]; then printf 'https://%s, through your own proxy (ipping listens on plain HTTP, port %s)' "$DOMAIN" "$HTTP_PORT"
+  elif [ -n "$DOMAIN" ]; then printf 'https://%s  (a certificate is requested automatically)' "$DOMAIN"
   elif [ "$HTTP_PORT" = 80 ]; then printf 'plain HTTP on this machine, port 80'
   else printf 'plain HTTP on this machine, port %s' "$HTTP_PORT"; fi
+}
+
+# The questions about a proxy of your own (nginx, Apache, Traefik ...) and a CDN (Cloudflare ...) in front of ipping.
+# Sets BEHIND_PROXY, DOMAIN, HTTP_PORT, PROXY_IP and CLIENT_IP_HEADER; anything already given as an option is not asked.
+proxy_questions() {
+  local suggested="${1:-80}" pick=1 port=""
+  is_interactive || return 0
+  if [ -z "$BEHIND_PROXY" ]; then
+    choose pick "Will another web server or proxy, such as nginx, sit in front of ipping?" 1 \
+      "No|ipping serves the site itself, and can get an HTTPS certificate for a domain." \
+      "Yes, it handles HTTPS|A proxy such as nginx, Apache or Traefik holds the certificate and passes requests to ipping over plain HTTP. ipping then stays on plain HTTP and trusts it."
+    case "$pick" in 2) BEHIND_PROXY=1 ;; *) BEHIND_PROXY=0 ;; esac
+  fi
+  [ "$BEHIND_PROXY" = 1 ] || return 0
+  prompt DOMAIN "What name will visitors use to reach the site?" "" valid_domain_required \
+    "For example ping.example.com. ipping uses it for its links and cookies and as the address nodes connect to."
+  if [ "$HTTP_PORT_GIVEN" -eq 0 ]; then
+    prompt port "Which port should ipping listen on for the proxy?" "$suggested" valid_port \
+      "The proxy connects to this port over plain HTTP. If the proxy runs on this machine it needs ports 80 and 443 itself, so use another one, such as 8080."
+    if [ -n "$port" ]; then HTTP_PORT="$port"; HTTP_PORT_GIVEN=1; fi
+  fi
+  if [ -z "$PROXY_IP" ]; then
+    pick=1
+    choose pick "Where will the proxy connect to ipping from?" 1 \
+      "This machine, or a private network|Covers nginx on this server, in a container, or on your LAN. (Recommended)" \
+      "A specific address|Its IP address or network, for example 203.0.113.10: the proxy is on another server across the internet."
+    if [ "$pick" = 2 ]; then
+      prompt PROXY_IP "The proxy's address (several: separate them with spaces or commas)" "" valid_proxy_list \
+        "ipping believes the visitor addresses that this address forwards, and ignores them from anywhere else."
+    fi
+  fi
+  if [ -z "$CLIENT_IP_HEADER" ]; then
+    pick=1
+    choose pick "Is a CDN or protection service, such as Cloudflare, in front of the proxy?" 1 \
+      "No|Visitors reach the proxy directly." \
+      "Cloudflare|ipping reads each visitor's address from CF-Connecting-IP, which Cloudflare sets, so limits and logs are per visitor." \
+      "Another service|You give the name of the header that carries the visitor's address, for example True-Client-IP."
+    case "$pick" in
+      2) CLIENT_IP_HEADER="CF-Connecting-IP" ;;
+      3) prompt CLIENT_IP_HEADER "The header's name" "" valid_header_list "For example True-Client-IP." ;;
+    esac
+  fi
 }
 
 central_questions() {
@@ -1369,9 +1688,14 @@ central_questions() {
   fi
   if [ "$reuse" -eq 1 ]; then
     note "Found the settings of an earlier install; they will be reused."
-  elif [ -z "$DOMAIN" ]; then
-    prompt DOMAIN "Do you have a domain name for this site?" "" valid_domain \
-      "Enter it (for example ping.example.com) for automatic HTTPS. It must already point at this machine, with ports 80 and 443 open. Leave empty to use plain HTTP for now."
+  else
+    local suggested=80
+    port_in_use 80 && suggested=8080
+    proxy_questions "$suggested"
+    if [ "$BEHIND_PROXY" != 1 ] && [ -z "$DOMAIN" ]; then
+      prompt DOMAIN "Do you have a domain name for this site?" "" valid_domain \
+        "Enter it (for example ping.example.com) for automatic HTTPS. It must already point at this machine, with ports 80 and 443 open. Leave empty to use plain HTTP for now."
+    fi
   fi
   box "Ready to install" \
     "" \
@@ -1383,6 +1707,17 @@ central_questions() {
   confirm "Install now?" || { note "Nothing was changed."; exit 0; }
 }
 
+# The proxy options only make sense together, and a proxy needs the name visitors use.
+check_proxy_options() {
+  if [ "$BEHIND_PROXY" != 1 ]; then
+    if [ -n "$PROXY_IP" ] || [ -n "$CLIENT_IP_HEADER" ]; then
+      die "--proxy-ip, --cloudflare and --client-ip-header describe a proxy in front of ipping: add --behind-proxy."
+    fi
+    return 0
+  fi
+  [ -n "$DOMAIN" ] || die "Behind a proxy of your own, ipping needs the name visitors use: add --domain ping.example.com."
+}
+
 cmd_install() {
   need_root install
   ui_log_init /var/log/ipping-install.log
@@ -1391,6 +1726,7 @@ cmd_install() {
     die "ipping is already installed. Use 'update' to change versions, or 'uninstall' first."
   fi
   central_questions
+  check_proxy_options
   case "$MODE" in
     docker) ensure_tools ;;
     direct) need_systemd; ensure_tools xz ;;
@@ -1424,8 +1760,8 @@ menu() {
     if [ -z "$mode" ]; then
       keys=(install_docker install_direct); labels=("Install with Docker (recommended)" "Install directly on this machine")
     else
-      keys=(status access doctor logs update backup restart stop start uninstall)
-      labels=("Show what is running" "Show the address and setup token" "Check that everything works" "Follow the logs" "Update to the latest release" "Back up the database" "Restart" "Stop" "Start" "Uninstall")
+      keys=(status access doctor logs update proxy backup restart stop start uninstall)
+      labels=("Show what is running" "Show the address and setup token" "Check that everything works" "Follow the logs" "Update to the latest release" "Set up a proxy in front (nginx, Cloudflare ...)" "Back up the database" "Restart" "Stop" "Start" "Uninstall")
     fi
     banner "ipping" "$(menu_status_line)"
     printf '\n'
@@ -1443,6 +1779,7 @@ menu() {
         doctor) ( cmd_doctor ) || true ;;
         logs) ( cmd_logs ) || true ;;
         update) ( cmd_update ) || true ;;
+        proxy) ( cmd_proxy ) || true ;;
         backup) ( cmd_backup ) || true ;;
         restart) ( cmd_restart ) || true ;;
         stop) ( cmd_stop ) || true ;;
@@ -1475,7 +1812,7 @@ main() {
   SETUP_TOKEN="${IPPING_SETUP_TOKEN:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
-      install | update | start | stop | restart | status | logs | doctor | access | backup | geoip-update | geofeed-update | uninstall) command="$1" ;;
+      install | update | start | stop | restart | status | logs | doctor | access | backup | proxy | geoip-update | geofeed-update | uninstall) command="$1" ;;
       restore) command=restore; restore_file="${2:-}"; [ $# -gt 1 ] && shift ;;
       --mode) MODE="${2:?--mode needs a value}"; shift ;;
       --version)
@@ -1486,7 +1823,18 @@ main() {
         DOMAIN="${2:?--domain needs a value}"; shift
         valid_domain "$DOMAIN" || die "'${DOMAIN}' is not a domain name. Use something like ping.example.com."
         ;;
-      --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift ;;
+      --behind-proxy) BEHIND_PROXY=1 ;;
+      --no-proxy) BEHIND_PROXY=0 ;;
+      --proxy-ip)
+        PROXY_IP="${2:?--proxy-ip needs an address}"; shift
+        valid_proxy_list "$PROXY_IP" || die "'${PROXY_IP}' is not a list of addresses or networks. Use something like 203.0.113.10 or 10.0.0.0/8, separated by spaces or commas."
+        ;;
+      --cloudflare) CLIENT_IP_HEADER="CF-Connecting-IP" ;;
+      --client-ip-header)
+        CLIENT_IP_HEADER="${2:?--client-ip-header needs a header name}"; shift
+        valid_header_list "$CLIENT_IP_HEADER" || die "'${CLIENT_IP_HEADER}' is not a header name. Use something like True-Client-IP."
+        ;;
+      --http-port) HTTP_PORT="${2:?--http-port needs a value}"; HTTP_PORT_GIVEN=1; shift ;;
       --https-port) HTTPS_PORT="${2:?--https-port needs a value}"; shift ;;
       --backend-workers) BACKEND_WORKERS="${2:?--backend-workers needs a value}"; shift ;;
       --database-url) DATABASE_URL="${2:?--database-url needs a value}"; shift ;;
@@ -1516,6 +1864,7 @@ main() {
     logs) cmd_logs ;;
     doctor) cmd_doctor ;;
     backup) ui_log_init /var/log/ipping-install.log; cmd_backup ;;
+    proxy) ui_log_init /var/log/ipping-install.log; cmd_proxy ;;
     geoip-update) ui_log_init /var/log/ipping-install.log; cmd_geoip_update ;;
     geofeed-update) ui_log_init /var/log/ipping-install.log; cmd_geofeed_update ;;
     restore) ui_log_init /var/log/ipping-install.log; cmd_restore "$restore_file" ;;
