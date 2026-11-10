@@ -8,8 +8,10 @@ NOT FOR PRODUCTION: it enrols itself with a fixed setup token and a fixed admini
 Environment: IPPING_BACKEND (default http://127.0.0.1:18010), FLEET_CREDS (where node credentials are kept
 between runs, default /tmp/fleet-creds.json).
 
-Names the simulation treats specially, to give the interface something to show: a DNS name that starts with
-"nx-" does not exist; one that starts with "split-" is mid-change (nodes in Asia still hold the old record, and
+Names the simulation treats specially, to give the interface something to show: example.org (a real name, because the backend
+resolves a name itself before it lets the nodes have it, so a made-up one is refused) is geo-DNS: the nodes east of 60 degrees
+longitude get a server in Singapore from it and the others one in Frankfurt (as they do when each node resolves it, which is
+the default, or when one node resolves it for the rest); a DNS name that starts with "nx-" does not exist; one that starts with "split-" is mid-change (nodes in Asia still hold the old record, and
 one node's own resolver times out); 1.1.1.1 and 8.8.8.x behave like anycast (every node is a few ms away).
 """
 import asyncio, datetime, hashlib, http.cookiejar, json, math, random, sys, urllib.request, urllib.error
@@ -28,6 +30,7 @@ NODES = [
     ("Lisbon", "PT", 38.72, -9.14, "Home fibre"),  # a volunteer's node: a community node, never verified
 ]
 COMMUNITY = {"Lisbon"}
+GEO_NAME = "example.org"
 TARGETS = [("New York", 40.71, -74.0), ("Frankfurt", 50.11, 8.68), ("Singapore", 1.35, 103.82), ("Sydney", -33.87, 151.21), ("Sao Paulo", -23.55, -46.63), ("Tokyo", 35.68, 139.69)]
 jar = http.cookiejar.CookieJar(); op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)); csrf = ""
 def call(m, p, b=None, anon=False):
@@ -53,6 +56,10 @@ async def run_task(ws, pos, f, rnd):
     send = lambda o: ws.send(json.dumps(o))
     await send({"type": "task_ack", **ids})
     tgt = target_for(f); kind = f["kind"]; o = f["options"]; ip = f["target"].get("ip") or "93.184.216.34"
+    if (f["target"].get("hostname") or "") == GEO_NAME:
+        # geo-DNS: the nodes east of 60 degrees resolve this name to a server in Singapore, the others to one in Frankfurt
+        east = pos[1] > 60
+        tgt, ip = (("Singapore", 1.35, 103.82), "151.101.1.77") if east else (("Frankfurt", 50.11, 8.68), "104.18.1.10")
     if kind in ("ping", "tcp"):
         port = f["target"].get("port")
         for seq in range(o["count"]):
@@ -82,7 +89,10 @@ async def run_task(ws, pos, f, rnd):
             elif qtype == "NS": recs = [{"name": name, "type": "NS", "ttl": 86400, "data": "ns1.example.net"}, {"name": name, "type": "NS", "ttl": 86400, "data": "ns2.example.net"}]
             elif qtype == "CNAME": recs = [{"name": "www." + name, "type": "CNAME", "ttl": ttl, "data": "edge." + name}]
             else: recs = [{"name": name, "type": "SOA", "ttl": 300, "data": "ns1.example.net hostmaster.example.net 2026110701 7200 900 1209600 300"}]
-            if res == "system" and rnd.random() < 0.15: recs.append({"name": name, "type": "A", "ttl": 60, "data": "10.1.2.3"}) if qtype == "A" else None
+            if name == GEO_NAME and qtype == "A" and res == "system":
+                # geo-DNS: the same two servers as the ping above (so one node resolving it gets the server near it)
+                recs = [{"name": name, "type": "A", "ttl": 60, "data": "151.101.1.77" if pos[1] > 60 else "104.18.1.10"}]
+            elif res == "system" and rnd.random() < 0.15: recs.append({"name": name, "type": "A", "ttl": 60, "data": "10.1.2.3"}) if qtype == "A" else None
         r = rnd.uniform(4, 40) if res == "system" else rnd.uniform(12, 90)
         redacted = 0
         if res == "system":

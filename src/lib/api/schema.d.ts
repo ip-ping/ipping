@@ -770,6 +770,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AddressGroupOut
+         * @description One address that some of the nodes measured, when they did not all measure the same one.
+         */
+        AddressGroupOut: {
+            /** Ip */
+            ip: string;
+            /**
+             * Nodes
+             * @description How many nodes measured this address
+             */
+            nodes: number;
+            /**
+             * Selected
+             * @description Whether the estimate is for this address
+             */
+            selected: boolean;
+        };
         /** AdminNode */
         AdminNode: {
             /** Asn */
@@ -999,8 +1017,8 @@ export interface components {
             countries?: string[] | null;
             /**
              * Dns Mode
-             * @description fixed: resolve once and have every node probe the same address (use this for location estimates). regional: each node resolves the hostname itself.
-             * @default fixed
+             * @description regional (the default): each node resolves the hostname itself, so each gets the address that is near it. fixed: resolve it once and have every node probe the same address; `resolve_node_id` says which node resolves it (without one, the backend does).
+             * @default regional
              * @enum {string}
              */
             dns_mode: "fixed" | "regional";
@@ -1044,6 +1062,11 @@ export interface components {
              * @description dns only: the record type to ask for (default A)
              */
             record_type?: ("A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA") | null;
+            /**
+             * Resolve Node Id
+             * @description With dns_mode fixed and a hostname: the node that resolves it (an online node that can run DNS checks; any tier, since choosing it is a choice). Every node then probes the address that node got. Ignored for an IP address; refused for a dns check and with dns_mode regional.
+             */
+            resolve_node_id?: string | null;
             /**
              * Resolver
              * @description dns only: system asks each node's own resolvers (what people near the node get); the others ask that public resolver from every node (default system)
@@ -1510,6 +1533,12 @@ export interface components {
             geofeed?: components["schemas"]["GeoIpOut"] | null;
             /** @description A configured GeoIP database's answer, checked against the nodes */
             geoip?: components["schemas"]["GeoIpOut"] | null;
+            /**
+             * Groups
+             * @description When each node resolved the name itself and they did not all get the same address: the addresses and how many nodes measured each. The estimate is for the selected one (`?ip=` chooses). Empty when every node measured one address.
+             * @default []
+             */
+            groups: components["schemas"]["AddressGroupOut"][];
             likely?: components["schemas"]["PlaceOut"] | null;
             /**
              * Limitations
@@ -1658,6 +1687,8 @@ export interface components {
             /** Last Event Seq */
             last_event_seq: number;
             options: components["schemas"]["MeasurementOptions"];
+            /** @description The node that resolved the name for every node, when one was asked to */
+            resolved_by?: components["schemas"]["NodeInfo"] | null;
             /** Shared */
             shared: boolean;
             stats: components["schemas"]["MeasurementStats"];
@@ -2318,7 +2349,8 @@ export interface components {
             count?: number | null;
             /**
              * Dns Mode
-             * @default fixed
+             * @description regional: each node resolves the name itself; fixed: the backend resolves it once
+             * @default regional
              * @enum {string}
              */
             dns_mode: "fixed" | "regional";
@@ -3677,7 +3709,10 @@ export interface operations {
     };
     estimated_location_api_v1_measurements__measurement_id__location_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description When the nodes resolved the name to different addresses (`groups` in the answer): estimate for this one instead of the one most nodes measured */
+                ip?: string | null;
+            };
             header?: never;
             path: {
                 measurement_id: string;
@@ -3912,6 +3947,8 @@ export interface operations {
                 include_community?: boolean;
                 family?: "auto" | "4" | "6";
                 dns_mode?: "fixed" | "regional";
+                /** @description With dns_mode=fixed: the node that resolves the name */
+                resolve_node_id?: string | null;
                 /** @description Comma-separated ISO country codes */
                 countries?: string | null;
                 /** @description Seconds to wait for the result */

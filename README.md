@@ -36,10 +36,12 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 | **Certificate** | a TLS handshake with no request after it (any TLS service on an allowed port; 443 unless given) | one card for each **distinct certificate** the nodes were shown: trusted or not (and why not), days left on a timeline with today marked, the names it is valid for, who issued it and which nodes saw it. Several cards mean the nodes were not talking to one server, or a certificate is being replaced. Stations on the map are coloured by the certificate they saw. A watch on it alerts when a certificate has under 14 days left, before it fails. It can also be a **QUIC handshake** (the transport of HTTP/3), which names the protocol agreed |
 | **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address. With **rounds** (like `mtr`, up to 10) every hop shows its loss and best / average / worst time, and tells a router that is merely slow to answer probes aimed at it from loss that really carries on to the destination. With a GeoIP database on the backend, the **networks** the route crosses are listed and the route is drawn on a map; a router whose registered place light could not have reached in the time it answered is left off the map and counted |
 
-* **Same IP for every node**, or let each node resolve the name itself (to see CDN / DNS differences).
+* **Who resolves a hostname is a choice.** By default each node resolves the name itself and probes the address it gets, so a CDN or geo-DNS shows its differences; or **one node you pick** resolves it and every node probes that address (the same server measured from everywhere). The measurement says who resolved it. An IP address is the same for every node either way.
 * **Estimated location** (ping and TCP): where the address appears to be, from the nodes' round
   trips, with the evidence, alternatives and an honest "not enough evidence" or "inconclusive"
-  (anycast looks like that). How well it works on real data is in the
+  (anycast looks like that). When the nodes resolved a name to different addresses there is one estimate
+  per address (the address most nodes measured first, the others one click away), and the map shows rings only
+  for the nodes that measured it. How well it works on real data is in the
   [backend README](https://github.com/ip-ping/ipping-backend#estimated-network-location-experimental).
 * **Live results** stream in as each node answers and resume after a dropped connection.
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
@@ -332,6 +334,7 @@ export IPPING_SERVER=https://ipping.example.com IPPING_API_KEY=ipk_...      # or
 ./ipping-cli.sh traceroute example.com
 ./ipping-cli.sh -t MX -r google dns example.com            # who has the new MX record?
 ./ipping-cli.sh -c DE,NL ping example.com                  # only nodes in Germany and the Netherlands
+./ipping-cli.sh -R NODE_ID ping example.com                # that node resolves the name, every node probes what it found
 ```
 
 It prints a report like `ping` or `traceroute` would (a line per node, the hops of a route, the answers of a
@@ -340,7 +343,7 @@ The key goes to `curl` on its standard input, never as an argument that a proces
 that other users can read is warned about, and an `http://` site gets a warning that the key travels
 unencrypted. Without the script, the same thing is one request:
 `curl -s -H "Authorization: Bearer $KEY" "$SERVER/api/v1/text?target=example.com&kind=ping"`.
-`tests/cli.sh` tests the script against a stand-in server (30 checks, run in CI).
+`tests/cli.sh` tests the script against a stand-in server (39 checks, run in CI).
 
 ## Versions and compatibility
 

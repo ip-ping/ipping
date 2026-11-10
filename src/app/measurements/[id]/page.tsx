@@ -37,7 +37,9 @@ export default function MeasurementPage() {
   // The estimated place is worked out once the measurement is over, and only ping and TCP time a round trip.
   const current = state.phase === "ready" ? state.measurement : null;
   const wantsLocation = current !== null && current.status !== "running" && ["ping", "tcp"].includes(kindOf(current));
-  const { estimate, error: locationError } = useLocation(id, wantsLocation);
+  // When the nodes resolved the name to different addresses, the estimate is for one of them; the reader can pick another.
+  const [address, setAddress] = useState<string | null>(null);
+  const { estimate, error: locationError } = useLocation(id, wantsLocation, address);
   // the previous run of the same question (this browser's own), to show how each node moved
   const previousRun = usePreviousRun(current);
   const before = useMemo(() => medians(previousRun), [previousRun]);
@@ -114,6 +116,7 @@ export default function MeasurementPage() {
             {target.ip && target.ip !== target.host && (
               <span>
                 every node tests <span className="font-mono">{target.ip}</span>
+                {measurement.resolved_by ? `, as resolved by ${measurement.resolved_by.name}` : null}
               </span>
             )}
             {measurement.dns_mode === "regional" && kind !== "dns" && <span>each node resolves the name itself</span>}
@@ -189,7 +192,7 @@ export default function MeasurementPage() {
       <Charts measurement={measurement} focus={focus} slots={slots} previous={before} previousAt={previousRun?.created_at} />
       <ResultsTable measurement={measurement} focus={focus} previous={before} />
       {(kind === "ping" || kind === "tcp") && (
-        <LocationPanel estimate={estimate} error={locationError} finished={!running} />
+        <LocationPanel estimate={estimate} error={locationError} finished={!running} onAddress={setAddress} />
       )}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">

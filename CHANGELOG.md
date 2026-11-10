@@ -2,6 +2,36 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.10.0 (2026-11-10, not released yet)
+
+Who resolves a hostname: **each node by default**, or **one node you choose**. The API contract is pinned to backend `6b24000`
+(the v0.9.0 work, migration `0012`); `release.env` keeps pointing at backend v0.8.1 until that is released and tagged.
+
+### What changed
+- The measure form starts with **Each node resolves it** (it used to be "Same IP for every node"). **One node resolves it**
+  adds a *Resolving node* choice of the online nodes that can ask DNS questions (a volunteer's is marked); that node looks the
+  name up and every node probes what it found. A line under the form says which of the two will happen and that an IP address
+  needs no lookup. A node that goes offline is not kept: the form shows, and sends, the first that is left, and it cannot be
+  submitted with none.
+- A measurement says who resolved the name ("every node tests 151.101.1.69, as resolved by Tokyo"), and the pasted text says it
+  too (the same line the backend's text output prints).
+- The **location panel** works for names the nodes resolved themselves: when they got different addresses it says so, offers each
+  address with its node count (a toggle group, stock shadcn), estimates the one most nodes measured and the others on a click,
+  and the map draws rings only for the nodes that measured the chosen address (the rest say they measured another one).
+- `ipping-cli -R NODE` asks for a node to resolve the name (`dns_mode=fixed&resolve_node_id=NODE`).
+- The simulated fleet answers a DNS question about `example.org` the way it answers a ping (geo-DNS: Singapore for the nodes east
+  of 60°E, Frankfurt for the rest), so one node resolving it can be told from each node doing so.
+
+### Tests
+- `tests/ui/14-name-resolution.mjs` (browser, real backend and fleet): the default, two addresses, the estimate per address
+  and the address switch, the form (the node choice appears only for "one node", the line under it names the node), the
+  measurement that results (every node measured Tokyo's address, not the backend's), a name the node cannot resolve (refused,
+  the node named), an IP address with a node chosen (no lookup). All 14 browser checks pass. A unit test for the text line, and
+  tests for `-R` in `tests/cli.sh` (39 checks, ShellCheck 0.10 and stable clean). `npm run typecheck`, `lint` and `test` (80)
+  pass.
+- What was seen in the browser: the form with *One node resolves it* and Tokyo chosen, and a regional measurement of example.org
+  with two tested addresses in the table and the panel showing `104.18.1.10 · 12 nodes` and `151.101.1.77 · 4 nodes`.
+
 ## v0.9.1 (2026-11-10)
 
 Installs backend **v0.8.1**, which fixes the node auto-fill of v0.9.0. No change to the database (`0011`) or to nodes.

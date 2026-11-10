@@ -80,6 +80,18 @@ describe("toText", () => {
     expect(text).toContain("2 of 2 nodes answered.");
   });
 
+  it("says which node found the address every node measured, when one was asked to", () => {
+    const resolved = measurement("ping", [task("Tokyo")], {
+      target: { host: "example.com", ip: "151.101.1.69", resolved_ips: ["151.101.1.69"], input_kind: "hostname" },
+      resolved_by: { id: "node-Tokyo", name: "Tokyo", country: "JP", city: "Tokyo" },
+    } as never);
+    const lines = toText(resolved).split("\n");
+    expect(lines[1]).toBe("example.com resolved to 151.101.1.69 by Tokyo, JP");
+    expect(lines[2]).toBe("");
+    // each node resolved the name itself, or the backend did: nothing to say
+    expect(toText(measurement("ping", [task("Tokyo")])).split("\n")[1]).toBe("");
+  });
+
   it("prints loss and spread for a route traced in rounds", () => {
     const route = task("A", {
       summary: { sent: 2, received: 2, loss_pct: 0, reached: true, median_ms: 20 },

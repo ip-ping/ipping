@@ -135,6 +135,8 @@ export function toText(m: Measurement): string {
   const detail =
     kind === "ping" || kind === "tcp" ? `, ${m.options.count} ${KIND_INFO[kind].unit.many} per node` : "";
   lines.push(`${KIND_INFO[kind].label} ${m.target.host}${m.options.port ? `:${m.options.port}` : ""} (${when(m)}${dnsNote}${detail})`);
+  // every node measured the address this one node found for the name
+  if (m.resolved_by && m.target.ip) lines.push(`${m.target.host} resolved to ${m.target.ip} by ${m.resolved_by.name}, ${m.resolved_by.country ?? "?"}`);
   lines.push("");
   const width = Math.max(10, ...m.tasks.map((t) => `${t.node.name}, ${t.node.country ?? "?"}`.length));
   for (const t of m.tasks) {

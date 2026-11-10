@@ -8,6 +8,7 @@
 #   ipping-cli tls example.com
 #   ipping-cli -t MX dns example.com
 #   ipping-cli -r cloudflare -T doh dns example.com
+#   ipping-cli -R 9f3c... ping example.com     (one node resolves the name; every node probes what it found)
 #
 # It needs the address of an ipping site and an API key (an administrator creates one on the admin page):
 #
@@ -34,6 +35,8 @@ Options:
   -r NAME    resolver (dns): system cloudflare google quad9
   -T NAME    transport (dns): udp (default) or doh, DNS over HTTPS (cloudflare and google)
   -c CC,CC   only nodes in these countries (ISO 3166 codes)
+  -R NODE    the id of a node to resolve the name (not dns): every node then probes the address it found. Without it
+             each node resolves the name itself and probes what it gets
   -f         follow redirects (http)
   -C         also use community nodes (run by volunteers; their results are not verified)
   -w SEC     wait up to SEC seconds for the result (1 to 30, default 20)
@@ -51,9 +54,9 @@ die() {
 config_dir="${XDG_CONFIG_HOME:-${HOME:-.}/.config}/ipping"
 server="${IPPING_SERVER:-}"
 key="${IPPING_API_KEY:-}"
-count="" port="" record="" resolver="" transport="" countries="" follow="" community="" wait=""
+count="" port="" record="" resolver="" transport="" countries="" follow="" community="" wait="" resolve_node=""
 
-while getopts 's:k:n:p:t:r:T:c:fCw:h' option; do
+while getopts 's:k:n:p:t:r:T:c:R:fCw:h' option; do
   case "$option" in
     s) server="$OPTARG" ;;
     k) key="$OPTARG" ;;
@@ -63,6 +66,7 @@ while getopts 's:k:n:p:t:r:T:c:fCw:h' option; do
     r) resolver="$OPTARG" ;;
     T) transport="$OPTARG" ;;
     c) countries="$OPTARG" ;;
+    R) resolve_node="$OPTARG" ;;
     f) follow="true" ;;
     C) community="true" ;;
     w) wait="$OPTARG" ;;
@@ -118,6 +122,7 @@ set -- --get --data-urlencode "target=$target" --data-urlencode "kind=$kind"
 [ -z "$resolver" ] || set -- "$@" --data-urlencode "resolver=$resolver"
 [ -z "$transport" ] || set -- "$@" --data-urlencode "transport=$transport"
 [ -z "$countries" ] || set -- "$@" --data-urlencode "countries=$countries"
+[ -z "$resolve_node" ] || set -- "$@" --data-urlencode "dns_mode=fixed" --data-urlencode "resolve_node_id=$resolve_node"
 [ -z "$follow" ] || set -- "$@" --data-urlencode "follow_redirects=true"
 [ -z "$community" ] || set -- "$@" --data-urlencode "include_community=true"
 [ -z "$wait" ] || set -- "$@" --data-urlencode "wait=$wait"

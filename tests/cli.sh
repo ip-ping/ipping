@@ -95,6 +95,11 @@ check "dns transport" eq "$(heard transport)" doh
 check "community nodes are asked for with -C" eq "$(heard include_community)" true
 "$cli" -s "$site" -k ipk_good ping example.com >/dev/null
 check "and left out otherwise" eq "$(heard include_community)" ""
+"$cli" -s "$site" -k ipk_good -R 9f3c0a ping example.com >/dev/null
+check "a node to resolve the name is asked for with -R" eq "$(heard resolve_node_id)" 9f3c0a
+check "and that makes the address one for every node" eq "$(heard dns_mode)" fixed
+"$cli" -s "$site" -k ipk_good ping example.com >/dev/null
+check "each node resolves it otherwise (the server's default)" eq "$(heard dns_mode)$(heard resolve_node_id)" ""
 "$cli" -s "$site" -k ipk_good trace example.com >/dev/null
 check "trace is traceroute" eq "$(heard kind)" traceroute
 "$cli" -s "$site" -k ipk_good -n 3 trace example.com >/dev/null

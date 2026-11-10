@@ -120,7 +120,14 @@ export function MeasureForm({
   const [target, setTarget] = useState(initialTarget);
   const [port, setPort] = useState("");
   const [follow, setFollow] = useState(false);
-  const [dnsMode, setDnsMode] = useState<Request["dns_mode"]>("fixed");
+  // Who resolves a hostname: each node for itself (the default), or one node, whose answer every node then probes.
+  const [resolution, setResolution] = useState<"each" | "one">("each");
+  const [resolverId, setResolverId] = useState<string | null>(null);
+  // The node that resolves the name has to be able to ask DNS questions. One that went offline is not kept: the
+  // control shows (and the request sends) the first that is left, so what is shown is what is sent.
+  const askable = online.filter((n) => n.kinds.includes("dns"));
+  const oneNode = kind !== "dns" && resolution === "one";
+  const resolverNode = oneNode ? (askable.find((n) => n.id === resolverId) ?? askable[0] ?? null) : null;
   const [family, setFamily] = useState<Request["family"]>("auto");
   const [count, setCount] = useState("4");
   const [rounds, setRounds] = useState("1");
@@ -143,7 +150,8 @@ export function MeasureForm({
       const body: Request = {
         target: target.trim(),
         kind,
-        dns_mode: dnsMode,
+        dns_mode: resolverNode ? "fixed" : "regional",
+        resolve_node_id: resolverNode?.id ?? null,
         family,
         follow_redirects: kind === "http" && follow,
         node_ids: scope === "selected" ? [...selected] : null,
@@ -169,6 +177,7 @@ export function MeasureForm({
   const noNodes = nodes !== null && online.length === 0;
   const noCapable = nodes !== null && online.length > 0 && capable.length === 0;
   const needsSelection = scope === "selected" && selected.size === 0;
+  const needsResolver = oneNode && resolverNode === null;
   const KindIcon = KIND_ICON[kind];
 
   return (
@@ -200,7 +209,7 @@ export function MeasureForm({
               />
               <Button
                 type="submit"
-                disabled={busy || !target.trim() || noNodes || noCapable || needsSelection}
+                disabled={busy || !target.trim() || noNodes || noCapable || needsSelection || needsResolver}
               >
                 {busy ? <Loader2Icon className="animate-spin" /> : <KindIcon />}
                 {info.action}
@@ -248,13 +257,31 @@ export function MeasureForm({
                 <Choice
                   className="lg:col-span-3"
                   label="Name resolution"
-                  value={dnsMode}
-                  onChange={setDnsMode}
+                  value={resolution}
+                  onChange={setResolution}
                   options={[
-                    { value: "fixed", label: "Same IP for every node" },
-                    { value: "regional", label: "Each node resolves it" },
+                    { value: "each", label: "Each node resolves it" },
+                    { value: "one", label: "One node resolves it" },
                   ]}
                 />
+                {resolution === "one" &&
+                  (askable.length > 0 ? (
+                    <Choice
+                      className="lg:col-span-3"
+                      label="Resolving node"
+                      value={resolverNode?.id ?? ""}
+                      onChange={setResolverId}
+                      options={askable.map((n) => ({
+                        value: n.id,
+                        label: `${n.name}${n.tier === "community" ? " (community)" : ""} · ${flag(n.country)} ${place(n)}`.trim(),
+                      }))}
+                    />
+                  ) : (
+                    <div className="min-w-0 space-y-1.5 lg:col-span-3">
+                      <Label>Resolving node</Label>
+                      <p className="text-xs text-muted-foreground">No online node can ask DNS questions.</p>
+                    </div>
+                  ))}
                 <Choice
                   className="lg:col-span-3"
                   label="IP version"
@@ -402,6 +429,14 @@ export function MeasureForm({
               </div>
             </div>
           </div>
+
+          {kind !== "dns" && (
+            <p className="text-xs text-muted-foreground">
+              {resolverNode
+                ? `${resolverNode.name} looks the name up and every node probes the address it found, so the same server is measured from everywhere. An IP address needs no lookup.`
+                : "Each node looks the name up itself and probes the address it gets: a CDN or geo-DNS may send each node to a nearer server. An IP address needs no lookup."}
+            </p>
+          )}
 
           {noCapable && (
             <Alert>

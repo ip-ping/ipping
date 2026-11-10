@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LocationEstimate } from "@/features/location/use-location";
 import { ms } from "@/lib/format";
@@ -236,14 +237,45 @@ function Body({ estimate }: { estimate: LocationEstimate }) {
  * The words of the location estimate: the place, how strong the evidence is, what else fits, and the
  * measurements behind it. The map above already shows where it is, with a ring per node.
  */
+/** When the nodes resolved the name to different addresses: which one the estimate is for, and a way to pick another. */
+function Addresses({ estimate, onAddress }: { estimate: LocationEstimate; onAddress: (ip: string) => void }) {
+  if (estimate.groups.length < 2) return null;
+  const selected = estimate.groups.find((g) => g.selected)?.ip;
+  return (
+    <div className="mb-4 space-y-2">
+      <p className="max-w-prose text-sm text-muted-foreground">
+        The nodes resolved the name to {estimate.groups.length} different addresses, which can be different servers, so each
+        address gets its own estimate. Showing:
+      </p>
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        spacing={1}
+        value={selected ? [selected] : []}
+        onValueChange={(value) => value[0] && onAddress(value[0])}
+        aria-label="Address to estimate"
+        className="flex-wrap"
+      >
+        {estimate.groups.map((g) => (
+          <ToggleGroupItem key={g.ip} value={g.ip} className="font-mono">
+            {g.ip} · {g.nodes} {g.nodes === 1 ? "node" : "nodes"}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
+}
+
 export function LocationPanel({
   estimate,
   error,
   finished,
+  onAddress,
 }: {
   estimate: LocationEstimate | null;
   error: string | null;
   finished: boolean;
+  onAddress: (ip: string) => void;
 }) {
   if (!finished) return null;
   return (
@@ -254,6 +286,7 @@ export function LocationPanel({
       </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!estimate && !error && <Skeleton className="h-40 w-full" />}
+      {estimate && <Addresses estimate={estimate} onAddress={onAddress} />}
       {estimate && <Body estimate={estimate} />}
     </Panel>
   );

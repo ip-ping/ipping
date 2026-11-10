@@ -131,7 +131,15 @@ export function Instrument({
           : undefined,
     [kind, tasks, slots],
   );
-  const nodes = useMemo(() => mapNodes(measurement, colors), [measurement, colors]);
+  const nodes = useMemo(() => {
+    const all = mapNodes(measurement, colors);
+    if (!estimate || estimate.groups.length < 2) return all;
+    // Nodes that resolved the name to another address timed a different server: no ring for them, they say so.
+    const measured = new Set(tasks.filter((t) => t.tested_ip === estimate.target_ip).map((t) => t.node.id));
+    return all.map((n) =>
+      measured.has(n.id) ? n : { ...n, ms: null, note: ["measured another address", n.note].filter(Boolean).join(" · ") },
+    );
+  }, [measurement, colors, estimate, tasks]);
   const target: MapPlace | null = estimate?.likely
     ? { lat: estimate.likely.latitude, lon: estimate.likely.longitude, label: estimate.likely.name }
     : null;
@@ -206,6 +214,13 @@ export function Instrument({
               {target && " The crosshair is the estimated location of the target."}
             </span>
           </p>
+          {estimate && estimate.groups.length > 1 && (
+            <p className="mt-2 border-l-2 border-signal px-3 text-xs leading-relaxed">
+              The nodes resolved the name to {estimate.groups.length} different addresses. The rings and the estimate are for{" "}
+              <strong className="font-semibold">{estimate.target_ip}</strong>, measured by{" "}
+              {estimate.groups.find((g) => g.selected)?.nodes} nodes; the others measured something else and have no ring.
+            </p>
+          )}
           {conflictPair && (
             <p className="mt-2 border-l-2 border-signal px-3 text-xs leading-relaxed">
               <strong className="font-semibold">{conflictPair.a.node_name}</strong> ({ms(conflictPair.a.rtt_ms)} ms) and{" "}
