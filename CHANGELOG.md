@@ -4,6 +4,10 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.10.0 (2026-11-10)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.9.0,
+and both images (`ipping:0.10.0`, `ipping-backend:0.9.0`) are on Docker Hub. The installer is unchanged in this release, so it
+was not run again on a fresh machine.
+
 Who resolves a hostname: **each node by default**, or **one node you choose**. Installs backend **v0.9.0**
 (database migration `0012`); the API contract and `release.env` are pinned to it.
 
