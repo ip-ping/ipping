@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.11.0 (2026-11-10)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.9.0
+(schema `0012`), `ipping:0.11.0` is on Docker Hub, and the released frontend bundle holds the new interface (the tested
+addresses, the IP info option, the node choice). Backend and installer are unchanged in this release, so nothing was installed on a
+fresh machine.
+
 IP info from the site's own lookup API, the location evidence with the nodes' places and networks, and the map in the theme's
 own colours. Interface only: it installs backend **v0.9.0**, unchanged (database migration `0012`).
 
