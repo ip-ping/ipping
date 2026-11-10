@@ -2,6 +2,32 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+### What was verified on the released v0.7.0 (the files, not the repository)
+- All 12 attestations of the three releases verify (application 6, backend 3, node 3), every checksum matches, and the three
+  images exist for amd64 and arm64.
+- A real upgrade on a fresh Debian 13: a v0.6.1 stack (which refuses Quad9 over HTTPS, as it should) with a v0.6.0 node,
+  updated with the released `ipping.sh` to v0.7.0 (schema `0010`, node still v0.6.0 and online):
+  - Quad9 over HTTPS is refused with "None of the 1 online nodes can run a dns measurement over DoH to quad9 (it needs HTTP/2,
+    which nodes speak from v0.7.0) yet. Nodes need to be updated to a newer version.", while Cloudflare over HTTPS still
+    answers from that node.
+  - After `ipping-node.sh update` (v0.7.0): Quad9 answers over HTTPS for real: an A record (20 ms; plain UDP to Quad9 took 8 ms
+    from the same node), TXT, and NXDOMAIN for a name that does not exist; Cloudflare and Google answer as before; the released
+    `ipping-cli -r quad9 -T doh dns example.com` prints `(DoH)`.
+  - `ipping.sh geofeed-update` through the released installer in direct mode (it also created the systemd drop-in and restarted
+    the backend, the shared step): an http address is refused before anything is fetched; Cloudflare's and AS13030's feeds load
+    (155,791 prefixes, 1.1 MB, the admin status says so); repeating it with no arguments uses the remembered list. A ping to
+    103.22.200.9 from the node, which Cloudflare's feed puts in Singapore, took 162 ms and the result says "Geofeed from
+    api.cloudflare.com ... Singapore, SG ... consistent"; with one node the estimate itself is `insufficient_evidence`, which the
+    geofeed does not change. An address whose ping gets no answer is `not_checked`.
+  - Docker mode of the same command, on the released backend image with a named volume as Compose has: two feeds load, an http
+    one is refused, nothing named is a clear error.
+
+### What it did not show
+- A geofeed claim being **ruled out** was seen in the browser check against the simulated fleet and in unit tests, but not on
+  the real internet: the one real check (Singapore, from Europe) was consistent.
+
 ## v0.7.0 (2026-11-10)
 
 Installs backend v0.7.0. New: **DNS over HTTPS to Quad9** (needs nodes of v0.7.0, which speak HTTP/2) and **geofeeds** in the
