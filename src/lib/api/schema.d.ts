@@ -292,25 +292,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke Node */
+        /**
+         * Revoke Node
+         * @description Cut a node off and remove it: it is gone from the lists, its credential is refused from now on, and what was
+         *     measured with it stays in the measurements (each result carries the node as it was). A node that wants back in enrolls
+         *     again and waits for approval like any new one.
+         */
         post: operations["revoke_node_api_v1_admin_nodes__node_id__revoke_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/nodes/{node_id}/rotate-credential": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rotate Credential */
-        post: operations["rotate_credential_api_v1_admin_nodes__node_id__rotate_credential_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -549,6 +537,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/measurements/{measurement_id}/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tested Addresses
+         * @description What the IP databases say about each address the nodes tested (place, network, AS), most tested first.
+         *
+         *     It belongs to the measurement: whoever may read the measurement may read this, whatever the IP lookup API's
+         *     own access setting says, because the addresses are the ones the measurement itself tested (a name each node
+         *     resolved for itself can be several) and nothing else can be asked for. `info` is null when no database is
+         *     installed.
+         */
+        get: operations["tested_addresses_api_v1_measurements__measurement_id__addresses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/measurements/{measurement_id}/cancel": {
         parameters: {
             query?: never;
@@ -681,7 +694,7 @@ export interface paths {
         put?: never;
         /**
          * Enroll
-         * @description Exchange a single-use enrollment token for this node's own credential.
+         * @description Exchange an enrollment token for this node's own credential (a single-use token is taken by the first node).
          */
         post: operations["enroll_api_v1_nodes_enroll_post"];
         delete?: never;
@@ -813,6 +826,21 @@ export interface components {
              */
             selected: boolean;
         };
+        /**
+         * AddressInfoOut
+         * @description One address the nodes tested, and what the IP databases say about it.
+         */
+        AddressInfoOut: {
+            /** Address */
+            address: string;
+            /** @description Null when no IP database is installed */
+            info?: components["schemas"]["IpInfoOut"] | null;
+            /**
+             * Nodes
+             * @description How many nodes tested this address
+             */
+            nodes: number;
+        };
         /** AdminNode */
         AdminNode: {
             /** Asn */
@@ -831,6 +859,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Custom Name
+             * @description The name an administrator gave (or the node enrolled with); empty: the default is used
+             */
+            custom_name: string;
             /** Id */
             id: string;
             /** Ipv4 */
@@ -851,7 +884,10 @@ export interface components {
             location_verified: boolean;
             /** Longitude */
             longitude: number | null;
-            /** Name */
+            /**
+             * Name
+             * @description What the node is shown by: its own name, or one made of its place and network
+             */
             name: string;
             /** Online */
             online: boolean;
@@ -1113,6 +1149,12 @@ export interface components {
             /** Label */
             label?: string | null;
             /**
+             * Reusable
+             * @description Any number of nodes can enroll with it until it expires or is revoked (each still waits for approval). Without this the first node to use it takes it.
+             * @default false
+             */
+            reusable: boolean;
+            /**
              * Tier
              * @description community: for a volunteer's node. It is left out of measurements unless asked for.
              * @default official
@@ -1225,7 +1267,11 @@ export interface components {
             latitude?: number | null;
             /** Longitude */
             longitude?: number | null;
-            /** Name */
+            /**
+             * Name
+             * @description Optional. Without one the node is called after its place and its network (`City, CC - Provider · ASn`).
+             * @default
+             */
             name: string;
             /** Provider */
             provider?: string | null;
@@ -1661,6 +1707,19 @@ export interface components {
             /** Update Hours */
             update_hours: number;
         };
+        /** MeasurementAddressesOut */
+        MeasurementAddressesOut: {
+            /**
+             * Addresses
+             * @description The most tested address first; at most 50
+             */
+            addresses: components["schemas"]["AddressInfoOut"][];
+            /**
+             * Databases Loaded
+             * @description Whether any IP database is in use on this site
+             */
+            databases_loaded: boolean;
+        };
         /**
          * MeasurementOptions
          * @description The settings a measurement was run with; which ones are present depends on its kind.
@@ -1882,16 +1941,6 @@ export interface components {
             location_scheme?: string | null;
             /** Status Code */
             status_code: number;
-        };
-        /** RotatedCredential */
-        RotatedCredential: {
-            /**
-             * Credential
-             * @description Shown once. The node must be reconfigured with it.
-             */
-            credential: string;
-            /** Node Id */
-            node_id: string;
         };
         /** RuledOutOut */
         RuledOutOut: {
@@ -2312,8 +2361,16 @@ export interface components {
             id: string;
             /** Label */
             label: string | null;
-            /** Node Id */
+            /**
+             * Node Id
+             * @description The node that enrolled with it (the latest, when reusable)
+             */
             node_id: string | null;
+            /**
+             * Reusable
+             * @default false
+             */
+            reusable: boolean;
             /**
              * State
              * @enum {string}
@@ -2325,6 +2382,12 @@ export interface components {
              * @enum {string}
              */
             tier: "official" | "community";
+            /**
+             * Uses
+             * @description How many nodes have enrolled with it
+             * @default 0
+             */
+            uses: number;
         };
         /** UpdateNodeRequest */
         UpdateNodeRequest: {
@@ -2340,7 +2403,10 @@ export interface components {
             location_verified?: boolean | null;
             /** Longitude */
             longitude?: number | null;
-            /** Name */
+            /**
+             * Name
+             * @description Empty: the node is called after its place and its network again
+             */
             name?: string | null;
             /** Provider */
             provider?: string | null;
@@ -3134,37 +3200,6 @@ export interface operations {
             };
         };
     };
-    rotate_credential_api_v1_admin_nodes__node_id__rotate_credential_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                node_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RotatedCredential"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_settings_api_v1_admin_settings_get: {
         parameters: {
             query?: never;
@@ -3658,6 +3693,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeasurementOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tested_addresses_api_v1_measurements__measurement_id__addresses_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasurementAddressesOut"];
                 };
             };
             /** @description Validation Error */

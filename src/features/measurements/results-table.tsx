@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Measurement, Task } from "@/lib/api/client";
-import { delta, flag, ms, pct, place } from "@/lib/format";
+import { delta, flag, ms, nodeHeading, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { commonName } from "./certs";
@@ -228,8 +228,6 @@ export function ResultsTable({
           <TableRow>
             <TableHead className="w-8" />
             <TableHead>Node</TableHead>
-            <TableHead className={SHOW.md}>Region</TableHead>
-            <TableHead className={SHOW.xl}>Provider / ASN</TableHead>
             {kind !== "dns" && <TableHead className={SHOW.lg}>Tested IP</TableHead>}
             {columns.map((c) => (
               <TableHead
@@ -245,6 +243,7 @@ export function ResultsTable({
         <TableBody>
           {measurement.tasks.map((task) => {
             const expanded = open.has(task.id);
+            const h = nodeHeading(task.node);
             const active = focus.active === task.node.id;
             const context = { fastest: task.id === measurement.stats.fastest_task_id, slowest, active, before: previous?.get(task.node.id) };
             return (
@@ -261,19 +260,10 @@ export function ResultsTable({
                       className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-90")}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">
-                    {task.node.name}
+                  <TableCell className="min-w-0 font-medium">
+                    {h.named ? h.title : `${flag(task.node.country)} ${h.title}`.trim()}
                     <CommunityBadge tier={task.node.tier} />
-                    <div className="text-xs font-normal text-muted-foreground md:hidden">
-                      {flag(task.node.country)} {place(task.node)}
-                    </div>
-                  </TableCell>
-                  <TableCell className={cn("whitespace-nowrap", SHOW.md)}>
-                    {flag(task.node.country)} {place(task.node)}
-                  </TableCell>
-                  <TableCell className={cn("text-muted-foreground", SHOW.xl)}>
-                    {task.node.provider ?? "–"}
-                    {task.node.asn ? ` · AS${task.node.asn}` : ""}
+                    {h.sub && <div className="text-xs font-normal text-muted-foreground [overflow-wrap:anywhere]">{h.sub}</div>}
                   </TableCell>
                   {kind !== "dns" && (
                     <TableCell className={cn("font-mono text-xs", SHOW.lg)}>{task.tested_ip ?? "–"}</TableCell>

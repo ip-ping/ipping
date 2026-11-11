@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.11.0** (application), installing backend **v0.9.0** (v0.12.0 is on `main`, not released; it needs backend v0.10.0, which is not released either). Nodes of any earlier version
+Current release: **v0.12.0** (application), installing backend **v0.10.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -33,7 +33,7 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 | **TCP** | opening a connection to a port, then closing it | connect times; a *refused* connection is shown as "refused after N ms" (the machine answered), not as a success |
 | **HTTP** | one `GET` (headers only, body never read) | status, a **phase waterfall** of DNS / connect / TLS / first-byte time per node, server, redirects, and the **TLS certificate** (issuer, subject, validity, days left, trusted or not). A certificate that does not verify is described, and no request is sent over it |
 | **DNS** | one question to one resolver: a node's own, or Cloudflare, Google or Quad9 | whether the nodes **agree**: stations on the map coloured by the answer they got, every distinct answer with the nodes that got it, response code, TTL and every record. A name that does not exist can be checked. Answers that are private addresses from a node's own resolver are never shown. Cloudflare, Google and Quad9 can also be asked **over HTTPS (DoH)**; a result says so. Quad9 answers DoH only over HTTP/2, which nodes speak from v0.7.0, so older nodes are left out of that question |
-| **Certificate** | a TLS handshake with no request after it (any TLS service on an allowed port; 443 unless given) | one card for each **distinct certificate** the nodes were shown: trusted or not (and why not), days left on a timeline with today marked, the names it is valid for, who issued it and which nodes saw it. Several cards mean the nodes were not talking to one server, or a certificate is being replaced. Stations on the map are coloured by the certificate they saw. A watch on it alerts when a certificate has under 14 days left, before it fails. It can also be a **QUIC handshake** (the transport of HTTP/3), which names the protocol agreed |
+| **Certificate** | a TLS handshake with no request after it (any TLS service on an allowed port; 443 unless given) | one card for each **distinct certificate** the nodes were shown: trusted or not (and why not), days left on a timeline with today marked, the names it is valid for, who issued it and how many nodes saw it (a count, not a list of their names). Several cards mean the nodes were not talking to one server, or a certificate is being replaced. Stations on the map are coloured by the certificate they saw. A watch on it alerts when a certificate has under 14 days left, before it fails. It can also be a **QUIC handshake** (the transport of HTTP/3), which names the protocol agreed |
 | **Traceroute** | the routers between the node and the target (Linux nodes) | whether the destination was reached and a **route ladder** (a rung per router, placed by its round trip) with a hop table; a router inside someone's private network is shown as "a router inside a private network", never as an address. With **rounds** (like `mtr`, up to 10) every hop shows its loss and best / average / worst time, and tells a router that is merely slow to answer probes aimed at it from loss that really carries on to the destination. With a GeoIP database on the backend, the **networks** the route crosses are listed and the route is drawn on a map; a router whose registered place light could not have reached in the time it answered is left off the map and counted |
 
 * **Who resolves a hostname is a choice.** By default each node resolves the name itself and probes the address it gets, so a CDN or geo-DNS shows its differences; or **one node you pick** resolves it and every node probes that address (the same server measured from everywhere). The measurement says who resolved it. An IP address is the same for every node either way.
@@ -52,7 +52,7 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
   neither the list nor an answer (the option says why) until an administrator opens it to everyone.
 * **Live results** stream in as each node answers and resume after a dropped connection.
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
-* **Admin**: approve nodes, enrollment tokens, which kinds are enabled, the allowed TCP/HTTP ports,
+* **Admin** (at `/admin`: the header has no link to it): approve nodes, enrollment keys (single-use, or **reusable** for many nodes, up to 30 days), revoke a node (it is removed, and there is no key rotation: enroll it again), which kinds are enabled, the allowed TCP/HTTP ports,
   probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log, and the
   **IP data**: a MaxMind account the backend downloads its databases with, an IP lookup API, and nodes that fill in
   their own country, city, provider and AS number.
@@ -118,7 +118,7 @@ and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a
    ```
 
    Open the address it prints, go to `/setup` and create the administrator with the setup token.
-2. **Install a node** on each measurement host. In *Admin > Enrollment* create a token, then on the
+2. **Install a node** on each measurement host. In *Admin > Enrollment* create a key (reusable if you will add several nodes), then on the
    host run the node installer (see the [node README](https://github.com/ip-ping/ipping-node)):
 
    ```bash
@@ -356,7 +356,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
-| v0.12.0 | v0.10.0 (not released yet) | migration `0012` | as v0.11.0 (the location estimate always shows, with an accuracy percentage, and says when the nodes disagree) |
+| v0.12.0 | v0.10.0 | migration `0013` | the location estimate always shows with an accuracy percentage and says when nodes disagree; the measurement page redesigned (headline numbers beside the target's IP info, the map, the best guess, then the details) with result numbers on the map; a node is shown by its place with its network beneath instead of a name; nodes need no name (called `City, CC - Provider · ASn`); reusable enrollment keys; no key rotation; a revoked node is removed; no Admin link in the header. Nodes: **v0.8.0** is the first that enrolls without a name; older nodes still work and keep the names they send |
 | v0.11.0 | v0.9.0 | migration `0012` | as v0.10.0 (IP info for the addresses a measurement tested and as an option of its own; the evidence of a location estimate says where each node is and whose it is; the map in the theme's own colours) |
 | v0.10.0 | v0.9.0 | migration `0012` | as v0.9.1 (each node resolves a hostname itself by default, or one node you choose resolves it for the rest; the migration adds which node resolved a measurement) |
 | v0.9.1 | v0.8.1 | migration `0011` | as v0.9.0 (a node's place from the IP data is only used where it agrees with the place the node reported or you typed) |
@@ -424,7 +424,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0 and v0.11.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0 and v0.12.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

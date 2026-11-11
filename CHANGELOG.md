@@ -2,10 +2,35 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.12.0 (2026-11-10, not released yet)
+## v0.12.0 (2026-11-11)
 
-The estimated network location is not strict any more: it always shows an estimate and an accuracy percentage. It needs backend
-**v0.10.0** (not released yet: `release.env` still pins v0.9.0, the contract is pinned to backend `367c639`).
+The estimated network location is not strict any more (it always shows an estimate and an accuracy percentage), the measurement page
+is laid out answer-first, and the admin and node pages follow the backend's changes: reusable enrollment keys, no key rotation, a
+revoked node that is removed, nodes that need no name. Installs backend **v0.10.0** (migration `0013`); it works with nodes of any
+version, and node **v0.8.0** is the first that enrolls without a name.
+
+### The measurement page, redesigned
+- **Answer first.** Under the title: the headline numbers (responding, fastest, slowest, loss) beside the **target address card**
+  (where the IP databases put it, whose network it is, the prefix; the other addresses are one link away), then the map, then
+  **Best guess where it is** (the place, the strength, the accuracy bar), then the round trips, the nodes, the location evidence and,
+  when the nodes tested several addresses, a table of them. A row of links to the sections sits under the title, and **Share** is in
+  the header next to Export and Run again (it was at the bottom).
+- The address information comes from the new backend endpoint `GET /measurements/{id}/addresses`: it belongs to the measurement, so
+  a visitor sees it whatever the standalone lookup's access setting says (the *IP info* option still follows that setting). One address
+  is on the card and is not repeated in a table.
+- **Result numbers on the map**: each station has its fastest round trip beside it where there is room (the fastest first, a number that
+  would sit on another is left off, none on a phone); the caption says so.
+- **A node is shown by its place with its network beneath it** (`🇩🇪 Frankfurt, DE` over `OVH SAS · AS16276`), in one column, without
+  a name: a node is called after its place and network unless somebody named it, so the name only repeated them. A node missing either
+  keeps its name. The nodes page and the node picker do the same; chart rows and map tooltips use the place. A **certificate card** says
+  "Seen by N nodes" and no longer lists their names.
+
+### Admin
+- **No Admin link in the header** (go to `/admin`).
+- **Enrollment keys**: a *Reusable* option (many nodes enroll with the key until it expires or is revoked), a longer validity (up to 30
+  days), and a line under a reusable key saying how many nodes enrolled with it.
+- **No Rotate key** button (the backend has no rotation any more); **Revoke** removes the node, says so, and a revoked node is not listed.
+- The node's **Name** is optional: left empty it is called after its place and network, and the field shows that name as its placeholder.
 
 ### What changed
 - The panel shows an **Accuracy** bar under the place: "96% within 500 km", the figure for 100, 300, 500, 1,000 and 2,000 km
@@ -21,6 +46,11 @@ The estimated network location is not strict any more: it always shows an estima
 - The map caption says the target is inside all the rings *that agree*.
 
 ### Tests
+- `tests/ui/17-measurement-layout.mjs` (the order of the page, the target card, Share in the header, the section links, every width) and
+  `tests/ui/18-names-and-admin.mjs` (a reusable key enrolling two nodes with no name, their default names, no Rotate key, a revoked node
+  gone and staying gone, the name field, no Admin link, place over network in the table, "Seen by" in a certificate card, result numbers
+  on the map at wide and phone widths); `02`, `03`, `09`, `14` follow the new node display. Unit tests for the heading and short-name
+  helpers and for where the map writes its numbers (97 pass); typecheck and lint are clean.
 - `tests/ui/16-location-accuracy.mjs` (browser, real backend and fleet): an ordinary answer shows the API's percentage, its radius,
   the other radii and what the figure is; two nodes still give an answer and the warning; an anycast address (1.1.1.1 in the fleet)
   gets an estimate, "The nodes disagree" and a low figure; no overflow at 390 / 768 / 1440. All 16 browser checks pass; typecheck,

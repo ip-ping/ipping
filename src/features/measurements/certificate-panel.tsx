@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 
 import { type CertGroup, type CertState, certState, certificatesOf, commonName, daysUntil } from "./certs";
 import { TERMINAL_TASK } from "./summary";
-import { Toggle } from "@/components/ui/toggle";
 import { Badge } from "@/components/ui/badge";
 
 const SHOW_NAMES = 12;
@@ -118,30 +117,9 @@ function Card({ group, many, now, focus }: { group: CertGroup; many: boolean; no
           </ul>
         </div>
       )}
-      <div className="space-y-1">
-        <div className="text-xs text-muted-foreground">
-          Seen by {group.nodeNames.length} {group.nodeNames.length === 1 ? "node" : "nodes"}
-        </div>
-        <ul className="flex flex-wrap gap-1.5" aria-label="Nodes that were shown this certificate">
-          {group.nodeIds.map((id, i) => (
-            <li key={id}>
-              <Toggle
-                variant="outline"
-                size="sm"
-                pressed={focus.pinned === id}
-                onPressedChange={() => focus.pin(focus.pinned === id ? null : id)}
-                onPointerEnter={() => focus.setHover(id)}
-                onPointerLeave={() => focus.setHover(null)}
-                onFocus={() => focus.setHover(id)}
-                onBlur={() => focus.setHover(null)}
-                className={cn(focus.hover === id && focus.pinned !== id && "border-signal bg-signal-soft")}
-              >
-                {group.nodeNames[i]}
-              </Toggle>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Seen by {group.nodeNames.length} {group.nodeNames.length === 1 ? "node" : "nodes"}
+      </p>
     </article>
   );
 }

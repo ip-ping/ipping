@@ -30,7 +30,6 @@ import { flag, place } from "@/lib/format";
 
 import { CommunityBadge } from "@/components/community-badge";
 
-import { SecretDialog } from "./secret-dialog";
 
 type Update = Schemas["UpdateNodeRequest"];
 
@@ -63,7 +62,7 @@ const number = (value: string): number | null => (value.trim() === "" ? null : N
 
 /** The fields of the dialog, as the strings the inputs hold. */
 const formOf = (node: AdminNode) => ({
-  name: node.name,
+  name: node.custom_name,
   country: node.country ?? "",
   region: node.region ?? "",
   city: node.city ?? "",
@@ -147,7 +146,7 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
         {!changed(key) && auto.has(key) && <Badge variant="secondary">auto</Badge>}
       </div>
       <Input id={`node-${key}`} value={String(form[key])} onChange={set(key)} {...extra} />
-      {cleared(key) && <p className="text-xs text-muted-foreground">Automatic once saved</p>}
+      {cleared(key) && <p className="text-xs text-muted-foreground">{key === "name" ? "Named after its place and network once saved" : "Automatic once saved"}</p>}
     </div>
   );
 
@@ -163,7 +162,7 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={save} className="space-y-3">
-          {field("name", "Name", { required: true })}
+          {field("name", "Name (optional)", { placeholder: node.name })}
           <div className="grid grid-cols-3 gap-3">
             {field("country", "Country", { maxLength: 2, placeholder: "DE" })}
             {field("region", "Region")}
@@ -207,24 +206,16 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
 }
 
 export function NodesTab() {
-  const { data, error, reload } = useApiData<AdminNode[]>("/admin/nodes", 5000);
+  const { data: all, error, reload } = useApiData<AdminNode[]>("/admin/nodes", 5000);
+  // A revoked node is removed by the backend; one left over from before is not shown either.
+  const data = all?.filter((node) => node.status !== "revoked");
   const [editing, setEditing] = useState<AdminNode | null>(null);
   const [revoking, setRevoking] = useState<AdminNode | null>(null);
-  const [rotated, setRotated] = useState<string | null>(null);
 
   const act = async (path: string, success: string) => {
     try {
       await api("POST", path);
       toast.success(success);
-      await reload();
-    } catch (e) {
-      toast.error(errorMessage(e));
-    }
-  };
-  const rotate = async (node: AdminNode) => {
-    try {
-      const result = await api<{ credential: string }>("POST", `/admin/nodes/${node.id}/rotate-credential`);
-      setRotated(result.credential);
       await reload();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -284,9 +275,6 @@ export function NodesTab() {
                         Check location
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => rotate(node)}>
-                      Rotate key
-                    </Button>
                     <Button size="sm" variant="destructive" onClick={() => setRevoking(node)}>
                       Revoke
                     </Button>
@@ -342,8 +330,9 @@ export function NodesTab() {
           <DialogHeader>
             <DialogTitle>Revoke {revoking?.name}?</DialogTitle>
             <DialogDescription>
-              The node is disconnected immediately and can never connect again. To bring the host
-              back it must enroll again with a new token.
+              The node is disconnected at once and removed: its key stops working and it leaves this list for good. The
+              measurements it took part in keep their results. To bring the host back it enrolls again with an enrollment
+              key and waits for your approval like a new node.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -362,14 +351,6 @@ export function NodesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <SecretDialog
-        open={rotated !== null}
-        onClose={() => setRotated(null)}
-        title="New node credential"
-        description="The old credential stopped working and the node was disconnected. Put this one in the node's credential file (mode 600); it will not be shown again."
-        secret={rotated ?? ""}
-      />
     </div>
   );
 }

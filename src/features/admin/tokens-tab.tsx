@@ -29,6 +29,7 @@ export function TokensTab() {
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("60");
   const [community, setCommunity] = useState(false);
+  const [reusable, setReusable] = useState(false);
   const [created, setCreated] = useState<Created | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -40,6 +41,7 @@ export function TokensTab() {
         label: label.trim() || null,
         ttl_minutes: Number(ttl),
         tier: community ? "community" : "official",
+        reusable,
       });
       setCreated(result);
       setLabel("");
@@ -75,8 +77,12 @@ export function TokensTab() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="token-ttl">Valid for (minutes)</Label>
-          <Input id="token-ttl" type="number" min={1} max={1440} value={ttl} onChange={(e) => setTtl(e.target.value)} className="w-32" />
+          <Input id="token-ttl" type="number" min={1} max={43200} value={ttl} onChange={(e) => setTtl(e.target.value)} className="w-32" />
         </div>
+        <Label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
+          <Checkbox checked={reusable} onCheckedChange={(checked) => setReusable(checked === true)} />
+          Reusable (many nodes can enroll with it)
+        </Label>
         <Label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
           <Checkbox checked={community} onCheckedChange={(checked) => setCommunity(checked === true)} />
           For a volunteer&apos;s node (community)
@@ -86,8 +92,11 @@ export function TokensTab() {
         </Button>
       </form>
       <p className="text-sm text-muted-foreground">
-        A token works once and expires. The node trades it for its own credential, then waits for
-        your approval on the Nodes tab.{" "}
+        {reusable
+          ? "A reusable key enrolls any number of nodes until it expires (up to 30 days = 43200 minutes) or you revoke it: keep it as private as the nodes you give it to. "
+          : "A key works once and expires. "}
+        The node trades it for its own credential, then waits for your approval on the Nodes tab, so a key on its own
+        puts nothing into a measurement.{" "}
         {community && (
           <span>
             A community node is left out of measurements unless a visitor asks for it, is rate limited, and cannot
@@ -119,6 +128,11 @@ export function TokensTab() {
             <TableRow key={token.id}>
               <TableCell className="whitespace-normal">
                 {token.label ?? <span className="text-muted-foreground">–</span>}
+                {token.reusable && (
+                  <div className="text-xs text-muted-foreground">
+                    reusable · {token.uses} node{token.uses === 1 ? "" : "s"} enrolled
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground sm:hidden">
                   expires {new Date(token.expires_at).toLocaleString()}
                 </div>

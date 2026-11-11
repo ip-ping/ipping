@@ -31,7 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IpInfoLookup } from "@/features/ip-info/ip-info-lookup";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
-import { flag, place } from "@/lib/format";
+import { flag, nodeHeading } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { useSelection } from "./selection";
@@ -295,7 +295,7 @@ export function MeasureForm({
                       onChange={setResolverId}
                       options={askable.map((n) => ({
                         value: n.id,
-                        label: `${n.name}${n.tier === "community" ? " (community)" : ""} · ${flag(n.country)} ${place(n)}`.trim(),
+                        label: `${nodeHeading(n).named ? n.name : `${flag(n.country)} ${nodeHeading(n).title}${nodeHeading(n).sub ? ` · ${nodeHeading(n).sub}` : ""}`}${n.tier === "community" ? " (community)" : ""}`.trim(),
                       }))}
                     />
                   ) : (
@@ -426,12 +426,10 @@ export function MeasureForm({
                             }}
                           />
                           <span className="font-medium">
-                            {node.name}
+                            {nodeHeading(node).named ? node.name : `${flag(node.country)} ${nodeHeading(node).title}`.trim()}
                             <CommunityBadge tier={node.tier} />
                           </span>
-                          <span className="text-muted-foreground">
-                            {flag(node.country)} {place(node)}
-                          </span>
+                          <span className="text-muted-foreground">{nodeHeading(node).sub}</span>
                         </Label>
                       ))}
                     </div>

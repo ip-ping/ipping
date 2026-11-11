@@ -99,7 +99,7 @@ describe("mapNodes", () => {
     const noPlace = task("Nowhere", { node: { id: "n", name: "Nowhere", location_verified: false } as never });
     const m = measurement("dns", [noPlace, node("A", null)]);
     const nodes = mapNodes(m, new Map([["node-A", "blue"]]));
-    expect(nodes.map((n) => n.name)).toEqual(["A"]);
+    expect(nodes.map((n) => n.name)).toEqual(["A, NL"]); // a node is shown by its place where room is short
     expect(nodes[0].color).toBe("blue");
   });
 

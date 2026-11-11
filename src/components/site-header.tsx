@@ -8,10 +8,10 @@ import { Mark } from "@/components/mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
+// The administration page is not linked from here: administrators go to /admin by its address.
 const links = [
   { href: "/", label: "Measure" },
   { href: "/nodes", label: "Nodes" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export function SiteHeader() {

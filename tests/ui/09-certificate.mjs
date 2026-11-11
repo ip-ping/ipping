@@ -42,14 +42,11 @@ export default async function check(t) {
   const badges = await page.locator("tbody").innerText();
   t.ok(/\d+ d left/i.test(badges), "the table should show days left");
 
-  // pointing at a node chip lights the node in the table
-  const chip = page.locator("article[aria-label^='Certificate for'] ul[aria-label^='Nodes'] button").first();
-  const name = (await chip.innerText()).trim();
-  await chip.hover();
-  await page.waitForTimeout(250);
-  const lit = await page.locator("tbody tr").evaluateAll((trs) => trs.filter((r) => r.className.includes("bg-signal-soft")).map((r) => r.innerText));
-  t.ok(lit.some((row) => row.includes(name)), `hovering ${name} should light its row`);
-  await page.mouse.move(5, 5);
+  // a card says how many nodes saw its certificate and does not list them
+  const seen = await page.locator("article[aria-label^='Certificate for']").evaluateAll((cards) => cards.map((c) => /Seen by (\d+) nodes?/.exec(c.innerText)?.[1] ?? null));
+  t.ok(seen.length === 2 && seen.every((n) => n !== null), `each card should say how many nodes saw it (${seen})`);
+  t.eq(seen.reduce((n, x) => n + Number(x), 0), rows, "and together the cards account for every node");
+  t.eq(await page.locator("article[aria-label^='Certificate for'] button").count(), 0, "with no list of node names in it");
   await screenshot(page, "certificate-split");
 
   // a certificate that is not trusted still shows what it is, and why

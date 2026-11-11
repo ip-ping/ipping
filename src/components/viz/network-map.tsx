@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { LABEL_FONT, placeLabels } from "./map-labels";
+
 import { circlePath, KM_PER_RTT_MS, KM_PER_RTT_MS_MAX, px, py, routeSegment } from "@/lib/geo/project";
 import { WORLD_PATH } from "@/lib/geo/world-path";
 import { useTween } from "@/lib/use-tween";
@@ -85,6 +87,7 @@ export function NetworkMap({
   conflict,
   claim,
   route,
+  labels = false,
   className,
   label,
 }: {
@@ -106,6 +109,8 @@ export function NetworkMap({
   conflict?: MapConflict | null;
   claim?: MapClaim | null;
   route?: MapRoute | null;
+  /** Write each station's fastest round trip beside it where there is room (not on a phone, where the map is small). */
+  labels?: boolean;
   className?: string;
   label: string;
 }) {
@@ -113,6 +118,7 @@ export function NetworkMap({
   const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const active = hover ?? activeId ?? selectedId;
   const activeNode = nodes.find((n) => n.id === active) ?? null;
+  const written = useMemo(() => (labels ? placeLabels(nodes, active) : null), [labels, nodes, active]);
   const ordered = useMemo(
     () => [...nodes].sort((a, b) => Number(a.id === active) - Number(b.id === active)),
     [nodes, active],
@@ -211,6 +217,26 @@ export function NetworkMap({
             vectorEffect="non-scaling-stroke"
             pointerEvents="none"
           />
+        )}
+
+        {written && written.size > 0 && (
+          <g aria-hidden pointerEvents="none" className="max-sm:hidden" fontFamily="var(--font-sans)" fontSize={LABEL_FONT} fontWeight="500">
+            {[...written].map(([id, label]) => (
+              <text
+                key={id}
+                x={label.x}
+                y={label.y}
+                textAnchor={label.anchor}
+                fill={id === active ? "var(--foreground)" : "var(--muted-foreground)"}
+                stroke="var(--card)"
+                strokeWidth="1.1"
+                paintOrder="stroke"
+                className="tabular-nums"
+              >
+                {label.text}
+              </text>
+            ))}
+          </g>
         )}
 
         {/* in a stable order: re-ordering the DOM under the pointer would swallow a quick click or tap */}

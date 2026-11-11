@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NetworkMap, type MapNode } from "@/components/viz/network-map";
 import { Readouts } from "@/components/viz/readout";
 import { useNodes } from "@/features/nodes/use-nodes";
-import { flag, place } from "@/lib/format";
+import { flag, nodeHeading, place } from "@/lib/format";
 import { useFocus } from "@/lib/use-focus";
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/components/ui/toggle";
@@ -115,6 +115,7 @@ export default function NodesPage() {
             )}
             {list.map((node) => {
               const active = focus.active === node.id;
+              const heading = nodeHeading(node);
               return (
                 <li key={node.id}>
                   <Toggle
@@ -137,7 +138,7 @@ export default function NodesPage() {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="truncate font-medium">
-                          {node.name}
+                          {heading.named ? heading.title : `${flag(node.country)} ${heading.title}`.trim()}
                           <CommunityBadge tier={node.tier} />
                         </span>
                         <span className="flex shrink-0 gap-1">
@@ -145,14 +146,8 @@ export default function NodesPage() {
                           {node.ipv6 && <Badge variant="secondary">v6</Badge>}
                         </span>
                       </span>
-                      <span className="text-xs text-muted-foreground block truncate">
-                        {flag(node.country)} {place(node)}
-                      </span>
-                      <span className="text-xs text-muted-foreground block truncate">
-                        {[node.provider && `${node.provider}${node.asn ? ` · AS${node.asn}` : ""}`, node.online ? node.kinds.join(" · ") : "offline"]
-                          .filter(Boolean)
-                          .join("  ·  ")}
-                      </span>
+                      {heading.sub && <span className="text-xs text-muted-foreground block truncate">{heading.sub}</span>}
+                      <span className="text-xs text-muted-foreground block truncate">{node.online ? node.kinds.join(" · ") : "offline"}</span>
                     </span>
                   </Toggle>
                 </li>

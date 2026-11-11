@@ -1,6 +1,7 @@
-// IP info from ipping's own lookup API: what each measurement says about the addresses its nodes tested, and the
-// form's "IP info" option, which looks an address up and measures nothing. What a visitor sees follows the lookup's
-// access setting (API keys only by default), so the check sets it, looks as a stranger would, and puts it back.
+// IP info from ipping's own IP databases: what each measurement says about the addresses its nodes tested (it belongs to the
+// measurement, so a visitor who can see the measurement sees it), and the form's "IP info" option, which looks an address up and
+// measures nothing and follows the lookup's access setting (API keys only by default): the check sets it, looks as a stranger
+// would, and puts it back.
 // Needs a backend with the lookup API (0.8 or newer) and IP databases installed; it stops with a note otherwise.
 import { BASE, apiFor, measure, noOverflow, open, screenshot, signIn } from "./lib.mjs";
 
@@ -31,13 +32,16 @@ export default async function check(t) {
     const call = apiFor(stranger.page);
     await call("GET", "/session");
 
-    // 1. By default a stranger may not use the lookup: the measurement is no worse for it, and the option says why
+    // 1. By default a stranger may not use the standalone lookup, but what the databases say about the address of a
+    //    measurement they can see is part of that measurement (the target card): it shows, and the option says why it is closed
     await raw("PUT", "/admin/ip-data", { lookup_enabled: true, lookup_access: "api_key" });
     const id = await measure(call, stranger.page, { target: "93.184.216.34", kind: "ping", count: 1, dns_mode: "fixed" });
     await stranger.page.goto(`${BASE}/measurements/${id}`);
     await stranger.page.waitForLoadState("networkidle");
     await stranger.page.waitForTimeout(1500);
-    t.eq(await stranger.page.getByText("Tested addresses").count(), 0, "a stranger should not see the address information while the lookup is for API keys");
+    await stranger.page.getByTestId("target-card").waitFor({ timeout: 15000 });
+    t.eq(await stranger.page.getByText("Tested addresses").count(), 0, "one address is on the target card: no table repeating it");
+    t.ok(/93\.184\.216\.34/.test(await stranger.page.getByTestId("target-card").innerText()), "the target card should show the address");
     await stranger.page.goto(`${BASE}/?kind=ip`);
     await stranger.page.waitForLoadState("networkidle");
     await stranger.page.locator("#ip-address").fill("8.8.8.8");
@@ -45,7 +49,7 @@ export default async function check(t) {
     await stranger.page.getByText("No answer").waitFor({ timeout: 10000 });
     t.ok(/API keys and administrators/.test(await stranger.page.locator("main").innerText()), "the option should say who may use the lookup");
 
-    // 2. Opened to everyone, it shows up: a row for each address the nodes tested, and the option answers
+    // 2. Opened to everyone, the option answers too, and a name each node resolved for itself gets a row for each address
     await raw("PUT", "/admin/ip-data", { lookup_enabled: true, lookup_access: "public" });
     const geo = await measure(call, stranger.page, { target: "example.org", kind: "ping", count: 1, dns_mode: "regional" });
     await stranger.page.goto(`${BASE}/measurements/${geo}`);

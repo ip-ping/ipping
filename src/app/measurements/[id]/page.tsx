@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { TargetCard } from "@/features/ip-info/target-card";
 import { TestedAddresses } from "@/features/ip-info/tested-addresses";
-import { LocationPanel } from "@/features/location/location-panel";
+import { useAddresses } from "@/features/ip-info/use-addresses";
+import { EstimateSummary, LocationPanel } from "@/features/location/location-panel";
 import { useLocation } from "@/features/location/use-location";
 import { DNS_RESOLVERS, KIND_INFO, kindOf } from "@/features/measurements/kinds";
 import { Charts } from "@/features/measurements/charts";
@@ -41,6 +43,8 @@ export default function MeasurementPage() {
   // When the nodes resolved the name to different addresses, the estimate is for one of them; the reader can pick another.
   const [address, setAddress] = useState<string | null>(null);
   const { estimate, error: locationError } = useLocation(id, wantsLocation, address);
+  // what the IP databases say about the addresses the nodes tested (the target card and the table of them)
+  const addresses = useAddresses(id, state.phase === "ready" ? state.measurement.tasks : NO_TASKS);
   // the previous run of the same question (this browser's own), to show how each node moved
   const previousRun = usePreviousRun(current);
   const before = useMemo(() => medians(previousRun), [previousRun]);
@@ -150,6 +154,17 @@ export default function MeasurementPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
+            <Switch id="share" checked={isShared} onCheckedChange={share} />
+            <Label htmlFor="share" className="text-sm" title="Anyone with the link can view these results">
+              Share
+            </Label>
+            {isShared && (
+              <Button variant="ghost" size="sm" onClick={copyLink} className="-mr-2">
+                <CopyIcon /> Copy link
+              </Button>
+            )}
+          </div>
           {running && (
             <Button variant="outline" onClick={cancel}>
               <XIcon /> Cancel
@@ -189,23 +204,37 @@ export default function MeasurementPage() {
         </Alert>
       )}
 
-      <Instrument measurement={measurement} estimate={estimate} focus={focus} slots={slots} />
-      <Charts measurement={measurement} focus={focus} slots={slots} previous={before} previousAt={previousRun?.created_at} />
-      <ResultsTable measurement={measurement} focus={focus} previous={before} />
-      <TestedAddresses tasks={measurement.tasks} />
-      {(kind === "ping" || kind === "tcp") && (
-        <LocationPanel estimate={estimate} error={locationError} finished={!running} onAddress={setAddress} nodes={measurement.tasks.map((t) => t.node)} />
-      )}
-
-      <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-        <Switch id="share" checked={isShared} onCheckedChange={share} />
-        <Label htmlFor="share">Anyone with the link can view these results</Label>
-        {isShared && (
-          <Button variant="ghost" size="sm" onClick={copyLink}>
-            <CopyIcon /> Copy link
+      <nav aria-label="Sections" className="-mt-1 flex flex-wrap items-center gap-1">
+        {[
+          ["#map", "Map"],
+          ...(measurement.tasks.length > 0 ? [["#results", "Round trips"] as const, ["#nodes", "Nodes"] as const] : []),
+          ...(kind === "ping" || kind === "tcp" ? [["#location", "Location"] as const] : []),
+          ...(addresses?.databases_loaded && addresses.addresses.length > 1 ? [["#addresses", "Addresses"] as const] : []),
+        ].map(([href, label]) => (
+          <Button key={href} variant="ghost" size="sm" render={<a href={href} />}>
+            {label}
           </Button>
-        )}
-      </div>
+        ))}
+      </nav>
+
+      <section id="map" className="scroll-mt-20">
+        <Instrument measurement={measurement} estimate={estimate} focus={focus} slots={slots} aside={<TargetCard data={addresses} />} />
+      </section>
+      {(kind === "ping" || kind === "tcp") && !running && <EstimateSummary estimate={estimate} />}
+      <section id="results" className="scroll-mt-20">
+        <Charts measurement={measurement} focus={focus} slots={slots} previous={before} previousAt={previousRun?.created_at} />
+      </section>
+      <section id="nodes" className="scroll-mt-20">
+        <ResultsTable measurement={measurement} focus={focus} previous={before} />
+      </section>
+      {(kind === "ping" || kind === "tcp") && (
+        <section id="location" className="scroll-mt-20">
+          <LocationPanel estimate={estimate} error={locationError} finished={!running} onAddress={setAddress} nodes={measurement.tasks.map((t) => t.node)} />
+        </section>
+      )}
+      <section id="addresses" className="scroll-mt-20">
+        <TestedAddresses data={addresses} />
+      </section>
     </div>
   );
 }

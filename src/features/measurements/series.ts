@@ -3,7 +3,7 @@ import type { MapNode } from "@/components/viz/network-map";
 import type { PhaseKey, WaterfallRow } from "@/components/viz/phase-waterfall";
 import type { StripRow } from "@/components/viz/range-strip";
 import type { Measurement, Task } from "@/lib/api/client";
-import { flag, ms, place } from "@/lib/format";
+import { flag, ms, networkOf, place, shortName } from "@/lib/format";
 
 import { daysUntil } from "./certs";
 import { shortError } from "./errors";
@@ -33,8 +33,8 @@ export function stripRows(
       .map((s) => ({ seq: s.seq, ms: s.rtt_ms as number, ok: s.status === "ok" }));
     return {
       id: task.node.id,
-      name: task.node.name,
-      place: where(task),
+      name: shortName(task.node),
+      place: networkOf(task.node) || where(task),
       state: stateOf(task),
       points,
       lost: task.samples.filter((s) => s.rtt_ms == null).length,
@@ -70,8 +70,8 @@ export function waterfallRows(measurement: Measurement): WaterfallRow[] {
     if (total != null && total > sum + 0.05) phases.other = total - sum;
     return {
       id: task.node.id,
-      name: task.node.name,
-      place: where(task),
+      name: shortName(task.node),
+      place: networkOf(task.node) || where(task),
       state: stateOf(task),
       phases,
       total,
@@ -133,8 +133,8 @@ export function mapNodes(measurement: Measurement, colors?: ReadonlyMap<string, 
     return [
       {
         id: task.node.id,
-        name: task.node.name,
-        place: where(task),
+        name: shortName(task.node),
+        place: networkOf(task.node) || where(task),
         lat: latitude,
         lon: longitude,
         state: state === "failed" && task.samples.length > 0 ? "done" : state === "pending" ? "idle" : state,

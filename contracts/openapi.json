@@ -62,6 +62,37 @@
         "title": "AddressGroupOut",
         "type": "object"
       },
+      "AddressInfoOut": {
+        "description": "One address the nodes tested, and what the IP databases say about it.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IpInfoOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when no IP database is installed"
+          },
+          "nodes": {
+            "description": "How many nodes tested this address",
+            "title": "Nodes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "address",
+          "nodes"
+        ],
+        "title": "AddressInfoOut",
+        "type": "object"
+      },
       "AdminNode": {
         "properties": {
           "asn": {
@@ -108,6 +139,11 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "custom_name": {
+            "description": "The name an administrator gave (or the node enrolled with); empty: the default is used",
+            "title": "Custom Name",
             "type": "string"
           },
           "id": {
@@ -201,6 +237,7 @@
             "title": "Longitude"
           },
           "name": {
+            "description": "What the node is shown by: its own name, or one made of its place and network",
             "title": "Name",
             "type": "string"
           },
@@ -284,6 +321,7 @@
         "required": [
           "id",
           "name",
+          "custom_name",
           "status",
           "online",
           "country",
@@ -881,6 +919,12 @@
             ],
             "title": "Label"
           },
+          "reusable": {
+            "default": false,
+            "description": "Any number of nodes can enroll with it until it expires or is revoked (each still waits for approval). Without this the first node to use it takes it.",
+            "title": "Reusable",
+            "type": "boolean"
+          },
           "tier": {
             "default": "official",
             "description": "community: for a volunteer's node. It is left out of measurements unless asked for.",
@@ -893,7 +937,7 @@
           },
           "ttl_minutes": {
             "default": 60,
-            "maximum": 1440.0,
+            "maximum": 43200.0,
             "minimum": 1.0,
             "title": "Ttl Minutes",
             "type": "integer"
@@ -1192,8 +1236,9 @@
             "title": "Longitude"
           },
           "name": {
+            "default": "",
+            "description": "Optional. Without one the node is called after its place and its network (`City, CC - Provider \u00b7 ASn`).",
             "maxLength": 100,
-            "minLength": 1,
             "title": "Name",
             "type": "string"
           },
@@ -1235,8 +1280,7 @@
           }
         },
         "required": [
-          "token",
-          "name"
+          "token"
         ],
         "title": "EnrollRequest",
         "type": "object"
@@ -2514,6 +2558,29 @@
         "title": "MaxMindOut",
         "type": "object"
       },
+      "MeasurementAddressesOut": {
+        "properties": {
+          "addresses": {
+            "description": "The most tested address first; at most 50",
+            "items": {
+              "$ref": "#/components/schemas/AddressInfoOut"
+            },
+            "title": "Addresses",
+            "type": "array"
+          },
+          "databases_loaded": {
+            "description": "Whether any IP database is in use on this site",
+            "title": "Databases Loaded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "databases_loaded",
+          "addresses"
+        ],
+        "title": "MeasurementAddressesOut",
+        "type": "object"
+      },
       "MeasurementOptions": {
         "description": "The settings a measurement was run with; which ones are present depends on its kind.",
         "properties": {
@@ -3220,25 +3287,6 @@
           "status_code"
         ],
         "title": "RedirectHop",
-        "type": "object"
-      },
-      "RotatedCredential": {
-        "properties": {
-          "credential": {
-            "description": "Shown once. The node must be reconfigured with it.",
-            "title": "Credential",
-            "type": "string"
-          },
-          "node_id": {
-            "title": "Node Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "node_id",
-          "credential"
-        ],
-        "title": "RotatedCredential",
         "type": "object"
       },
       "RuledOutOut": {
@@ -4493,7 +4541,13 @@
                 "type": "null"
               }
             ],
+            "description": "The node that enrolled with it (the latest, when reusable)",
             "title": "Node Id"
+          },
+          "reusable": {
+            "default": false,
+            "title": "Reusable",
+            "type": "boolean"
           },
           "state": {
             "enum": [
@@ -4513,6 +4567,12 @@
             ],
             "title": "Tier",
             "type": "string"
+          },
+          "uses": {
+            "default": 0,
+            "description": "How many nodes have enrolled with it",
+            "title": "Uses",
+            "type": "integer"
           }
         },
         "required": [
@@ -4608,13 +4668,13 @@
             "anyOf": [
               {
                 "maxLength": 100,
-                "minLength": 1,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
+            "description": "Empty: the node is called after its place and its network again",
             "title": "Name"
           },
           "provider": {
@@ -6114,6 +6174,7 @@
     },
     "/api/v1/admin/nodes/{node_id}/revoke": {
       "post": {
+        "description": "Cut a node off and remove it: it is gone from the lists, its credential is refused from now on, and what was\nmeasured with it stays in the measurements (each result carries the node as it was). A node that wants back in enrolls\nagain and waits for approval like any new one.",
         "operationId": "revoke_node_api_v1_admin_nodes__node_id__revoke_post",
         "parameters": [
           {
@@ -6149,48 +6210,6 @@
           }
         },
         "summary": "Revoke Node",
-        "tags": [
-          "admin"
-        ]
-      }
-    },
-    "/api/v1/admin/nodes/{node_id}/rotate-credential": {
-      "post": {
-        "operationId": "rotate_credential_api_v1_admin_nodes__node_id__rotate_credential_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "node_id",
-            "required": true,
-            "schema": {
-              "title": "Node Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RotatedCredential"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Rotate Credential",
         "tags": [
           "admin"
         ]
@@ -6853,6 +6872,49 @@
         ]
       }
     },
+    "/api/v1/measurements/{measurement_id}/addresses": {
+      "get": {
+        "description": "What the IP databases say about each address the nodes tested (place, network, AS), most tested first.\n\nIt belongs to the measurement: whoever may read the measurement may read this, whatever the IP lookup API's\nown access setting says, because the addresses are the ones the measurement itself tested (a name each node\nresolved for itself can be several) and nothing else can be asked for. `info` is null when no database is\ninstalled.",
+        "operationId": "tested_addresses_api_v1_measurements__measurement_id__addresses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measurement_id",
+            "required": true,
+            "schema": {
+              "title": "Measurement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementAddressesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tested Addresses",
+        "tags": [
+          "measurements"
+        ]
+      }
+    },
     "/api/v1/measurements/{measurement_id}/cancel": {
       "post": {
         "operationId": "cancel_measurement_api_v1_measurements__measurement_id__cancel_post",
@@ -7160,7 +7222,7 @@
     },
     "/api/v1/nodes/enroll": {
       "post": {
-        "description": "Exchange a single-use enrollment token for this node's own credential.",
+        "description": "Exchange an enrollment token for this node's own credential (a single-use token is taken by the first node).",
         "operationId": "enroll_api_v1_nodes_enroll_post",
         "requestBody": {
           "content": {

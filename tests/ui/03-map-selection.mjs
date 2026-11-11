@@ -41,9 +41,11 @@ export default async function check(t) {
   await page.locator("form button[type=submit]").click();
   await page.waitForURL(/\/measurements\//);
   await page.getByText("Finished", { exact: true }).first().waitFor({ timeout: 90000 });
-  const names = (await page.locator("tbody tr td:nth-child(2)").allInnerTexts()).map((n) => n.split("\n")[0].trim()).filter(Boolean);
+  const names = (await page.locator("tbody tr td:nth-child(2)").allInnerTexts())
+    .map((n) => n.split("\n")[0].trim().replace(/^\p{Regional_Indicator}{2}\s*/u, ""))
+    .filter(Boolean);
   t.eq(names.length, chosen, "the measurement should run on exactly the chosen nodes");
-  t.ok(names.every((n) => ["Chicago", "Dallas", "Los Angeles", "New York"].includes(n)), `unexpected nodes: ${names}`);
+  t.ok(names.every((n) => ["Chicago, US", "Dallas, US", "Los Angeles, US", "New York, US"].includes(n)), `unexpected nodes: ${names}`);
   t.ok(errors.length === 0, `console errors ${JSON.stringify(errors)}`);
   await close();
 }

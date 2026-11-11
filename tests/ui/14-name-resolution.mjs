@@ -61,7 +61,7 @@ export default async function check(t) {
   await page.getByText("Resolving node", { exact: true }).waitFor();
   const picker = page.getByRole("combobox").filter({ hasText: /·/ }).last();
   await picker.click();
-  await page.getByRole("option", { name: /^Tokyo/ }).click();
+  await page.getByRole("option", { name: /Tokyo, JP/ }).click();
   t.ok(/Tokyo looks the name up/.test(await page.locator("main").innerText()), "the form should say which node looks the name up");
   await screenshot(page, "name-resolution-form");
   await page.getByRole("button", { name: /^Ping/ }).click();

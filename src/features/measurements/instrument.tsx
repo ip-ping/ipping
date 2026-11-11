@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { NetworkMap, type MapClaim, type MapConflict, type MapPlace } from "@/components/viz/network-map";
 import { Readouts, type ReadoutItem } from "@/components/viz/readout";
@@ -10,6 +10,7 @@ import type { LocationEstimate } from "@/features/location/use-location";
 import type { Measurement } from "@/lib/api/client";
 import { findConflict } from "@/lib/geo/conflict";
 import { ms, pct } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import type { Focus } from "@/lib/use-focus";
 import { certificatesOf } from "./certs";
@@ -22,7 +23,7 @@ import { TERMINAL_TASK } from "./summary";
 const CAPTION = {
   rings: {
     lead: "Each ring is how far that node's fastest round trip could have reached: about 100 km per millisecond, and never more than 150, which light itself cannot beat.",
-    more: " Hover a station to see that limit. The target is inside all of the rings that agree. Rings wider than 8,000 km rule almost nothing out and are left off.",
+    more: " Hover a station to see that limit; the number beside a station is its fastest round trip in ms. The target is inside all of the rings that agree. Rings wider than 8,000 km rule almost nothing out and are left off.",
   },
   dns: {
     lead: "Each station is coloured by the answer its node got, and the key is below the map. A hollow grey station got no answer.",
@@ -111,10 +112,13 @@ export function Instrument({
   estimate,
   focus,
   slots,
+  aside,
 }: {
   measurement: Measurement;
   estimate: LocationEstimate | null;
   focus: Focus;
+  /** A card for the target, beside the headline numbers (the IP databases' record of it). */
+  aside?: ReactNode;
   /** The colour of each distinct DNS answer (see `useAnswerSlots`). */
   slots: ReadonlyMap<string, number>;
 }) {
@@ -181,8 +185,13 @@ export function Instrument({
   const caption = kind === "dns" ? CAPTION.dns : kind === "tls" ? CAPTION.tls : rings ? CAPTION.rings : CAPTION.http;
 
   return (
+    <div className="space-y-4 sm:space-y-5">
+    <div className={cn("grid gap-4 sm:gap-5", aside ? "lg:grid-cols-[minmax(0,1fr)_21rem]" : undefined)}>
+      <Readouts items={items} className="p-0 sm:grid-cols-4" />
+      {aside}
+    </div>
     <Panel
-      label="The reading"
+      label="Where the nodes are"
       meta={
         <>
           <span>{pct(tasks.length ? (done * 100) / tasks.length : 100)}</span>
@@ -191,7 +200,7 @@ export function Instrument({
       }
       flush
     >
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div>
         <div className="min-w-0 p-2 pb-3 sm:p-3">
           <NetworkMap
             nodes={nodes}
@@ -204,6 +213,7 @@ export function Instrument({
             onHover={focus.setHover}
             conflict={conflict}
             claim={claim}
+            labels={kind !== "dns" && kind !== "tls"}
             label={`Map of ${nodes.length} nodes measuring ${measurement.target.host}${target ? `, with the estimated location near ${target.label}` : ""}`}
           />
           <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">
@@ -231,7 +241,6 @@ export function Instrument({
             </p>
           )}
         </div>
-        <Readouts items={items} className="border-t lg:border-t-0 lg:border-l" />
       </div>
       <div className="flex items-center gap-3 border-t px-3 py-2">
         <span className="text-xs text-muted-foreground shrink-0">
@@ -240,5 +249,6 @@ export function Instrument({
         <Progress value={tasks.length ? (done * 100) / tasks.length : 100} className="min-w-0 flex-1" aria-label="Nodes finished" />
       </div>
     </Panel>
+    </div>
   );
 }

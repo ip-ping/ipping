@@ -16,7 +16,7 @@ export default async function check(t) {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(900);
     const text = await page.locator("main").innerText();
-    t.ok(/the reading/i.test(text), `${kind}: no reading panel`);
+    t.ok(/where the nodes are/i.test(text) && /Responding/.test(text), `${kind}: no map panel or headline numbers`);
     t.ok(PANELS[kind].test(text), `${kind}: no ${PANELS[kind]} panel`);
     const rows = await page.locator("tbody tr").count();
     const readoutNodes = await page.getByText(/^\d+ of \d+ nodes finished/i).first().innerText();
@@ -24,7 +24,8 @@ export default async function check(t) {
 
     // pointing at a row of the table lights the same node on the map and in the chart
     const first = page.locator("tbody tr").first();
-    const name = (await first.locator("td").nth(1).innerText()).split("\n")[0].trim();
+    // the table introduces a node by its place (with a flag), and the map's tooltip by the same words without the flag
+    const name = (await first.locator("td").nth(1).innerText()).split("\n")[0].trim().replace(/^\p{Regional_Indicator}{2}\s*/u, "");
     await first.hover();
     await page.waitForTimeout(250);
     const tooltip = await page.locator("figure").first().innerText();

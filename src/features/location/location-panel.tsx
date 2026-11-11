@@ -5,6 +5,7 @@ import { InfoIcon } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Panel } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -180,16 +181,18 @@ function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
  * How accurate answers like this one have been: the share, on real targets of known position, that were within each
  * radius. It is a measured rate for answers made with a closest node this far away, not a probability for this address.
  */
-function Accuracy({ estimate }: { estimate: LocationEstimate }) {
+function Accuracy({ estimate, compact = false }: { estimate: LocationEstimate; compact?: boolean }) {
   const accuracy = estimate.accuracy;
   if (!accuracy) return null;
   const rows = Object.entries(accuracy.by_radius).sort((a, b) => Number(a[0]) - Number(b[0]));
   return (
-    <div className="max-w-xl space-y-2" data-testid="accuracy">
+    <div className="max-w-xl space-y-2" data-testid={compact ? "accuracy-summary" : "accuracy"}>
       <Progress value={accuracy.percent} aria-label="Accuracy">
         <ProgressLabel>Accuracy</ProgressLabel>
         <ProgressValue>{() => `${accuracy.percent}% within ${accuracy.radius_km.toLocaleString()} km`}</ProgressValue>
       </Progress>
+      {compact ? null : (
+        <>
       <p className="text-xs text-muted-foreground">
         {rows.map(([km, pct], i) => (
           <span key={km} className="whitespace-nowrap">
@@ -199,7 +202,41 @@ function Accuracy({ estimate }: { estimate: LocationEstimate }) {
         ))}
       </p>
       <p className="text-xs leading-relaxed text-muted-foreground">{accuracy.basis}</p>
+        </>
+      )}
     </div>
+  );
+}
+
+/**
+ * The best guess at a glance, for the top of a measurement: the place, how strong the evidence is, whether the nodes
+ * disagree, and the accuracy figure, with a link to the full panel below. Always there once there is a place: the
+ * estimate is a guess by design, and this is where the reader sees it first.
+ */
+export function EstimateSummary({ estimate }: { estimate: LocationEstimate | null }) {
+  if (!estimate || estimate.status !== "estimated" || !estimate.likely) return null;
+  return (
+    <Panel
+      label="Best guess where it is"
+      meta={
+        <Button variant="link" size="sm" className="h-auto p-0 text-xs" render={<a href="#location" />}>
+          Evidence and details
+        </Button>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3" data-testid="estimate-summary">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-2xl leading-none font-semibold">
+            {estimate.likely.name}, {estimate.likely.country}
+          </div>
+          {estimate.strength && <StrengthBadge strength={estimate.strength} />}
+          {estimate.conflicting && <Badge variant="destructive">nodes disagree</Badge>}
+        </div>
+        <div className="min-w-[15rem] max-w-sm flex-1">
+          <Accuracy estimate={estimate} compact />
+        </div>
+      </div>
+    </Panel>
   );
 }
 
