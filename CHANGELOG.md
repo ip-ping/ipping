@@ -2,6 +2,19 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.15.0 (unreleased)
+
+Work toward the next release; the entries below are finished and tested, the release is not made yet.
+
+### The "no node can run this" alert tells the truth
+- The alert said "The nodes that are online are older and only know ping. Update them." That was wrong for a node that is up to date but whose
+  host keeps it from using ICMP (an Alpine or other LXC container with only `CAP_NET_RAW` pinged and never offered traceroute before node
+  v0.8.1). It now says that **none of the online nodes offers the kind, because a node leaves a check out when it is older than the check needs or
+  when its host does not allow it (ping and traceroute need permission to use ICMP), that updating the node comes first and that its log says why**
+  (node v0.8.1 logs it). Translated into all nine languages.
+- `tests/ui/21-no-capable-node.mjs` (browser): with every kind but ping taken away from the node list the page receives, choosing Traceroute shows the
+  alert with both reasons, the button is off, ping shows no alert, and the German text gives the reason too. 135 unit tests, typecheck and lint pass.
+
 ## v0.14.1 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema

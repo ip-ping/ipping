@@ -110,7 +110,7 @@ export const en = {
   "form.clear": "Clear",
   "form.done": "Done",
   "form.noCapableTitle": "No online node can run {kind}",
-  "form.noCapableText": "The nodes that are online are older and only know ping. Update them to run {kind} measurements.",
+  "form.noCapableText": "None of the online nodes offers {kind}. A node leaves a check out when it is older than that check needs, or when its host does not allow it (ping and traceroute need permission to use ICMP). Update the node first; its log says why it left it out.",
   "form.noNodesTitle": "No node is online",
   "form.noNodesText": "Measurements need at least one approved, connected node.",
   "form.startFailed": "That measurement could not start",

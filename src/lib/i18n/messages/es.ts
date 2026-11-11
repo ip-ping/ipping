@@ -104,7 +104,7 @@ export const es: Partial<Record<MessageKey, string>> = {
   "form.clear": "Borrar",
   "form.done": "Listo",
   "form.noCapableTitle": "Ningún nodo en línea puede ejecutar {kind}",
-  "form.noCapableText": "Los nodos en línea son más antiguos y solo conocen ping. Actualízalos para ejecutar mediciones de {kind}.",
+  "form.noCapableText": "Ninguno de los nodos en línea ofrece {kind}. Un nodo omite una comprobación cuando es demasiado antiguo para ella o su host no la permite (ping y traceroute necesitan permiso para usar ICMP). Actualiza primero el nodo; su registro indica el motivo.",
   "form.noNodesTitle": "Ningún nodo está en línea",
   "form.noNodesText": "Las mediciones necesitan al menos un nodo aprobado y conectado.",
   "form.startFailed": "No se pudo iniciar esa medición",

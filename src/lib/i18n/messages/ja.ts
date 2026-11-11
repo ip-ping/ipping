@@ -103,7 +103,7 @@ export const ja: Partial<Record<MessageKey, string>> = {
   "form.clear": "クリア",
   "form.done": "完了",
   "form.noCapableTitle": "{kind} を実行できるオンラインのノードがありません",
-  "form.noCapableText": "オンラインのノードは古く、Ping にしか対応していません。{kind} の測定を行うには更新してください。",
+  "form.noCapableText": "オンラインのノードはどれも {kind} に対応していません。ノードが古すぎる場合や、ホストが許可していない場合（Ping と Traceroute には ICMP を使う権限が必要です）、その確認は省かれます。まずノードを更新してください。理由はノードのログに記録されています。",
   "form.noNodesTitle": "オンラインのノードがありません",
   "form.noNodesText": "測定には、承認済みで接続中のノードが少なくとも 1 台必要です。",
   "form.startFailed": "測定を開始できませんでした",

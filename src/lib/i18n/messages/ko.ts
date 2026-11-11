@@ -103,7 +103,7 @@ export const ko: Partial<Record<MessageKey, string>> = {
   "form.clear": "지우기",
   "form.done": "완료",
   "form.noCapableTitle": "{kind}을(를) 실행할 수 있는 온라인 노드가 없습니다",
-  "form.noCapableText": "온라인 노드가 오래되어 Ping만 지원합니다. {kind} 측정을 실행하려면 업데이트하세요.",
+  "form.noCapableText": "온라인 노드 중 {kind}을(를) 지원하는 노드가 없습니다. 노드가 해당 검사를 하기에 너무 오래되었거나 호스트가 허용하지 않으면(Ping과 Traceroute는 ICMP 사용 권한이 필요합니다) 그 검사가 제외됩니다. 먼저 노드를 업데이트하세요. 이유는 노드의 로그에 나와 있습니다.",
   "form.noNodesTitle": "온라인 노드가 없습니다",
   "form.noNodesText": "측정에는 승인되어 연결된 노드가 최소 하나 필요합니다.",
   "form.startFailed": "측정을 시작할 수 없습니다",

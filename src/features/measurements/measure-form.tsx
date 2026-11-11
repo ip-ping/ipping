@@ -120,7 +120,7 @@ export function MeasureForm({
   const { kind, setKind, scope, setScope, selected, setSelected } = useSelection();
   const info = KIND_INFO[kind];
   const online = nodes?.filter((n) => n.online) ?? [];
-  // Older nodes only know ping; say so instead of failing after the click.
+  // No node offers this kind (older than it needs, or its host does not allow it): say so instead of failing after the click.
   const capable = online.filter((n) => n.kinds.includes(kind));
 
   const [target, setTarget] = useState(initialTarget);

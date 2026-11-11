@@ -104,7 +104,7 @@ export const de: Partial<Record<MessageKey, string>> = {
   "form.clear": "Leeren",
   "form.done": "Fertig",
   "form.noCapableTitle": "Kein Knoten, der online ist, kann {kind} ausführen",
-  "form.noCapableText": "Die Knoten, die online sind, sind älter und kennen nur Ping. Aktualisiere sie, um {kind}-Messungen auszuführen.",
+  "form.noCapableText": "Keiner der Online-Knoten bietet {kind} an. Ein Knoten lässt eine Prüfung weg, wenn er für sie zu alt ist oder sein Host sie nicht erlaubt (Ping und Traceroute brauchen die Erlaubnis, ICMP zu nutzen). Aktualisiere zuerst den Knoten; sein Protokoll nennt den Grund.",
   "form.noNodesTitle": "Kein Knoten ist online",
   "form.noNodesText": "Messungen brauchen mindestens einen freigegebenen, verbundenen Knoten.",
   "form.startFailed": "Diese Messung konnte nicht gestartet werden",

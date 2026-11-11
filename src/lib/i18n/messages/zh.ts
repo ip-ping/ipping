@@ -96,7 +96,7 @@ export const zh: Partial<Record<MessageKey, string>> = {
   "form.clear": "清除",
   "form.done": "完成",
   "form.noCapableTitle": "没有在线节点可以运行{kind}",
-  "form.noCapableText": "在线的节点版本较旧，只支持 Ping。请更新它们以运行{kind}测量。",
+  "form.noCapableText": "在线的节点都不支持{kind}。节点版本过旧，或其主机不允许时（Ping 和 Traceroute 需要使用 ICMP 的权限），就不会提供该检测。请先更新节点；节点的日志会说明原因。",
   "form.noNodesTitle": "没有在线节点",
   "form.noNodesText": "测量至少需要一个已批准且已连接的节点。",
   "form.startFailed": "无法开始该测量",

@@ -104,7 +104,7 @@ export const pt: Partial<Record<MessageKey, string>> = {
   "form.clear": "Limpar",
   "form.done": "Concluir",
   "form.noCapableTitle": "Nenhum nó online pode executar {kind}",
-  "form.noCapableText": "Os nós online são mais antigos e só conhecem ping. Atualize-os para executar medições de {kind}.",
+  "form.noCapableText": "Nenhum dos nós online oferece {kind}. Um nó deixa de fora uma verificação quando é antigo demais para ela ou quando o host não a permite (ping e traceroute precisam de permissão para usar ICMP). Atualize o nó primeiro; o registro dele diz o motivo.",
   "form.noNodesTitle": "Nenhum nó está online",
   "form.noNodesText": "As medições precisam de pelo menos um nó aprovado e conectado.",
   "form.startFailed": "Não foi possível iniciar essa medição",

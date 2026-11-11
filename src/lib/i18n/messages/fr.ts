@@ -104,7 +104,7 @@ export const fr: Partial<Record<MessageKey, string>> = {
   "form.clear": "Effacer",
   "form.done": "Terminé",
   "form.noCapableTitle": "Aucun nœud en ligne ne peut exécuter {kind}",
-  "form.noCapableText": "Les nœuds en ligne sont plus anciens et ne connaissent que le ping. Mettez-les à jour pour exécuter des mesures {kind}.",
+  "form.noCapableText": "Aucun des nœuds en ligne ne propose {kind}. Un nœud écarte une vérification quand il est trop ancien pour elle ou que son hôte ne l'autorise pas (le ping et le traceroute ont besoin du droit d'utiliser ICMP). Mettez d'abord le nœud à jour ; son journal dit pourquoi.",
   "form.noNodesTitle": "Aucun nœud n’est en ligne",
   "form.noNodesText": "Les mesures nécessitent au moins un nœud approuvé et connecté.",
   "form.startFailed": "Cette mesure n’a pas pu démarrer",
