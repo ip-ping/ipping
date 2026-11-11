@@ -4,6 +4,12 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.14.0 (2026-11-11)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema
+`0013`), and `ipping:0.14.0` is on Docker Hub. The frontend bundle has no link to GitHub. **The released `ipping:0.14.0` and
+`ipping-backend:0.11.0` images were run together** (the backend in the frontend's network, as the release image expects) with the simulated
+fleet, and the browser checks `pages`, `measurements`, `map-selection`, `languages` and `home-layout` pass against them. The installer is
+unchanged in this release, so nothing was installed on a fresh machine.
+
 A better home page, and the address in "Recent in this browser" is written in full. Interface only: installs backend **v0.11.0** (unchanged,
 still migration `0013`).
 
