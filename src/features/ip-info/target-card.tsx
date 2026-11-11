@@ -3,15 +3,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { flag } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 
-import { networkLine, nothingToShow, placeLine } from "./describe";
+import { Confidence } from "./confidence";
+import { networkLine, nothingToShow, placeLine, placeSure, sure } from "./describe";
+import { IpInfoDetails } from "./ip-info-details";
 import type { MeasurementAddresses } from "./use-addresses";
 
 /**
- * The target at a glance: the address the most nodes tested, where the IP databases put it and whose network it is. When
- * the nodes tested several addresses the others are one link away. It leaves itself out when there is nothing to say.
+ * The target at a glance: the address the most nodes tested, where the IP data puts it and whose network it is, each with how sure
+ * the vote of the sources is. All the fields and the sources themselves are one click away, and so are the other addresses when
+ * the nodes tested several. It leaves itself out when there is nothing to say.
  */
 export function TargetCard({ data }: { data: MeasurementAddresses | null }) {
   const { t } = useI18n();
@@ -36,12 +40,28 @@ export function TargetCard({ data }: { data: MeasurementAddresses | null }) {
           <p className="text-sm text-muted-foreground">{nothing}</p>
         ) : (
           <>
-            <div className="text-sm">
-              {flag(info.country)} {place || "Location unknown"}
+            <div className="flex items-start justify-between gap-3 text-sm" data-testid="target-place">
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                {flag(info.country)} {place || t("ip.unknownPlace")}
+              </span>
+              <Confidence percent={placeSure(info)} />
             </div>
-            {network && <div className="text-sm text-muted-foreground">{network}</div>}
+            {network && (
+              <div className="flex items-start justify-between gap-3 text-sm text-muted-foreground" data-testid="target-network">
+                <span className="min-w-0 [overflow-wrap:anywhere]">{network}</span>
+                <Confidence percent={sure(info, "asn")} />
+              </div>
+            )}
             {info.network && <div className="font-mono text-xs text-muted-foreground">{info.network}</div>}
           </>
+        )}
+        {!nothing && (info.sources?.length ?? 0) > 0 && (
+          <Collapsible>
+            <CollapsibleTrigger render={<Button variant="link" size="sm" className="h-auto p-0 text-xs" />}>{t("ip.details")}</CollapsibleTrigger>
+            <CollapsibleContent>
+              <IpInfoDetails info={info} />
+            </CollapsibleContent>
+          </Collapsible>
         )}
         {others > 0 && (
           <Button variant="link" size="sm" className="h-auto p-0 text-xs" render={<a href="#addresses" />}>

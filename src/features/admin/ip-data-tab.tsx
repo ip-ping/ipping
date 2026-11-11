@@ -17,6 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
 
+import { SourcesCard } from "./ip-sources";
+
 type IpData = Schemas["IpDataOut"];
 type Update = Partial<Schemas["IpDataUpdate"]>;
 type Edition = Schemas["IpDataOut"]["maxmind"]["editions"][number];
@@ -132,6 +134,8 @@ function IpDataForms({ data, reload }: { data: IpData; reload: () => Promise<voi
 
   return (
     <div className="space-y-6">
+      <SourcesCard data={data} send={send} busy={busy} updateNow={updateNow} />
+
       <Card>
         <CardHeader>
           <CardTitle>MaxMind GeoLite2</CardTitle>
@@ -328,7 +332,8 @@ function IpDataForms({ data, reload }: { data: IpData; reload: () => Promise<voi
           <CardTitle>IP lookup API</CardTitle>
           <CardDescription>
             <code>GET /api/v1/ip/&lt;address&gt;</code> answers with the network, country, region, city, position, time zone and AS
-            number from these databases; <code>GET /api/v1/ip</code> with the caller&apos;s own address.
+            number, each with how sure the vote of the sources that are on is, and what every source said; <code>GET /api/v1/ip</code> with
+            the caller&apos;s own address.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -1,6 +1,21 @@
 import type { Schemas } from "@/lib/api/client";
 
 export type IpInfo = Schemas["IpInfoOut"];
+export type SourceAnswer = Schemas["SourceAnswerOut"];
+
+/** The fields a vote is taken on, as the backend names them in `confidence`, `agrees` and `differs`. */
+export type VotedField = "country" | "region" | "city" | "location" | "postal_code" | "time_zone" | "asn" | "organization";
+
+/** How sure the answer is about a field, as a percentage, or `null` when it has no answer for it. */
+export function sure(info: IpInfo, field: VotedField): number | null {
+  return info.confidence?.[field] ?? null;
+}
+
+/** How sure the place that is shown is: the least sure of the parts that are shown (city, else region, else country). */
+export function placeSure(info: IpInfo): number | null {
+  const shown: VotedField[] = info.city ? ["city"] : info.region ? ["region"] : ["country"];
+  return sure(info, shown[0]);
+}
 
 /** The words for where the databases put an address: "Falkenstein, Saxony, Germany" (the country code when it has no name). */
 export function placeLine(info: IpInfo): string {
@@ -21,10 +36,23 @@ export function positionLine(info: IpInfo): string {
   return info.accuracy_radius_km ? `${point} · within about ${info.accuracy_radius_km.toLocaleString()} km` : point;
 }
 
+/** What a source said, in a few words: "Mountain View, California, US · AS15169 Google LLC". Empty when it said nothing. */
+export function saidLine(answer: SourceAnswer): string {
+  const said = answer.said;
+  const place = [said.city, said.region, said.country].filter(Boolean).join(", ");
+  const network = [said.asn ? `AS${said.asn}` : null, said.organization].filter(Boolean).join(" ");
+  return [place, network].filter(Boolean).join(" · ");
+}
+
+/** How many sources said something about the address. */
+export function answered(info: IpInfo): number {
+  return (info.sources ?? []).filter((s) => s.status === "ok").length;
+}
+
 /** What to say when there is no place to show: a private address is not looked up, an unknown one is not in the data. */
 export function nothingToShow(info: IpInfo): string | null {
   if (!info.public) return "A private, reserved or otherwise non-routable address: nothing is looked up for it.";
-  if (!info.found) return "The IP databases know nothing about this address.";
+  if (!info.found) return "The IP data sources know nothing about this address.";
   return null;
 }
 

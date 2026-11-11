@@ -5,13 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { flag } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 
-import { networkLine, nothingToShow, placeLine } from "./describe";
+import { networkLine, nothingToShow, placeLine, placeSure, sure } from "./describe";
 import type { MeasurementAddresses } from "./use-addresses";
 
 /**
  * The addresses the nodes really tested when there were several (a name each node resolved for itself can lead to many), with
- * what ipping's own IP databases say about each: where it is, whose network it is. One address is already on the target card at
- * the top, so it is not repeated here; nothing is shown when no database is installed.
+ * what ipping's IP data sources say about each: where it is and whose network it is, with how sure the vote is. One address is already
+ * on the target card at the top, so it is not repeated here; nothing is shown when no source can answer.
  */
 export function TestedAddresses({ data }: { data: MeasurementAddresses | null }) {
   const { t } = useI18n();
@@ -46,11 +46,17 @@ export function TestedAddresses({ data }: { data: MeasurementAddresses | null })
                   ) : (
                     <>
                       {flag(info.country)} {place || "–"}
+                      <span className="ml-1 text-xs tabular-nums text-muted-foreground" title={t("ip.sure")}>
+                        {placeSure(info) != null ? `${placeSure(info)}%` : ""}
+                      </span>
                       <div className="text-xs text-muted-foreground md:hidden">{network}</div>
                     </>
                   )}
                 </TableCell>
-                <TableCell className="hidden align-top text-muted-foreground md:table-cell">{network || "–"}</TableCell>
+                <TableCell className="hidden align-top text-muted-foreground md:table-cell">
+                  {network || "–"}
+                  {network && sure(info!, "asn") != null ? <span className="ml-1 text-xs tabular-nums">{sure(info!, "asn")}%</span> : null}
+                </TableCell>
                 <TableCell className="hidden pr-4 align-top font-mono text-xs text-muted-foreground lg:table-cell">{info?.network ?? "–"}</TableCell>
               </TableRow>
             );

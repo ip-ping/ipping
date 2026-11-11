@@ -42,6 +42,7 @@ jobs:
           docker run -d --name backend --network host \
             -e IPPING_DATABASE_URL=postgresql://postgres:pw@127.0.0.1:5432/ipping \
             -e IPPING_SETUP_TOKEN=e2e-token -e IPPING_COOKIE_SECURE=false \
+            -e IPPING_IPDATA_OFFLINE=1 \
             -e IPPING_HOST=0.0.0.0 -e IPPING_PORT=18010 \
             --entrypoint sh "tonyliuzj/ipping-backend:${BACKEND_TAG#v}" \
             -c 'ipping-backend migrate && exec ipping-backend serve'

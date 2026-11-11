@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.14.1** (application), installing backend **v0.11.0**. Nodes of any earlier version
+Current release: **v0.15.0** (application), installing backend **v0.12.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -44,8 +44,10 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
   per address (the address most nodes measured first, the others one click away), and the map shows rings only
   for the nodes that measured it. How well it works on real data is in the
   [backend README](https://github.com/ip-ping/ipping-backend#estimated-network-location-experimental).
-* **IP info.** What the site's own IP databases (the lookup API, `GET /api/v1/ip/{address}`) say about an address: place,
-  position, time zone, AS number and owner, and the network the record covers. A measurement lists **every address its nodes
+* **IP info.** What the site's IP data sources (the lookup API, `GET /api/v1/ip/{address}`) say about an address, **voted**:
+  country, region, city, position, postal code, time zone, AS number and owner, and the network the record covers, **each with how
+  sure the vote is** (a percentage), and a list of the nine sources with what each said and whether it agreed. One source with
+  something to say is enough. A measurement lists **every address its nodes
   tested** with that information (a name each node resolved for itself can be several), and the form has an **IP info** option
   that looks an address up and measures nothing (empty: your own address; `/?kind=ip` opens it). Who sees it follows the lookup's
   access setting on the admin page (*IP data*): by default it is for API keys and administrators, so an ordinary visitor sees
@@ -94,9 +96,13 @@ and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
   The same goes for a **geofeed** (RFC 8805): where the address's own network says its addresses are, from the
   feeds an administrator lists (`ipping.sh geofeed-update --feed https://...`); only those are fetched, only then.
-* **IP data from MaxMind, and an API for it.** In *Admin > IP data* enter a free MaxMind GeoLite2 account ID and license
-  key: the backend downloads the City and ASN databases, keeps them current (how often is a setting; "Update now"
-  is a button), and uses them everywhere an address is looked at. They also answer `GET /api/v1/ip/<address>`
+* **Nine IP data sources, and an API for them.** *Admin > IP data* lists MaxMind GeoLite2, DB-IP Lite, IPtoASN, IPdeny,
+  ip2region, IPinfo, IPLocate, ipapi.is and IP2Location, each with a **switch (all on until you turn one off)**, its state, what
+  it needs and, for the online ones, a place for an **optional key** (written, never shown again). The databases that need no
+  account are downloaded and kept current by the backend itself; the online services work without a key at a low daily limit and
+  the address that is looked up is sent to them (turn them off, or set `IPPING_IPDATA_OFFLINE=1`, if that is not wanted). A free
+  MaxMind GeoLite2 account ID and license key adds MaxMind: the backend downloads the City and ASN databases, keeps them current
+  (how often is a setting; "Update now" is a button), and uses them everywhere an address is looked at. They also answer `GET /api/v1/ip/<address>`
   (network, country, region, city, position, time zone, AS number and organisation), whose access (off, anyone, an API key
   or an administrator, administrators only) and rate are settings on the same page. A node's country, region, city,
   position, provider and AS number are **filled in from the address it connects from** unless the node reported
@@ -280,7 +286,20 @@ The `compose.yaml` of a release pins that release's images; the one in the repos
 releases. The frontend build contains no platform-specific binaries, so it is compiled once and
 shipped to both architectures without emulation.
 
-## IP data (MaxMind) and the lookup API
+## IP data (nine sources) and the lookup API
+
+**The vote.** Every source that is on is asked for an address and **a majority vote** is taken for each field (country, region,
+city, position, postal code, time zone, AS number, organization). A field is answered whenever one source has something for it:
+one source of nine with data, the other eight empty, failed or off, still gives that data. The sources are held together (only
+those that agree on the country vote on the city; only those that agree on the AS number vote on the organization). Each answered
+field carries **how sure it is**, from how many sources voted for it and how reliable each is for that kind of data: those
+reliabilities are priors (a country is surer than a city), **not measured on your deployment**, so the percentage is an estimate
+of how sure the vote is, not a guarantee. The details and the formula are in the
+[backend README](https://github.com/ip-ping/ipping-backend#ip-data-nine-sources-one-vote). The IP info card shows the percentage
+beside each field and, under it, the sources: what each said, whether it voted with the winner, or why it did not answer
+(turned off, needs setup, not downloaded yet, out of requests, offline mode).
+
+The rest of this section is about MaxMind, one of the nine.
 
 IP data says where an address is and who runs its network. It is optional; without it ipping works as it always did,
 and with it the location panel has a second opinion, a traceroute names the networks it crosses, nodes describe
@@ -365,6 +384,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.15.0 | v0.12.0 | migration `0013` | **nine IP data sources and a vote**: the IP info card and the target card give each field a percentage and list every source (what it said, whether it agreed, or why it did not answer); *Admin > IP data* has a switch for each of the nine sources (all on) and an optional key for the online ones; the "no node can run this" alert gives both reasons (the node is older, or its host does not allow it; with node v0.8.1 a node with only `CAP_NET_RAW` offers traceroute); works with nodes of any version |
 | v0.14.1 | v0.11.0 | migration `0013` | no gap between the command and the map on the home page (the recent list scrolls inside a card as tall as the command); works with nodes of any version |
 | v0.14.0 | v0.11.0 | migration `0013` | a better home page: the fleet's numbers in the title's header, the command with the recent measurements beside it, the map across the whole width; the recent list writes every address in full (it was squeezed to nothing) with when it was run; works with nodes of any version |
 | v0.13.0 | v0.11.0 | migration `0013` | languages (nine, followed from the browser, remembered, set by the administrator), a home page with the command first and the fleet and recent measurements beside it, no GitHub link; works with nodes of any version |
@@ -436,7 +456,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0 and v0.14.1 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0, v0.14.1 and v0.15.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
@@ -448,6 +468,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Community nodes, first slice: volunteers' nodes marked, left out unless asked for, kept out of location estimates until verified, rate limited, and an audit of their declared place (see the backend README for what it does not do)
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
+- [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card
 - [x] IP data: a MaxMind account in the admin page (databases downloaded and kept current), an IP lookup API with its own settings, and nodes filled in from their address unless typed otherwise
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove

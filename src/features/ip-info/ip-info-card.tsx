@@ -1,25 +1,12 @@
 import { Badge } from "@/components/ui/badge";
-import { flag } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 
-import { networkLine, nothingToShow, placeLine, positionLine, type IpInfo } from "./describe";
+import type { IpInfo } from "./describe";
+import { IpInfoDetails } from "./ip-info-details";
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-0.5 py-2 text-sm sm:grid-cols-[9rem_1fr]">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 [overflow-wrap:anywhere]">{children}</dd>
-    </div>
-  );
-}
-
-/** What the IP databases say about one address, as rows: place, position, network, time zone and where it comes from. */
+/** What the IP data sources say about one address, voted: the address, then a row for each field with how sure it is. */
 export function IpInfoCard({ info }: { info: IpInfo }) {
   const { t } = useI18n();
-  const nothing = nothingToShow(info);
-  const place = placeLine(info);
-  const network = networkLine(info);
-  const position = positionLine(info);
   return (
     <div data-testid="ip-info">
       <div className="flex flex-wrap items-center gap-2">
@@ -27,38 +14,7 @@ export function IpInfoCard({ info }: { info: IpInfo }) {
         <Badge variant="outline">IPv{info.version}</Badge>
         {!info.public && <Badge variant="secondary">{t("ip.notPublic")}</Badge>}
       </div>
-      {nothing ? (
-        <p className="mt-2 text-sm text-muted-foreground">{nothing}</p>
-      ) : (
-        <dl className="mt-2 divide-y">
-          <Row label={t("ip.location")}>
-            {place ? (
-              <>
-                {flag(info.country)} {place}
-              </>
-            ) : (
-              "–"
-            )}
-            {info.postal_code ? <span className="text-muted-foreground"> · {info.postal_code}</span> : null}
-          </Row>
-          {position && <Row label={t("ip.position")}>{position}</Row>}
-          {info.time_zone && <Row label={t("ip.timeZone")}>{info.time_zone}</Row>}
-          <Row label={t("ip.network")}>{network || "–"}</Row>
-          {info.network && (
-            <Row label={t("ip.prefix")}>
-              <span className="font-mono text-xs">{info.network}</span>
-            </Row>
-          )}
-        </dl>
-      )}
-      {(info.source || info.attribution) && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          {info.source ? `From ${info.source}` : null}
-          {info.database_built ? `, built ${info.database_built.slice(0, 10)}` : null}
-          {info.source ? ". " : ""}
-          {info.attribution}
-        </p>
-      )}
+      <IpInfoDetails info={info} />
     </div>
   );
 }

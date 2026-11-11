@@ -4,7 +4,26 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.15.0 (unreleased)
 
-Work toward the next release; the entries below are finished and tested, the release is not made yet.
+Nine IP data sources and a vote, and an alert that tells the truth. Installs backend **v0.12.0** (no database change: still `0013`). Not released yet.
+
+### IP info: a percentage for every field, and the sources behind it
+- **The IP info card** (the form's *IP info* option) is a row for each field the vote answered (country, region, city, position, postal code,
+  time zone, AS number, organization, and the network the record covers), each with **how sure it is**: a stock progress bar and the
+  percentage, from 1 to 99. Under it, **"5 of 9 sources answered"** opens a table of every source: its kind, its status (answered, knows nothing
+  about it, failed, turned off, needs setup, not downloaded yet, out of requests, offline mode), what it said in a line, and whether it voted with
+  the winner or **differed** (and on which fields). A field with no answer has no row; one source of nine with something is still shown.
+- **The target card** of a measurement shows the place and the network with their percentages, and **All fields and sources** opens the
+  same details; the table of tested addresses carries the percentages too. Translated into all nine languages (the explanation of the percentage
+  is the tooltip; the words a server gives for why a source did not answer are in English).
+- **Admin > IP data** starts with **IP data sources**: the nine sources, each with a **switch (all on by default)**, a state (ready, off, needs setup,
+  waiting for its first download, offline mode, no data directory, out of requests), what it knows and what it needs, its files with sizes and
+  dates, when it was last checked and when it is next, and for the four online ones an **optional key or token** that is written and never shown
+  again ("saved", "Remove key"). It says that the online services are sent the address that is looked up and that `IPPING_IPDATA_OFFLINE`
+  stops that, how often databases that need no account are looked at again, and "Update databases now". MaxMind's own card stays.
+- **Tests**: `tests/ui/22-ip-sources.mjs` (nine rows and switches, switching a source off is what a lookup sees, a key is saved and never shown
+  or sent back, the section at 390, 768 and 1440 px) and `tests/ui/15-ip-info.mjs` extended (a percentage 1 to 99 on every answered field, the
+  sources list with all nine, the target card's percentages and details). 4 new unit tests. The CI browser workflow starts the backend with
+  `IPPING_IPDATA_OFFLINE=1`.
 
 ### The "no node can run this" alert tells the truth
 - The alert said "The nodes that are online are older and only know ping. Update them." That was wrong for a node that is up to date but whose

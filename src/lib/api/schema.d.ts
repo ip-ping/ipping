@@ -1187,6 +1187,27 @@ export interface components {
              */
             ttl_minutes: number;
         };
+        /** CredentialOut */
+        CredentialOut: {
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Required */
+            required: boolean;
+            /**
+             * Secret
+             * @description Whether it is a secret: a secret is never sent back, only whether it is set
+             */
+            secret: boolean;
+            /** Set */
+            set: boolean;
+            /**
+             * Value
+             * @description The value, for what is not a secret
+             */
+            value?: string | null;
+        };
         /** DatabaseOut */
         DatabaseOut: {
             /**
@@ -1490,16 +1511,31 @@ export interface components {
             /** Attribution */
             attribution?: string | null;
             /**
+             * Data Update Hours
+             * @description How often the databases that need no account are asked for a newer file
+             */
+            data_update_hours: number;
+            /**
              * Databases Loaded
-             * @description Whether any IP database is in use, from MaxMind or another source
+             * @description Whether any IP data source can answer now (a database with data, or an online source)
              */
             databases_loaded: boolean;
             lookup: components["schemas"]["LookupSettingsOut"];
             maxmind: components["schemas"]["MaxMindOut"];
             /** Node Autofill */
             node_autofill: boolean;
+            /**
+             * Offline
+             * @description True when the server may not call out (IPPING_IPDATA_OFFLINE): no online lookups, no downloads
+             */
+            offline: boolean;
             /** Source */
             source?: string | null;
+            /**
+             * Sources
+             * @description Every source, with its switch, what it needs and how it is doing
+             */
+            sources: components["schemas"]["SourceAdminOut"][];
         };
         /**
          * IpDataUpdate
@@ -1513,6 +1549,8 @@ export interface components {
              * @default false
              */
             clear_credentials: boolean;
+            /** Data Update Hours */
+            data_update_hours?: number | null;
             /** License Key */
             license_key?: string | null;
             /** Lookup Access */
@@ -1529,6 +1567,10 @@ export interface components {
             maxmind_update_hours?: number | null;
             /** Node Autofill */
             node_autofill?: boolean | null;
+            /** Sources */
+            sources?: {
+                [key: string]: components["schemas"]["SourceUpdate"];
+            } | null;
         };
         /**
          * IpInfoOut
@@ -1548,6 +1590,13 @@ export interface components {
             attribution?: string | null;
             /** City */
             city?: string | null;
+            /**
+             * Confidence
+             * @description For each field that has an answer (country, region, city, location, postal_code, time_zone, asn, organization), how likely it is right as a percentage from 1 to 99: from how many sources voted for it, and how reliable each is for that kind of data. A value that only one source gave is still answered, with that source's reliability.
+             */
+            confidence?: {
+                [key: string]: number;
+            };
             /**
              * Continent
              * @description Continent code
@@ -1594,9 +1643,14 @@ export interface components {
             region_code?: string | null;
             /**
              * Source
-             * @description Which databases answered
+             * @description Which sources answered
              */
             source?: string | null;
+            /**
+             * Sources
+             * @description Every source, with what it said, or why it did not answer
+             */
+            sources?: components["schemas"]["SourceAnswerOut"][];
             /** Time Zone */
             time_zone?: string | null;
             /**
@@ -2245,6 +2299,161 @@ export interface components {
         ShareRequest: {
             /** Shared */
             shared: boolean;
+        };
+        /**
+         * SourceAdminOut
+         * @description One IP data source as the admin page shows it.
+         */
+        SourceAdminOut: {
+            /** Attribution */
+            attribution?: string | null;
+            /**
+             * Cost
+             * @description What it needs from the administrator
+             */
+            cost: string;
+            /** Credentials */
+            credentials: components["schemas"]["CredentialOut"][];
+            /** Detail */
+            detail?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Error
+             * @description How the last download or lookup failed
+             */
+            error?: string | null;
+            /**
+             * Files
+             * @description The files of a database that are in use
+             */
+            files: components["schemas"]["SourceFileOut"][];
+            /** Homepage */
+            homepage: string;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "database" | "online";
+            /**
+             * Last Attempt
+             * @description When it was last downloaded, or asked
+             */
+            last_attempt?: string | null;
+            /** Last Success */
+            last_success?: string | null;
+            /** Name */
+            name: string;
+            /** Next Check */
+            next_check?: string | null;
+            /**
+             * Running
+             * @description Whether a download is going on
+             */
+            running: boolean;
+            /**
+             * State
+             * @description ready, or why the source does not answer now
+             * @enum {string}
+             */
+            state: "ready" | "disabled" | "needs_setup" | "waiting" | "offline" | "no_directory" | "paused";
+            /**
+             * Summary
+             * @description What it knows
+             */
+            summary: string;
+        };
+        /**
+         * SourceAnswerOut
+         * @description One source's part in an answer.
+         */
+        SourceAnswerOut: {
+            /**
+             * Agrees
+             * @description The fields (country, region, city, location, postal_code, time_zone, asn, organization) where it voted for the winning value
+             */
+            agrees: string[];
+            /**
+             * Differs
+             * @description The fields where it voted for something else
+             */
+            differs: string[];
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "database" | "online";
+            /**
+             * Message
+             * @description Why it did not answer, when it did not
+             */
+            message?: string | null;
+            /** Name */
+            name: string;
+            /** @description What it said */
+            said: components["schemas"]["SourceSaid"];
+            /**
+             * Status
+             * @description ok: it said something; empty: it knows nothing about this address; the others say why it did not answer
+             * @enum {string}
+             */
+            status: "ok" | "empty" | "error" | "disabled" | "needs_setup" | "waiting" | "rate_limited" | "offline";
+        };
+        /** SourceFileOut */
+        SourceFileOut: {
+            /**
+             * Built
+             * @description When the data was built, where the file says
+             */
+            built?: string | null;
+            /** Name */
+            name: string;
+            /** Rows */
+            rows?: number | null;
+            /** Size */
+            size?: number | null;
+        };
+        /**
+         * SourceSaid
+         * @description What one source said about an address: only the fields it had.
+         */
+        SourceSaid: {
+            /** Accuracy Radius Km */
+            accuracy_radius_km?: number | null;
+            /** Asn */
+            asn?: number | null;
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+            /** Organization */
+            organization?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Time Zone */
+            time_zone?: string | null;
+        };
+        /**
+         * SourceUpdate
+         * @description A change to one source: switch it, or set or clear its credentials (`""` clears one).
+         */
+        SourceUpdate: {
+            /** Credentials */
+            credentials?: {
+                [key: string]: string;
+            } | null;
+            /** Enabled */
+            enabled?: boolean | null;
         };
         /** StatusErrorOut */
         StatusErrorOut: {

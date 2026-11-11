@@ -19,7 +19,7 @@ const WHY: Record<string, string> = {
   api_key_required: "On this site the lookup is for API keys and administrators. An administrator can open it to everyone on the admin page (IP data).",
   admin_required: "On this site the lookup is for administrators only. An administrator can change that on the admin page (IP data).",
   ip_lookup_disabled: "An administrator has turned the IP lookup off.",
-  no_database: "No IP database is installed. An administrator can turn on MaxMind on the admin page (IP data).",
+  no_database: "No IP data source can answer. An administrator can turn one on, or give MaxMind its account, on the admin page (IP data).",
 };
 
 /**

@@ -42,6 +42,11 @@ export default async function check(t) {
     await stranger.page.getByTestId("target-card").waitFor({ timeout: 15000 });
     t.eq(await stranger.page.getByText("Tested addresses").count(), 0, "one address is on the target card: no table repeating it");
     t.ok(/93\.184\.216\.34/.test(await stranger.page.getByTestId("target-card").innerText()), "the target card should show the address");
+    const place = await stranger.page.getByTestId("target-place").innerText();
+    t.ok(/\d+%/.test(await stranger.page.getByTestId("target-card").getByTestId("confidence").first().innerText()) || /\d+%/.test(place), "the target card should say how sure the place is");
+    await stranger.page.getByTestId("target-card").getByRole("button", { name: "All fields and sources" }).click();
+    await stranger.page.getByTestId("target-card").getByTestId("ip-info-details").waitFor();
+    t.ok((await stranger.page.getByTestId("target-card").getByTestId("confidence").count()) >= 4, "the details of the target card should have a percentage for each field");
     await stranger.page.goto(`${BASE}/?kind=ip`);
     await stranger.page.waitForLoadState("networkidle");
     await stranger.page.locator("#ip-address").fill("8.8.8.8");
@@ -78,6 +83,19 @@ export default async function check(t) {
     const info = await stranger.page.getByTestId("ip-info").innerText();
     t.ok(/8\.8\.8\.8/.test(info) && /AS15169|Google/i.test(info), `the lookup should say whose 8.8.8.8 is (${info.replace(/\s+/g, " ").slice(0, 200)})`);
     await screenshot(stranger.page, "ip-info-lookup");
+    // every field answered says how sure it is, and the sources behind the vote can be opened
+    const sureTexts = await stranger.page.getByTestId("ip-info").getByTestId("confidence").evaluateAll((els) => els.map((e) => e.getAttribute("data-percent")));
+    t.ok(sureTexts.length >= 4 && sureTexts.every((x) => /^([1-9]|[1-9][0-9])$/.test(x ?? "")), `each answered field should say how sure it is, 1 to 99 (${sureTexts.join(" ")})`);
+    t.ok(/%/.test(await stranger.page.getByTestId("ip-country").innerText()) && /United States/.test(await stranger.page.getByTestId("ip-country").innerText()), "the country row should say the country and how sure");
+    t.ok(/AS15169/.test(await stranger.page.getByTestId("ip-asn").innerText()), "the AS number row should say AS15169");
+    const sourcesButton = stranger.page.getByTestId("ip-sources").getByRole("button", { name: /sources answered/ });
+    t.ok(/^\d+ of 9 sources answered$/.test((await sourcesButton.innerText()).trim()), `the summary should count the nine sources (${await sourcesButton.innerText()})`);
+    await sourcesButton.click();
+    const sourceRows = await stranger.page.locator("[data-testid^='source-']:not([data-testid='ip-sources'])").count();
+    t.eq(sourceRows, 9, "every source should be listed, whether or not it answered");
+    t.ok(/Answered|Failed|Offline mode|Out of requests|Needs setup|Not downloaded/.test(await stranger.page.getByTestId("source-dbip").innerText()), "each source says what became of it");
+    await screenshot(stranger.page, "ip-info-sources");
+    await noOverflow(t, stranger.page, "the sources list");
     await stranger.page.locator("#ip-address").fill("192.168.1.1");
     await stranger.page.getByRole("button", { name: "Look up" }).click();
     await stranger.page.getByText(/not public|non-routable/).first().waitFor({ timeout: 10000 });
