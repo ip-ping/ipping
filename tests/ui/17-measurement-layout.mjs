@@ -37,7 +37,9 @@ export default async function check(t) {
     const card = await top(page.getByTestId("target-card"));
     t.ok(Math.abs(card - y.tiles) < 120 && card < y.map, `the target card should sit beside the headline numbers (card ${card}, tiles ${y.tiles})`);
     const text = await page.getByTestId("target-card").innerText();
-    t.ok(/[A-Z][a-z]+, [A-Z][a-z]+/.test(text) && /\d+\.\d+\.\d+\.\d+\/\d+/.test(text), `the target card should say where it is and the network record it comes from (${text.replace(/\s+/g, " ").slice(0, 120)})`);
+    // The network record is shown when the vote has one: an address that no routing data announces may have none, and then there is nothing to show
+    const network = (await call("GET", `/measurements/${ping}/addresses`))?.addresses?.[0]?.info?.network;
+    t.ok(/[A-Z][a-z]+, [A-Z][a-z]+/.test(text) && (!network || text.includes(network)), `the target card should say where it is, and the network record it comes from when there is one (${network ?? "none"}; ${text.replace(/\s+/g, " ").slice(0, 120)})`);
   }
   const summary = await page.getByTestId("estimate-summary").innerText();
   t.ok(/\d+% within [\d,]+ km/.test(summary), `the best guess should carry its accuracy (${summary.replace(/\s+/g, " ").slice(0, 120)})`);

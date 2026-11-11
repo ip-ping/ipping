@@ -65,8 +65,8 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
 * **Admin** (at `/admin`: the header has no link to it): approve nodes, enrollment keys (single-use, or **reusable** for many nodes, up to 30 days), revoke a node (it is removed, and there is no key rotation: enroll it again), which kinds are enabled, the allowed TCP/HTTP ports,
   probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log, and the
-  **IP data**: a MaxMind account the backend downloads its databases with, an IP lookup API, and nodes that fill in
-  their own country, city, provider and AS number.
+  **IP data**: nine sources (MaxMind among them, none apart from the others) with a switch each and a key where a free download needs an
+  account, an IP lookup API, and nodes that fill in their own country, city, provider and AS number.
 * Works on phones and in dark mode.
 
 ## The interface
@@ -96,18 +96,18 @@ and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a
   the address faster than light could make the trip) or merely not contradicted. It never changes the estimate.
   The same goes for a **geofeed** (RFC 8805): where the address's own network says its addresses are, from the
   feeds an administrator lists (`ipping.sh geofeed-update --feed https://...`); only those are fetched, only then.
-* **Nine IP data sources, and an API for them.** *Admin > IP data* lists MaxMind GeoLite2, DB-IP Lite, IPtoASN, IPdeny,
-  ip2region, IPinfo, IPLocate, ipapi.is and IP2Location, each with a **switch (all on until you turn one off)**, its state, what
-  it needs and, for the online ones, a place for an **optional key** (written, never shown again). The databases that need no
-  account are downloaded and kept current by the backend itself; the online services work without a key at a low daily limit and
-  the address that is looked up is sent to them (turn them off, or set `IPPING_IPDATA_OFFLINE=1`, if that is not wanted). A free
-  MaxMind GeoLite2 account ID and license key adds MaxMind: the backend downloads the City and ASN databases, keeps them current
-  (how often is a setting; "Update now" is a button), and uses them everywhere an address is looked at. They also answer `GET /api/v1/ip/<address>`
-  (network, country, region, city, position, time zone, AS number and organisation), whose access (off, anyone, an API key
-  or an administrator, administrators only) and rate are settings on the same page. A node's country, region, city,
-  position, provider and AS number are **filled in from the address it connects from** unless the node reported
+* **Nine IP data sources, and an API for them.** *Admin > IP data* is **one list**: MaxMind GeoLite2, DB-IP Lite, IPinfo Lite, IPLocate,
+  ipapi.is, IP2Location LITE, IPtoASN, IPdeny and ip2region, each row the same: a **switch (all on until you turn one off)**, its state, what
+  it needs, the files it has on disk and when it was last checked. **Every source is a database the backend downloads and answers
+  from**: no source's API is ever called, so a lookup sends your address nowhere. Six need no account and are downloaded by the backend
+  by itself (about 430 MB, measured); MaxMind (account ID and license key), IPinfo (a token) and IP2Location (a download token) each have
+  a place for the free account's key in their row (written, never shown again). Everything that looks at an address uses the **same vote
+  of every source that is on**: the lookup `GET /api/v1/ip/<address>` (network, country, region, city, position, time zone, AS number
+  and organisation, each with its percentage; its access (off, anyone, an API key or an administrator, administrators only) and rate are
+  settings on the same page), the location panel's cross-check, the networks of a traceroute, and the nodes. A node's country, region,
+  city, position, provider and AS number are **filled in from the address it connects from** unless the node reported
   them or you typed them: in a node's edit dialog the values that came from the data are marked *auto*, a value you type
-  stays yours, and clearing a field hands it back. See [IP data](#ip-data-maxmind-and-the-lookup-api).
+  stays yours, and clearing a field hands it back. See [IP data](#ip-data-nine-sources-and-the-lookup-api).
 * **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
   when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
 * **From a terminal.** An administrator can create API keys (with quotas) and scripts can use them; `ipping-cli`
@@ -297,31 +297,35 @@ reliabilities are priors (a country is surer than a city), **not measured on you
 of how sure the vote is, not a guarantee. The details and the formula are in the
 [backend README](https://github.com/ip-ping/ipping-backend#ip-data-nine-sources-one-vote). The IP info card shows the percentage
 beside each field and, under it, the sources: what each said, whether it voted with the winner, or why it did not answer
-(turned off, needs setup, not downloaded yet, out of requests, offline mode).
-
-The rest of this section is about MaxMind, one of the nine.
+(turned off, needs setup, not downloaded yet, offline mode).
 
 IP data says where an address is and who runs its network. It is optional; without it ipping works as it always did,
 and with it the location panel has a second opinion, a traceroute names the networks it crosses, nodes describe
 themselves, and `/api/v1/ip` answers.
 
-**Set it up in the admin page** (*Admin > IP data*):
+**Every source is the same kind of thing: a database the backend downloads and keeps on disk.** Nothing is asked of a service when an
+address is looked up (no source's API is called), so a lookup is fast, works once the files are there even with no network, and never
+sends an address anywhere. *Admin > IP data* is one list of nine rows, each with its switch, its state, its files and its last and next check.
 
-1. Create a free **GeoLite2** account at maxmind.com, and under *Manage license keys* make a key. MaxMind's current
-   download service needs the **account ID** (a number) as well as the key.
-2. Enter both and press *Save account*. The backend downloads the databases you chose (City for places, ASN for the
-   network; Country only if you leave City out) and the page shows each one's build date, size and status. The key is kept
-   on the server, is never shown again, and never appears in the audit log, an error or a log line. Setting
-   `IPPING_MAXMIND_ACCOUNT_ID` and `IPPING_MAXMIND_LICENSE_KEY` does the same and wins (in `/opt/ipping/.env` for
-   Docker, in `/etc/ipping/backend.env` for a direct install; then restart).
-3. Leave *Keep them up to date automatically* on. A check first asks MaxMind, for free, whether anything newer exists,
-   and downloads only if so (MaxMind allows 30 downloads a day); a failure is tried again in an hour, a refused key in six.
-   *Update now* does it at once. A new database is used without a restart, and shows its attribution
-   ("This product includes GeoLite2 data created by MaxMind") where results do.
+| Source | Account | What is downloaded |
+|---|---|---|
+| DB-IP Lite, IPLocate, ipapi.is, IPtoASN, IPdeny, ip2region | none | by the backend by itself, a few minutes after it starts: about 430 MB in all (measured on the real files) |
+| MaxMind GeoLite2 | a free account at maxmind.com: its **account ID** (a number) and a **license key** (*Manage license keys*) | City and ASN |
+| IPinfo Lite | a free account at ipinfo.io: its **access token** | one database |
+| IP2Location LITE | a free account at lite.ip2location.com: its **download token** (on its Download page) | two zip files, once a month, as IP2Location asks |
 
-Where the databases are kept: Docker installs have a volume for them; a direct install gets a directory
+A source that needs an account shows *needs setup* until its key is entered in its row (the same *Save key* button for all three; a secret is
+kept on the server, never shown again, and never appears in the audit log, an error or a log line; MaxMind's account ID is not a secret and is
+shown). Setting `IPPING_MAXMIND_ACCOUNT_ID` and `IPPING_MAXMIND_LICENSE_KEY` does the same for MaxMind and wins (in `/opt/ipping/.env` for Docker,
+in `/etc/ipping/backend.env` for a direct install; then restart): its row then says so. Turning a source on, or giving it its key, starts
+its download at once. *Look for newer files* sets how often the sources are asked (a source that is renewed less often is asked less often),
+and *Check for updates now* asks every source: a source is downloaded only if it has something newer, so pressing it costs nothing when there is
+nothing. A new file is used without a restart and shows its attribution where results do. `IPPING_IPDATA_OFFLINE=1` stops every download for a server
+that may not call out; what is on disk still answers.
+
+Where the files are kept: Docker installs have a volume for them; a direct install gets a directory
 (`/var/lib/ipping-backend/geoip`) from `ipping.sh install` and `ipping.sh update` (an install from before v0.9.0 gets it
-on the first `update`). A file whose name starts with `GeoLite2` is used in preference to any other.
+on the first `update`).
 
 **The lookup API.** `GET /api/v1/ip/<address>` (and `GET /api/v1/ip` for the caller's own address) answers:
 
@@ -331,8 +335,8 @@ curl -H "Authorization: Bearer $KEY" https://ipping.example.com/api/v1/ip/1.1.1.
 
 On the same page choose who may call it: **off**, **an API key or an administrator** (the default; keys are made in
 the *API keys* tab), **anyone**, or **administrators only**, and how many lookups a minute one client address may make
-(administrators are not limited). Private and reserved addresses are answered as such, without a database. MaxMind's
-license lets you answer single lookups, not give out the databases, and the API does not.
+(administrators are not limited). Private and reserved addresses are answered as such, without a database. The sources' licenses let you answer single
+lookups, not give out the databases, and the API does not.
 
 **Nodes fill themselves in.** When a node connects, the fields it has not got (country, region, city, position,
 provider, AS number) are filled from the address it connected from:
@@ -348,7 +352,7 @@ The data's *place* (country, region, city, position) is used only where it **agr
 typed: a different country, a typed position more than 300 km away, or a city the gazetteer puts that far away means the data is
 not used for the place (the provider and the AS number, which belong to the address, still are), because the location
 estimate trusts a node's position and a hosting address is often placed at its provider's headquarters. A record with no city
-(a country's centre) is never a position. A position from the databases is a city's, not the node's, so it is never marked
+(a country's centre) is never a position. A position from the IP data is a city's, not the node's, so it is never marked
 *verified*; that stays your decision.
 *Admin > IP data > Node details* turns all of this off. Behind a proxy of your own, the address a node connects from is the
 one the proxy reports (see `ipping.sh proxy`).
@@ -384,6 +388,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.16.0 (unreleased) | v0.13.0 | migration `0013` | **every IP data source is a downloaded database, all treated the same**: *Admin > IP data* is one list of nine alike rows (MaxMind is no longer a card of its own, and the "databases in use" table is gone: each row lists its own files), a key box in each row whose free download needs an account (MaxMind's account ID and license key, IPinfo's token, IP2Location's download token), and *Check for updates now*; the public IP info card no longer has an "online service" kind or an "out of requests" status |
 | v0.15.0 | v0.12.0 | migration `0013` | **nine IP data sources and a vote**: the IP info card and the target card give each field a percentage and list every source (what it said, whether it agreed, or why it did not answer); *Admin > IP data* has a switch for each of the nine sources (all on) and an optional key for the online ones; the "no node can run this" alert gives both reasons (the node is older, or its host does not allow it; with node v0.8.1 a node with only `CAP_NET_RAW` offers traceroute); works with nodes of any version |
 | v0.14.1 | v0.11.0 | migration `0013` | no gap between the command and the map on the home page (the recent list scrolls inside a card as tall as the command); works with nodes of any version |
 | v0.14.0 | v0.11.0 | migration `0013` | a better home page: the fleet's numbers in the title's header, the command with the recent measurements beside it, the map across the whole width; the recent list writes every address in full (it was squeezed to nothing) with when it was run; works with nodes of any version |
@@ -469,6 +474,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card
+- [x] Every IP data source a downloaded database served from disk (never a source's API), shown as one list of alike rows in the admin page with a key box wherever the free download needs an account
 - [x] IP data: a MaxMind account in the admin page (databases downloaded and kept current), an IP lookup API with its own settings, and nodes filled in from their address unless typed otherwise
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove

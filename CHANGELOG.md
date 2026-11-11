@@ -2,6 +2,30 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.16.0 (unreleased)
+
+Every IP data source is a downloaded database, all treated the same, and the admin page says so. Follows backend v0.13.0 (contract pinned to
+its commit; `release.env` is changed when it is released). The checks of the IP data page stop with a note on an older backend.
+
+- **One list, nine alike rows.** *Admin > IP data* had a card for MaxMind (account, editions to keep, automatic updates, "Update now"), a table of
+  "databases in use" and a list of the other eight. It is now one list: every row has its switch, its state, what it needs, the files it has on
+  disk (name, size, build date, ranges) and its last and next check; the cards for MaxMind and for the databases in use are gone. The
+  update interval and **Check for updates now** (which downloads only what is newer) are the list's footer; the lookup API and node details cards
+  are as they were.
+- **A key box wherever the free download needs an account**, the same in each row: MaxMind's account ID and license key, IPinfo's access token and
+  IP2Location's download token, with one *Save key* and *Remove key*. A secret is written and never shown again; MaxMind's account ID is
+  not a secret and is shown. A MaxMind account that the server's environment sets says so and cannot be changed in the page. Where a key was
+  the optional kind (the four online services of v0.15.0) there is none: nothing is asked of a service any more.
+- **The public IP info card** no longer labels a source "database" or "online service" and has no "out of requests" status (all nine languages: three
+  messages fewer in each). The text for "nothing can answer yet" no longer points to MaxMind alone. The dashboard says how many sources know places
+  or networks (`7 IP data sources loaded`) instead of naming them.
+- **Verified** against the new backend and the real downloaded files of the six sources that need no account (DB-IP, IPLocate, ipapi.is, IPtoASN,
+  IPdeny, ip2region; MaxMind, IPinfo and IP2Location need an account that was not used): the unit tests (139), the type check and lint, and **all 22
+  browser checks**, with a new assertion that every source has a key box exactly where it takes an account, that MaxMind's account behaves like
+  IPinfo's token (ID shown, key never), and that no card or table of "databases in use" is left. One check (`measurement-layout`) assumed that
+  every target has a network record in the card, which the old test data gave; with real data an address that no routing data announces has
+  none, and the check now requires the network exactly when the answer has one.
+
 ## v0.15.0 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.12.0 (schema `0013`),

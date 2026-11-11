@@ -29,7 +29,6 @@ const STATUS: Record<SourceAnswer["status"], { label: MessageKey; variant: "defa
   disabled: { label: "ip.status.disabled", variant: "outline" },
   needs_setup: { label: "ip.status.needs_setup", variant: "outline" },
   waiting: { label: "ip.status.waiting", variant: "outline" },
-  rate_limited: { label: "ip.status.rate_limited", variant: "destructive" },
   offline: { label: "ip.status.offline", variant: "outline" },
 };
 
@@ -75,7 +74,6 @@ export function SourceAnswers({ info }: { info: IpInfo }) {
                 <TableRow key={source.id} data-testid={`source-${source.id}`}>
                   <TableCell className="pl-0 align-top">
                     <div className="font-medium">{source.name}</div>
-                    <div className="text-muted-foreground">{t(source.kind === "online" ? "ip.kind.online" : "ip.kind.database")}</div>
                     {said && <div className="mt-1 whitespace-normal text-muted-foreground sm:hidden">{said}</div>}
                   </TableCell>
                   <TableCell className="whitespace-normal align-top">

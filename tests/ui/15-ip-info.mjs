@@ -93,7 +93,7 @@ export default async function check(t) {
     await sourcesButton.click();
     const sourceRows = await stranger.page.locator("[data-testid^='source-']:not([data-testid='ip-sources'])").count();
     t.eq(sourceRows, 9, "every source should be listed, whether or not it answered");
-    t.ok(/Answered|Failed|Offline mode|Out of requests|Needs setup|Not downloaded/.test(await stranger.page.getByTestId("source-dbip").innerText()), "each source says what became of it");
+    t.ok(/Answered|Failed|Offline mode|Needs setup|Not downloaded|Knows nothing/.test(await stranger.page.getByTestId("source-dbip").innerText()), "each source says what became of it");
     await screenshot(stranger.page, "ip-info-sources");
     await noOverflow(t, stranger.page, "the sources list");
     await stranger.page.locator("#ip-address").fill("192.168.1.1");

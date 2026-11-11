@@ -101,12 +101,12 @@ export interface paths {
         };
         /**
          * Get Ip Data
-         * @description The MaxMind account (never the key), the databases in use, and the settings of the lookup API.
+         * @description Every IP data source with its switch, what it needs and how it is doing, and the settings of the lookup API. Keys are never sent.
          */
         get: operations["get_ip_data_api_v1_admin_ip_data_get"];
         /**
          * Put Ip Data
-         * @description Change any of the settings. Only what is sent changes. A license key that is sent replaces the saved one.
+         * @description Change any of the settings. Only what is sent changes. A key or token that is sent replaces the saved one.
          */
         put: operations["put_ip_data_api_v1_admin_ip_data_put"];
         post?: never;
@@ -127,7 +127,7 @@ export interface paths {
         put?: never;
         /**
          * Update Now
-         * @description Download the databases now (it runs in the background: ask again to see how it went).
+         * @description Check every source that is on for a newer file now, and download what is newer (it runs in the background: ask again to see how it went).
          */
         post: operations["update_now_api_v1_admin_ip_data_update_post"];
         delete?: never;
@@ -1189,6 +1189,12 @@ export interface components {
         };
         /** CredentialOut */
         CredentialOut: {
+            /**
+             * From Environment
+             * @description Whether it is set in the server's environment, which wins over the admin page and cannot be changed there
+             * @default false
+             */
+            from_environment: boolean;
             /** Label */
             label: string;
             /** Name */
@@ -1207,33 +1213,6 @@ export interface components {
              * @description The value, for what is not a secret
              */
             value?: string | null;
-        };
-        /** DatabaseOut */
-        DatabaseOut: {
-            /**
-             * Built
-             * @description When MaxMind built the database
-             */
-            built?: string | null;
-            /** Checked At */
-            checked_at?: string | null;
-            /** Downloaded At */
-            downloaded_at?: string | null;
-            /**
-             * Edition
-             * @enum {string}
-             */
-            edition: "GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN";
-            /** Error */
-            error?: string | null;
-            /** File */
-            file?: string | null;
-            /** Present */
-            present: boolean;
-            /** Size */
-            size?: number | null;
-            /** Type */
-            type?: string | null;
         };
         /**
          * DnsAnswerRecord
@@ -1508,29 +1487,29 @@ export interface components {
         };
         /** IpDataOut */
         IpDataOut: {
-            /** Attribution */
-            attribution?: string | null;
             /**
              * Data Update Hours
-             * @description How often the databases that need no account are asked for a newer file
+             * @description How often the sources are asked for a newer file
              */
             data_update_hours: number;
             /**
              * Databases Loaded
-             * @description Whether any IP data source can answer now (a database with data, or an online source)
+             * @description Whether any IP data source can answer now
              */
             databases_loaded: boolean;
+            /**
+             * Directory Configured
+             * @description Whether the backend has a directory to keep the databases in
+             */
+            directory_configured: boolean;
             lookup: components["schemas"]["LookupSettingsOut"];
-            maxmind: components["schemas"]["MaxMindOut"];
             /** Node Autofill */
             node_autofill: boolean;
             /**
              * Offline
-             * @description True when the server may not call out (IPPING_IPDATA_OFFLINE): no online lookups, no downloads
+             * @description True when the server may not call out (IPPING_IPDATA_OFFLINE): nothing is downloaded
              */
             offline: boolean;
-            /** Source */
-            source?: string | null;
             /**
              * Sources
              * @description Every source, with its switch, what it needs and how it is doing
@@ -1542,29 +1521,14 @@ export interface components {
          * @description Every field optional: only the ones that are sent change.
          */
         IpDataUpdate: {
-            /** Account Id */
-            account_id?: string | null;
-            /**
-             * Clear Credentials
-             * @default false
-             */
-            clear_credentials: boolean;
             /** Data Update Hours */
             data_update_hours?: number | null;
-            /** License Key */
-            license_key?: string | null;
             /** Lookup Access */
             lookup_access?: ("public" | "api_key" | "admin") | null;
             /** Lookup Enabled */
             lookup_enabled?: boolean | null;
             /** Lookup Per Minute */
             lookup_per_minute?: number | null;
-            /** Maxmind Auto Update */
-            maxmind_auto_update?: boolean | null;
-            /** Maxmind Editions */
-            maxmind_editions?: ("GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN")[] | null;
-            /** Maxmind Update Hours */
-            maxmind_update_hours?: number | null;
             /** Node Autofill */
             node_autofill?: boolean | null;
             /** Sources */
@@ -1761,43 +1725,6 @@ export interface components {
             enabled: boolean;
             /** Per Minute */
             per_minute: number;
-        };
-        /** MaxMindOut */
-        MaxMindOut: {
-            /** Account Id */
-            account_id: string;
-            /** Auto Update */
-            auto_update: boolean;
-            /**
-             * Credentials Source
-             * @enum {string}
-             */
-            credentials_source: "admin" | "environment" | "none";
-            /** Databases */
-            databases: components["schemas"]["DatabaseOut"][];
-            /**
-             * Directory Configured
-             * @description Whether the backend has a directory to keep the databases in
-             */
-            directory_configured: boolean;
-            /** Editions */
-            editions: ("GeoLite2-City" | "GeoLite2-Country" | "GeoLite2-ASN")[];
-            error: components["schemas"]["StatusErrorOut"] | null;
-            /** Last Attempt */
-            last_attempt: string | null;
-            /** Last Success */
-            last_success: string | null;
-            /**
-             * License Key Set
-             * @description Whether a license key is saved. The key itself is never sent back.
-             */
-            license_key_set: boolean;
-            /** Next Check */
-            next_check: string | null;
-            /** Running */
-            running: boolean;
-            /** Update Hours */
-            update_hours: number;
         };
         /** MeasurementAddressesOut */
         MeasurementAddressesOut: {
@@ -2320,12 +2247,12 @@ export interface components {
             enabled: boolean;
             /**
              * Error
-             * @description How the last download or lookup failed
+             * @description How the last download failed
              */
             error?: string | null;
             /**
              * Files
-             * @description The files of a database that are in use
+             * @description The files of the source that are in use
              */
             files: components["schemas"]["SourceFileOut"][];
             /** Homepage */
@@ -2333,13 +2260,8 @@ export interface components {
             /** Id */
             id: string;
             /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "database" | "online";
-            /**
              * Last Attempt
-             * @description When it was last downloaded, or asked
+             * @description When it was last checked for a newer file
              */
             last_attempt?: string | null;
             /** Last Success */
@@ -2358,7 +2280,7 @@ export interface components {
              * @description ready, or why the source does not answer now
              * @enum {string}
              */
-            state: "ready" | "disabled" | "needs_setup" | "waiting" | "offline" | "no_directory" | "paused";
+            state: "ready" | "disabled" | "needs_setup" | "waiting" | "offline" | "no_directory";
             /**
              * Summary
              * @description What it knows
@@ -2383,11 +2305,6 @@ export interface components {
             /** Id */
             id: string;
             /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "database" | "online";
-            /**
              * Message
              * @description Why it did not answer, when it did not
              */
@@ -2401,7 +2318,7 @@ export interface components {
              * @description ok: it said something; empty: it knows nothing about this address; the others say why it did not answer
              * @enum {string}
              */
-            status: "ok" | "empty" | "error" | "disabled" | "needs_setup" | "waiting" | "rate_limited" | "offline";
+            status: "ok" | "empty" | "error" | "disabled" | "needs_setup" | "waiting" | "offline";
         };
         /** SourceFileOut */
         SourceFileOut: {
@@ -2454,13 +2371,6 @@ export interface components {
             } | null;
             /** Enabled */
             enabled?: boolean | null;
-        };
-        /** StatusErrorOut */
-        StatusErrorOut: {
-            /** Code */
-            code: string;
-            /** Message */
-            message: string;
         };
         /**
          * Summary

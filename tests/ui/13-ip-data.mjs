@@ -1,8 +1,9 @@
-// The "IP data" administration tab (MaxMind, the lookup API) and nodes that fill themselves in from their address.
-// It does not need a MaxMind account: downloading is covered by the backend's tests. It checks what an administrator
-// does in the page: the tab fits at every width, the lookup API's settings are saved and really change who may use the
+// The "IP data" administration tab (the sources, the lookup API) and nodes that fill themselves in from their address.
+// It does not need any account: downloading is covered by the backend's tests. It checks what an administrator
+// does in the page: the tab fits at every width, MaxMind is a row of the one list of sources like the others (no card of its own,
+// no table of "databases in use"), the lookup API's settings are saved and really change who may use the
 // API, and the node dialog sends only what was changed (a field that is sent becomes the administrator's own). It
-// stops with a note when the backend is older than 0.8.
+// stops with a note when the backend is older than 0.13 (before that MaxMind had its own card).
 import { BASE, noOverflow, open, screenshot, signIn } from "./lib.mjs";
 
 export default async function check(t) {
@@ -19,8 +20,8 @@ export default async function check(t) {
       [method, path, body],
     );
   const before = await call("GET", "/admin/ip-data");
-  if (before.status !== 200) {
-    t.note("skipped: this backend has no IP data settings (it needs version 0.8 or newer)");
+  if (before.status !== 200 || !before.body.sources || "maxmind" in before.body) {
+    t.note("skipped: this backend still has MaxMind apart from the other sources (it needs version 0.13 or newer)");
     await close();
     return;
   }
@@ -33,17 +34,21 @@ export default async function check(t) {
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
       await page.getByRole("tab", { name: "IP data" }).click();
-      await page.getByText("MaxMind GeoLite2").first().waitFor();
-      await page.getByText("Databases in use").waitFor();
+      await page.getByTestId("ip-sources-card").waitFor();
+      await page.getByText("IP lookup API").waitFor();
       await noOverflow(t, page, `${width} IP data`);
     }
     await page.setViewportSize({ width: 1280, height: 900 });
     const text = await page.locator("main").innerText();
-    for (const edition of ["GeoLite2-City", "GeoLite2-ASN", "GeoLite2-Country"]) t.ok(text.includes(edition), `the table should list ${edition}`);
-    t.ok(/Account ID/.test(text) && /License key/.test(text), "the account and key fields should be there");
-    t.ok(!text.includes(original.maxmind.license_key ?? "\u0000never"), "a saved license key must never be shown");
-    if (!original.maxmind.license_key_set) {
-      t.ok(await page.getByRole("button", { name: "Update now" }).isDisabled(), "'Update now' needs an account first");
+    // MaxMind is one row of the list, like every other source: no card or table of its own
+    t.ok(!/Databases in use/.test(text), "there is no table of databases in use");
+    t.eq(await page.getByText("MaxMind GeoLite2", { exact: true }).count(), 1, "MaxMind is named once, in the list of sources");
+    t.eq(await page.getByTestId("source-row-maxmind").count(), 1, "and it is a row of the list");
+    const maxmind = page.getByTestId("source-row-maxmind");
+    t.ok((await maxmind.getByLabel("Account ID").count()) === 1 && (await maxmind.getByLabel("License key").count()) === 1, "its account fields are in its row");
+    t.ok(await page.getByRole("button", { name: "Check for updates now" }).isVisible(), "there is one button to check every source");
+    if (original.offline || !original.directory_configured) {
+      t.ok(await page.getByRole("button", { name: "Check for updates now" }).isDisabled(), "checking needs a data directory, and is off in offline mode");
     }
     await screenshot(page, "ip-data", true);
 

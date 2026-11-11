@@ -66,7 +66,7 @@ describe("how sure", () => {
 
 describe("what a source said", () => {
   const answer = (over: Partial<SourceAnswer> = {}): SourceAnswer =>
-    ({ id: "dbip", name: "DB-IP Lite", kind: "database", status: "ok", said: {}, agrees: [], differs: [], ...over }) as SourceAnswer;
+    ({ id: "dbip", name: "DB-IP Lite", status: "ok", said: {}, agrees: [], differs: [], ...over }) as SourceAnswer;
   it("is a place and a network in a line, or nothing", () => {
     expect(saidLine(answer({ said: { city: "Mountain View", region: "California", country: "US", asn: 15169, organization: "Google LLC" } }))).toBe(
       "Mountain View, California, US · AS15169 Google LLC",

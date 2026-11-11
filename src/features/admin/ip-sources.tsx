@@ -14,6 +14,7 @@ import type { Schemas } from "@/lib/api/client";
 
 type IpData = Schemas["IpDataOut"];
 type Source = Schemas["SourceAdminOut"];
+type Credential = Source["credentials"][number];
 type Update = Partial<Schemas["IpDataUpdate"]>;
 type Send = (name: string, body: Update, done: string) => Promise<boolean>;
 
@@ -24,7 +25,6 @@ const STATE: Record<Source["state"], { label: string; variant: "default" | "seco
   waiting: { label: "waiting for its first download", variant: "outline" },
   offline: { label: "offline mode", variant: "outline" },
   no_directory: { label: "no data directory", variant: "destructive" },
-  paused: { label: "out of requests", variant: "destructive" },
 };
 
 const HOURS = [
@@ -39,66 +39,76 @@ const HOURS = [
 const when = (iso: string | null | undefined): string => (iso ? new Date(iso).toLocaleString() : "never");
 const megabytes = (bytes: number | null | undefined): string => (bytes ? `${(bytes / 1_048_576).toFixed(1)} MB` : "–");
 
-/** The key or token of an online source: typed here, kept on the server, never shown again. */
+/**
+ * What a source's free download needs from its account (MaxMind: an account ID and a license key, IPinfo: a token, ...). Every source is
+ * handled the same way: typed here, kept on the server, and a secret is never shown again. An account ID is not a secret and is shown.
+ */
 function Credentials({ source, send, busy }: { source: Source; send: Send; busy: boolean }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [typed, setTyped] = useState<Record<string, string>>({});
   if (source.credentials.length === 0) return null;
-  if (source.id === "maxmind") {
-    return <p className="text-xs text-muted-foreground">The account ID and license key are set in the MaxMind card below.</p>;
-  }
-  const typed = source.credentials.filter((c) => (values[c.name] ?? "").trim());
+  const fromEnvironment = source.credentials.some((c) => c.from_environment);
+  const saved = (c: Credential) => (c.secret ? "" : (c.value ?? ""));
+  const shown = (c: Credential) => typed[c.name] ?? saved(c);
+  const changed = source.credentials.filter((c) => shown(c).trim() !== saved(c));
+  const anySet = source.credentials.some((c) => c.set);
+  const submit = async (credentials: Record<string, string>, done: string) => {
+    if (await send(`key-${source.id}`, { sources: { [source.id]: { credentials } } }, `${source.name}: ${done}`)) setTyped({});
+  };
   return (
     <div className="space-y-2">
       {source.credentials.map((c) => (
         <div key={c.name} className="grid items-center gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
           <Label htmlFor={`${source.id}-${c.name}`} className="text-sm">
-            {c.label} <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            {c.label}
           </Label>
           <Input
             id={`${source.id}-${c.name}`}
             type={c.secret ? "password" : "text"}
-            autoComplete="new-password"
+            autoComplete={c.secret ? "new-password" : "off"}
             spellCheck={false}
-            value={values[c.name] ?? ""}
-            onChange={(e) => setValues({ ...values, [c.name]: e.target.value })}
-            placeholder={c.set ? "Saved. Type a new one to replace it" : `Paste a ${c.label.toLowerCase()} for a higher limit`}
+            disabled={c.from_environment}
+            value={shown(c)}
+            onChange={(e) => setTyped({ ...typed, [c.name]: e.target.value })}
+            placeholder={c.secret && c.set ? "Saved. Type a new one to replace it" : `Paste your ${c.label}`}
           />
           {c.set ? <Badge variant="secondary">saved</Badge> : <span />}
         </div>
       ))}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          disabled={busy || typed.length === 0}
-          onClick={async () => {
-            const credentials = Object.fromEntries(typed.map((c) => [c.name, (values[c.name] ?? "").trim()]));
-            if (await send(`key-${source.id}`, { sources: { [source.id]: { credentials } } }, `${source.name}: key saved`)) setValues({});
-          }}
-        >
-          Save key
-        </Button>
-        {source.credentials.some((c) => c.set) && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={async () => {
-              const credentials = Object.fromEntries(source.credentials.map((c) => [c.name, ""]));
-              if (await send(`key-${source.id}`, { sources: { [source.id]: { credentials } } }, `${source.name}: key removed`)) setValues({});
-            }}
-          >
-            Remove key
-          </Button>
-        )}
-      </div>
+      {fromEnvironment ? (
+        <p className="text-xs text-muted-foreground">This is set in the server&apos;s environment, which wins over this page: it cannot be changed here.</p>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">It is kept on this server. A key is never shown again.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy || changed.length === 0}
+              onClick={() => submit(Object.fromEntries(changed.map((c) => [c.name, shown(c).trim()])), "key saved")}
+            >
+              Save key
+            </Button>
+            {anySet && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => submit(Object.fromEntries(source.credentials.map((c) => [c.name, ""])), "key removed")}
+              >
+                Remove key
+              </Button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: boolean }) {
   const state = STATE[source.state];
+  const timing = source.running ? "Downloading…" : source.last_attempt ? `Last check ${when(source.last_attempt)}` : null;
   return (
     <li className="space-y-2 py-4 first:pt-0 last:pb-0" data-testid={`source-row-${source.id}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -115,7 +125,6 @@ function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: b
               {source.name}
             </a>
           </Label>
-          <Badge variant="outline">{source.kind === "online" ? "online" : "database"}</Badge>
         </div>
         <Badge variant={state.variant} title={source.detail ?? undefined} data-testid={`source-state-${source.id}`}>
           {state.label}
@@ -125,7 +134,7 @@ function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: b
         {source.summary} {source.cost}
       </p>
       {source.enabled && source.detail && source.state !== "ready" && <p className="text-xs text-muted-foreground">{source.detail}</p>}
-      {source.error && <p className="text-xs text-destructive">The last {source.kind === "online" ? "lookup" : "download"} did not work: {source.error}</p>}
+      {source.error && <p className="text-xs text-destructive">The last download did not work: {source.error}</p>}
       {source.files.length > 0 && (
         <ul className="space-y-0.5 text-xs text-muted-foreground">
           {source.files.map((f) => (
@@ -137,10 +146,10 @@ function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: b
           ))}
         </ul>
       )}
-      {source.kind === "database" && source.id !== "maxmind" && source.enabled && (
-        <p className="text-xs text-muted-foreground">
-          {source.running ? "Downloading…" : `Last check ${when(source.last_attempt)}`}
-          {source.next_check ? ` · next ${when(source.next_check)}` : ""}
+      {source.enabled && timing && (
+        <p className="text-xs text-muted-foreground" data-testid={`source-timing-${source.id}`}>
+          {timing}
+          {!source.running && source.next_check ? ` · next ${when(source.next_check)}` : ""}
         </p>
       )}
       {source.attribution && <p className="text-xs text-muted-foreground">{source.attribution}</p>}
@@ -150,10 +159,10 @@ function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: b
 }
 
 /**
- * Every IP data source with its switch (all on by default), what it needs, how it is doing and, for the online ones, a place for an optional
- * key. The lookup API and a measurement's addresses ask every source that is on and take a majority vote.
+ * Every IP data source, all the same: its switch (all on by default), what its download needs, what is on disk and how the last check went.
+ * A lookup asks every source that is on and takes a majority vote. Every source is a database this server downloads and answers from.
  */
-export function SourcesCard({ data, send, busy, updateNow }: { data: IpData; send: Send; busy: string | null; updateNow: () => void }) {
+export function SourcesCard({ data, send, busy, checkNow }: { data: IpData; send: Send; busy: string | null; checkNow: () => void }) {
   const [hours, setHours] = useState(String(data.data_update_hours));
   const on = data.sources.filter((s) => s.enabled).length;
   const downloading = data.sources.some((s) => s.running);
@@ -162,9 +171,9 @@ export function SourcesCard({ data, send, busy, updateNow }: { data: IpData; sen
       <CardHeader>
         <CardTitle>IP data sources</CardTitle>
         <CardDescription>
-          {on} of {data.sources.length} sources are on. Each address that is looked up is put to every source that is on and the answers are
-          voted on: the value most sources give wins, and each field says how sure the vote is. One source with something to say is
-          enough. The online services are sent the address that is looked up; turn them off if that is not wanted.
+          {on} of {data.sources.length} sources are on. Each is a database this server downloads and answers from, so nothing is asked of a service when
+          an address is looked up. Every address is put to every source that is on and the answers are voted on: the value most sources give wins, and
+          each field says how sure the vote is. One source with something to say is enough.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -172,16 +181,16 @@ export function SourcesCard({ data, send, busy, updateNow }: { data: IpData; sen
           <Alert>
             <AlertTitle>Offline mode</AlertTitle>
             <AlertDescription>
-              <code>IPPING_IPDATA_OFFLINE</code> is set on this server: the online sources are not asked and nothing is downloaded. The databases
-              already on disk still answer.
+              <code>IPPING_IPDATA_OFFLINE</code> is set on this server: nothing is downloaded. The databases already on disk still answer.
             </AlertDescription>
           </Alert>
         )}
-        {!data.maxmind.directory_configured && !data.offline && (
+        {!data.directory_configured && !data.offline && (
           <Alert variant="destructive">
             <AlertTitle>Nowhere to keep the databases</AlertTitle>
             <AlertDescription>
-              The backend has no directory for them (<code>IPPING_GEOIP_DIR</code>), so only the online sources can answer.
+              The backend has no directory for them (<code>IPPING_GEOIP_DIR</code>), so nothing can be downloaded. Docker installs have one; for a direct
+              install, update the installer and run <code>ipping.sh update</code>.
             </AlertDescription>
           </Alert>
         )}
@@ -194,7 +203,7 @@ export function SourcesCard({ data, send, busy, updateNow }: { data: IpData; sen
       <CardFooter className="flex flex-wrap items-end justify-between gap-3 border-t">
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1.5">
-            <Label htmlFor="data-hours">Look for newer databases (those that need no account)</Label>
+            <Label htmlFor="data-hours">Look for newer files</Label>
             <Select value={hours} items={HOURS} onValueChange={(next) => next !== null && setHours(next)}>
               <SelectTrigger id="data-hours" className="w-48">
                 <SelectValue />
@@ -217,8 +226,8 @@ export function SourcesCard({ data, send, busy, updateNow }: { data: IpData; sen
             Save
           </Button>
         </div>
-        <Button type="button" onClick={updateNow} disabled={busy !== null || downloading || data.offline || !data.maxmind.directory_configured}>
-          {downloading ? "Downloading…" : "Update databases now"}
+        <Button type="button" onClick={checkNow} disabled={busy !== null || downloading || data.offline || !data.directory_configured}>
+          {downloading ? "Downloading…" : "Check for updates now"}
         </Button>
       </CardFooter>
     </Card>

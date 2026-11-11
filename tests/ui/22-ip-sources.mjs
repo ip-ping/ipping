@@ -1,6 +1,7 @@
-// The administrator's IP data sources: nine of them, each with a switch (all on until turned off), a state, and for the online ones an optional
-// key that is written and never read back. What the page says is what the lookup does: a source that is switched off answers "Turned off".
-// It puts everything back as it found it. Needs a backend with the sources (0.12 or newer); it stops with a note otherwise.
+// The administrator's IP data sources: nine of them, all treated the same: each is a row with a switch (all on until turned off), a state, what
+// is on disk, and where its free download needs an account a key (MaxMind's account ID and license key, IPinfo's token, IP2Location's download
+// token) that is written and never read back. What the page says is what the lookup does: a source that is switched off answers "Turned off".
+// It puts everything back as it found it. Needs a backend that treats every source the same (0.13 or newer); it stops with a note otherwise.
 import { noOverflow, open, screenshot, signIn } from "./lib.mjs";
 
 const TOKEN = "UI-TEST-TOKEN-0123456789";
@@ -19,8 +20,8 @@ export default async function check(t) {
       [method, path, body],
     );
   const before = await call("GET", "/admin/ip-data");
-  if (before.status !== 200 || !before.body.sources) {
-    t.note("skipped: this backend has no IP data sources (it needs version 0.12 or newer)");
+  if (before.status !== 200 || !before.body.sources || "maxmind" in before.body) {
+    t.note("skipped: this backend does not treat every IP data source the same (it needs version 0.13 or newer)");
     await close();
     return;
   }
@@ -31,13 +32,20 @@ export default async function check(t) {
   try {
     await page.getByRole("tab", { name: "IP data" }).click();
     await page.getByTestId("ip-sources-card").waitFor();
-    const ids = ["maxmind", "dbip", "iptoasn", "ipdeny", "ip2region", "ipinfo", "iplocate", "ipapi_is", "ip2location"];
+    const ids = ["maxmind", "dbip", "ipinfo", "iplocate", "ipapi_is", "ip2location", "iptoasn", "ipdeny", "ip2region"];
 
     // 1. All nine, with a switch and a state each; everything is on unless an administrator turned it off
     for (const id of ids) t.eq(await page.getByTestId(`source-row-${id}`).count(), 1, `${id} should have a row`);
     t.eq(await page.getByTestId("ip-sources-card").getByRole("switch").count(), 9, "nine switches");
     t.eq(JSON.stringify(Object.keys(original)), JSON.stringify(ids), "the backend lists the nine sources in this order");
     t.ok(/\d+ of 9 sources are on/.test(await page.getByTestId("ip-sources-card").innerText()), "the card should count the sources that are on");
+    // Treated the same: every row has a state, and a key box exactly where the source's download needs an account (and the environment does not set it)
+    const takingKeys = before.body.sources.filter((s) => s.credentials.length > 0 && !s.credentials.some((c) => c.from_environment)).map((s) => s.id);
+    t.eq(JSON.stringify(takingKeys), JSON.stringify(["maxmind", "ipinfo", "ip2location"]), "the sources that need an account are MaxMind, IPinfo and IP2Location");
+    for (const id of ids) {
+      t.eq(await page.getByTestId(`source-state-${id}`).count(), 1, `${id} should show its state`);
+      t.eq(await page.getByTestId(`source-row-${id}`).getByRole("button", { name: "Save key" }).count(), takingKeys.includes(id) ? 1 : 0, `${id}: a key box only where an account is needed`);
+    }
     await screenshot(page, "ip-sources");
 
     // 2. Switching one off is what the lookup sees: ipdeny says so, and the others still answer
@@ -76,8 +84,27 @@ export default async function check(t) {
     t.eq((await removed).status(), 200, "removing a key should work");
     await page.getByTestId("source-row-ipinfo").getByText("saved", { exact: true }).waitFor({ state: "detached", timeout: 10000 });
     t.eq((await sourceOf("ipinfo")).credentials[0].set, false, "and it is gone");
-    // MaxMind's account is set in its own card
-    t.ok(/set in the MaxMind card/.test(await page.getByTestId("source-row-maxmind").innerText()), "MaxMind points to its own card for the account");
+    // MaxMind's account is set in the same way: its ID (not a secret) comes back, its license key never does. Only where nothing is downloaded
+    // (offline mode), so that a made-up account is not tried against MaxMind.
+    if (before.body.offline) {
+      const mm = page.getByTestId("source-row-maxmind");
+      await mm.getByLabel("Account ID").fill("123456");
+      await mm.getByLabel("License key").fill("abcDEF0123456789_abcDEF0123456789");
+      const savedAccount = page.waitForResponse((r) => r.request().method() === "PUT" && /\/admin\/ip-data$/.test(r.url()));
+      await mm.getByRole("button", { name: "Save key" }).click();
+      t.eq((await savedAccount).status(), 200, "saving an account should work");
+      await mm.getByText("saved", { exact: true }).first().waitFor({ timeout: 10000 });
+      t.ok(!(await page.locator("main").innerText()).includes("abcDEF0123456789"), "the license key must never be shown again");
+      t.eq(await mm.getByLabel("Account ID").inputValue(), "123456", "the account ID is shown: it is not a secret");
+      t.eq(await mm.getByLabel("License key").inputValue(), "", "and the license key box is empty");
+      const account = (await sourceOf("maxmind")).credentials;
+      t.ok(account.every((c) => c.set) && !JSON.stringify(account).includes("abcDEF"), "the API says both are set and never sends the key");
+      const gone = page.waitForResponse((r) => r.request().method() === "PUT" && /\/admin\/ip-data$/.test(r.url()));
+      await mm.getByRole("button", { name: "Remove key" }).click();
+      t.eq((await gone).status(), 200, "removing the account should work");
+      await mm.getByText("saved", { exact: true }).first().waitFor({ state: "detached", timeout: 10000 });
+      t.ok((await sourceOf("maxmind")).credentials.every((c) => !c.set), "and it is gone");
+    }
 
     // 4. At the widths people use (once the toasts of the saves above have gone: they slide in from beyond the edge)
     await page.locator("[data-sonner-toast]").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
@@ -89,7 +116,7 @@ export default async function check(t) {
     t.ok(errors.length === 0, `console errors ${JSON.stringify(errors)}`);
   } finally {
     await call("PUT", "/admin/ip-data", { sources: Object.fromEntries(Object.entries(original).map(([id, enabled]) => [id, { enabled }])) });
-    await call("PUT", "/admin/ip-data", { sources: { ipinfo: { credentials: { token: "" } } } });
+    await call("PUT", "/admin/ip-data", { sources: { ipinfo: { credentials: { token: "" } }, maxmind: { credentials: { account_id: "", license_key: "" } } } });
     await close();
   }
 }
