@@ -17,7 +17,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <div className="space-y-6 lg:space-y-8">
       <HomeHero />
       <SelectionProvider initialKind={KINDS.find((k) => k === kind) ?? "ping"}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
           <Suspense>
             <MeasureForm
               initialTarget={typeof target === "string" ? target : ""}

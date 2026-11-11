@@ -45,7 +45,9 @@ export default async function check(t) {
   // a card says how many nodes saw its certificate and does not list them
   const seen = await page.locator("article[aria-label^='Certificate for']").evaluateAll((cards) => cards.map((c) => /Seen by (\d+) nodes?/.exec(c.innerText)?.[1] ?? null));
   t.ok(seen.length === 2 && seen.every((n) => n !== null), `each card should say how many nodes saw it (${seen})`);
-  t.eq(seen.reduce((n, x) => n + Number(x), 0), rows, "and together the cards account for every node");
+  // (the simulated fleet's nodes time out now and then, 3% of the time each: such a node has no certificate to show a card for)
+  const gave = await page.locator("tbody tr").evaluateAll((trs) => trs.filter((tr) => /\d+ d left/i.test(tr.innerText)).length);
+  t.eq(seen.reduce((n, x) => n + Number(x), 0), gave, "and together the cards account for every node that gave a certificate");
   t.eq(await page.locator("article[aria-label^='Certificate for'] button").count(), 0, "with no list of node names in it");
   await screenshot(page, "certificate-split");
 

@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.14.0** (application), installing backend **v0.11.0**. Nodes of any earlier version
+Current release: **v0.14.1** (application), installing backend **v0.11.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -365,6 +365,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.14.1 | v0.11.0 | migration `0013` | no gap between the command and the map on the home page (the recent list scrolls inside a card as tall as the command); works with nodes of any version |
 | v0.14.0 | v0.11.0 | migration `0013` | a better home page: the fleet's numbers in the title's header, the command with the recent measurements beside it, the map across the whole width; the recent list writes every address in full (it was squeezed to nothing) with when it was run; works with nodes of any version |
 | v0.13.0 | v0.11.0 | migration `0013` | languages (nine, followed from the browser, remembered, set by the administrator), a home page with the command first and the fleet and recent measurements beside it, no GitHub link; works with nodes of any version |
 | v0.12.0 | v0.10.0 | migration `0013` | the location estimate always shows with an accuracy percentage and says when nodes disagree; the measurement page redesigned (headline numbers beside the target's IP info, the map, the best guess, then the details) with result numbers on the map; a node is shown by its place with its network beneath instead of a name; nodes need no name (called `City, CC - Provider · ASn`); reusable enrollment keys; no key rotation; a revoked node is removed; no Admin link in the header. Nodes: **v0.8.0** is the first that enrolls without a name; older nodes still work and keep the names they send |
@@ -435,7 +436,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0 and v0.14.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0 and v0.14.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

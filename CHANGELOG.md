@@ -2,6 +2,23 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.14.1 (2026-11-11)
+
+The gap between the command and the map on the home page is gone. Interface only: installs backend **v0.11.0** (unchanged, still `0013`).
+
+- **The cause**: the command and "Recent in this browser" sit side by side in one row of the page, and a row is as tall as its taller card.
+  With a full recent list (eight measurements) that card is about 160 px taller than the command, so the command ended and the page left
+  186 px of empty space before the map. (v0.14.0 was looked at with six measurements, where the difference was 22 px.)
+- **The fix**: the row is as tall as the **command** and the recent card fills exactly that height; its list **scrolls inside the card**
+  (a part of the next row shows at the bottom). Both cards end together and the map follows by the page's usual space (24 px). A list that is
+  still loading or empty is as tall as it is. On a narrow screen the cards are stacked as before and the list is its full length.
+- **Tests**: `tests/ui/20-home-layout.mjs` now fills the list (eight rows) and checks, at every width, that the command and the list end
+  together and that nothing but the usual space is between either and the map. **Run against v0.14.0's layout it fails** ("the command and
+  the list end together (675 and 837)").
+  `tests/ui/09-certificate.mjs` counted a card for every node, but the simulated fleet's nodes time out 3% of the time each on a certificate
+  check (about 4 runs in 10 had one), so "16 rows, 15 in the cards" failed at random; it now counts the nodes that gave a certificate.
+  Eight reruns pass. 135 unit tests, typecheck, lint and all 20 browser checks pass.
+
 ## v0.14.0 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema
