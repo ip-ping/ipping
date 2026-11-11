@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.14.1 (2026-11-11)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema
+`0013`), `ipping:0.14.1` is on Docker Hub and the bundle has no link to GitHub. **The released `ipping:0.14.1` and `ipping-backend:0.11.0`
+images were run together** with the simulated fleet, and the browser checks `pages`, `measurements`, `map-selection`, `languages`,
+`certificate` and `home-layout` pass against them. The installer is unchanged in this release, so nothing was installed on a fresh machine.
+
 The gap between the command and the map on the home page is gone. Interface only: installs backend **v0.11.0** (unchanged, still `0013`).
 
 - **The cause**: the command and "Recent in this browser" sit side by side in one row of the page, and a row is as tall as its taller card.
