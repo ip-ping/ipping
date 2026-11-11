@@ -2,7 +2,7 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.17.0 (unreleased)
+## v0.17.0 (2026-11-11)
 
 An API page: a guided, interactive way through the API. The backend is unchanged (v0.13.0).
 
