@@ -2,9 +2,16 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.15.0 (unreleased)
+## v0.15.0 (2026-11-11)
 
-Nine IP data sources and a vote, and an alert that tells the truth. Installs backend **v0.12.0** (no database change: still `0013`). Not released yet.
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.12.0 (schema `0013`),
+`ipping:0.15.0` is on Docker Hub and the bundle has no link to GitHub. **The released `ipping:0.15.0` and `ipping-backend:0.12.0` images were run
+together** with the simulated fleet and the databases of five sources, and the browser checks `pages`, `measurements`, `ip-data`, `ip-info`,
+`ip-sources`, `languages`, `home-layout` and `no-capable-node` pass against them. The installer is unchanged in this release, so nothing was
+installed on a fresh machine. Not run against the real MaxMind (no account), and the online services were exercised by the released backend alone
+(see its changelog), not by the browser checks, which run offline.
+
+Nine IP data sources and a vote, and an alert that tells the truth. Installs backend **v0.12.0** (no database change: still `0013`).
 
 ### IP info: a percentage for every field, and the sources behind it
 - **The IP info card** (the form's *IP info* option) is a row for each field the vote answered (country, region, city, position, postal code,
