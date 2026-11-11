@@ -309,7 +309,7 @@ sends an address anywhere. *Admin > IP data* is one list of nine rows, each with
 
 | Source | Account | What is downloaded |
 |---|---|---|
-| DB-IP Lite, IPLocate, ipapi.is, IPtoASN, IPdeny, ip2region | none | by the backend by itself, a few minutes after it starts: about 430 MB in all (measured on the real files) |
+| DB-IP Lite, IPLocate, ipapi.is, IPtoASN, IPdeny, ip2region | none | by the backend by itself, about a minute after it starts on a fast connection (25 s to begin, 41 s to download and build, measured): about 430 MB in all |
 | MaxMind GeoLite2 | a free account at maxmind.com: its **account ID** (a number) and a **license key** (*Manage license keys*) | City and ASN |
 | IPinfo Lite | a free account at ipinfo.io: its **access token** | one database |
 | IP2Location LITE | a free account at lite.ip2location.com: its **download token** (on its Download page) | two zip files, once a month, as IP2Location asks |
