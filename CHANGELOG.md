@@ -4,6 +4,10 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.12.0 (2026-11-11)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.10.0 (schema
+`0013`), and `ipping:0.12.0`, `ipping-backend:0.10.0` and `ipping-node:0.8.0` are on Docker Hub. The installer is unchanged in this
+release, so nothing was installed on a fresh machine; the released backend and node were tried together (see their changelogs).
+
 The estimated network location is not strict any more (it always shows an estimate and an accuracy percentage), the measurement page
 is laid out answer-first, and the admin and node pages follow the backend's changes: reusable enrollment keys, no key rotation, a
 revoked node that is removed, nodes that need no name. Installs backend **v0.10.0** (migration `0013`); it works with nodes of any
