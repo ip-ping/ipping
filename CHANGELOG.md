@@ -15,8 +15,8 @@ reported itself ready, had two failures: `measurement-layout` (no online node at
 17 nodes online. A second run of all ten had `home-layout` report the React hydration error (#418) that it had reported once before the release. It did not repeat in 3 runs of
 `languages` then `home-layout`, nor in 3 runs of the 7-check sequence it failed in (against the same released images). The same sequence was clean in 4 of 4 runs against the
 released v0.16.0 images, so the page may have made it more likely or it may be an older intermittent problem: that is not settled (2 failures in 6 sequences against 0 in 5 is too
-little to say), its cause has not been found, and it could not be reproduced in 120 plain loads of the home page or against a development server. React recovers from the error by drawing
-the page again in the browser; nothing it shows is wrong. The installer is unchanged in this release, so nothing was installed on a fresh machine.
+little to say), its cause has not been found, and it could not be reproduced in 120 plain loads of the home page or against a development server. React recovers from such an error by drawing
+the page again in the browser, and in the runs that reported it the check's layout assertions passed: only its console assertion failed. The installer is unchanged in this release, so nothing was installed on a fresh machine.
 
 - **`/developers`, linked as "API" in the header** (the word is the same in all nine languages; the page itself is English, like the admin pages). It cannot be `/api`:
   the proxy and Next's rewrite send everything under `/api` to the backend, so the page lives beside it, and links to the backend's own reference at `/api/docs`.
