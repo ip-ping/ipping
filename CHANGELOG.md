@@ -4,6 +4,14 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.16.0 (2026-11-11)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation (a file altered after release is refused), `release-manifest.json` names
+backend v0.13.0 (schema `0013`) and its wheel's hash is the one in the backend release, `ipping:0.16.0` is on Docker Hub for amd64 and arm64, and the
+frontend bundle has the new admin text ("Check for updates now", "Look for newer files") and none of the old ("Databases in use", "online service", "Out of
+requests") or any link to GitHub. **The released `ipping:0.16.0` and `ipping-backend:0.13.0` images were run together** with an empty data volume and the
+simulated fleet, and the browser checks `pages`, `measurements`, `ip-data`, `ip-info`, `ip-sources`, `languages`, `home-layout`, `no-capable-node` and
+`measurement-layout` pass against them (the MaxMind-account step of `ip-sources` only runs in offline mode, so it was not part of that run). The installer is
+unchanged in this release, so nothing was installed on a fresh machine.
+
 Every IP data source is a downloaded database, all treated the same, and the admin page says so. Installs backend v0.13.0 (`release.env`;
 the contract is pinned to its tag). The checks of the IP data page stop with a note on an older backend.
 
