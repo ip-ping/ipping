@@ -4,6 +4,11 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 ## v0.13.0 (2026-11-11)
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema
+`0013`), and `ipping:0.13.0` and `ipping-backend:0.11.0` are on Docker Hub. The frontend bundle holds the nine language names and no
+link to GitHub. The installer is unchanged in this release, so nothing was installed on a fresh machine; the languages were checked in the
+browser (check `19`) against the backend built from the same commit as v0.11.0.
+
 Languages, a reworked home page, and no GitHub link. Installs backend **v0.11.0** (no database change: still `0013`).
 
 ### Languages
