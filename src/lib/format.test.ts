@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { networkOf, nodeHeading, shortName } from "./format";
+import { ago, networkOf, nodeHeading, shortName } from "./format";
 
 const node = (over: Record<string, unknown> = {}) => ({
   name: "Sydney, AU - OVH SAS · AS16276",
@@ -36,5 +36,25 @@ describe("shortName", () => {
     expect(shortName(node())).toBe("Sydney, AU");
     expect(shortName(node({ city: null }))).toBe("AU");
     expect(shortName(node({ city: null, country: null, name: "Node abc123" }))).toBe("Node abc123");
+  });
+});
+
+describe("ago", () => {
+  const now = Date.parse("2026-11-11T12:00:00Z");
+  const before = (seconds: number) => new Date(now - seconds * 1000).toISOString();
+  it("says how long ago in the largest unit that fits", () => {
+    expect(ago(before(5), "en", now)).toBe("5 sec. ago");
+    expect(ago(before(3 * 60), "en", now)).toBe("3 min. ago");
+    expect(ago(before(2 * 3600), "en", now)).toBe("2 hr. ago");
+    expect(ago(before(86_400), "en", now)).toBe("yesterday");
+    expect(ago(before(3 * 86_400), "en", now)).toBe("3 days ago");
+  });
+  it("uses the interface's language", () => {
+    expect(ago(before(3 * 60), "de", now)).toMatch(/^vor 3 Min/);
+    expect(ago(before(3 * 60), "ja", now)).toMatch(/3/);
+    expect(ago(before(3 * 60), "ja", now)).not.toMatch(/ago/);
+  });
+  it("gives nothing for a date it cannot read", () => {
+    expect(ago("not a date", "en", now)).toBe("");
   });
 });

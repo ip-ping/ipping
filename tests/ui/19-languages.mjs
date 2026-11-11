@@ -71,7 +71,7 @@ export default async function check(t) {
       await screenshot(page, "language-ja");
     });
 
-    // 4. The home page: the command first, the map under it, the fleet and the recent list beside them
+    // 4. The home page: the title with the fleet's numbers, the command, the map under it (the layout itself is check 20)
     await visitor(t, "en-US", async (page) => {
       await page.goto(BASE + "/");
       await page.waitForLoadState("networkidle");
@@ -83,7 +83,7 @@ export default async function check(t) {
       t.ok(hero < form && form < map, `the title, then the command, then the map (${hero} ${form} ${map})`);
       const stats = page.getByText("Nodes online", { exact: true });
       t.ok((await stats.count()) > 0, "the fleet's numbers are on the page");
-      t.ok(Math.abs((await y(stats)) - form) < 400, "and beside the command, not below the map");
+      t.ok((await y(stats)) < form, "above the command, in the title's header");
       await screenshot(page, "home-layout");
       await noOverflow(t, page, "home at 1440");
       for (const width of [390, 768, 1024]) {

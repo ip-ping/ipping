@@ -251,14 +251,14 @@ export function MeasureForm({
             {kind === "dns" ? (
               <>
                 <Choice
-                  className="lg:col-span-3"
+                  className="lg:col-span-4"
                   label={t("form.recordType")}
                   value={recordType}
                   onChange={setRecordType}
                   options={DNS_RECORD_TYPES.map((rt) => ({ value: rt, label: rt }))}
                 />
                 <Choice
-                  className="lg:col-span-3"
+                  className="lg:col-span-4"
                   label={t("form.resolver")}
                   value={resolver}
                   onChange={setResolver}
@@ -266,7 +266,7 @@ export function MeasureForm({
                 />
                 {canUseDoh(resolver) && (
                   <Choice
-                    className="lg:col-span-3"
+                    className="lg:col-span-4"
                     label={t("form.transport")}
                     value={viaHttps ? "doh" : "udp"}
                     onChange={setTransport}
@@ -277,7 +277,7 @@ export function MeasureForm({
             ) : (
               <>
                 <Choice
-                  className="lg:col-span-3"
+                  className="lg:col-span-4"
                   label={t("form.nameResolution")}
                   value={resolution}
                   onChange={setResolution}
@@ -289,7 +289,7 @@ export function MeasureForm({
                 {resolution === "one" &&
                   (askable.length > 0 ? (
                     <Choice
-                      className="lg:col-span-3"
+                      className="lg:col-span-4"
                       label={t("form.resolvingNode")}
                       value={resolverNode?.id ?? ""}
                       onChange={setResolverId}
@@ -299,13 +299,13 @@ export function MeasureForm({
                       }))}
                     />
                   ) : (
-                    <div className="min-w-0 space-y-1.5 lg:col-span-3">
+                    <div className="min-w-0 space-y-1.5 lg:col-span-4">
                       <Label>{t("form.resolvingNode")}</Label>
                       <p className="text-xs text-muted-foreground">{t("form.noDnsNode")}</p>
                     </div>
                   ))}
                 <Choice
-                  className="lg:col-span-3"
+                  className="lg:col-span-4"
                   label={t("form.ipVersion")}
                   value={family}
                   onChange={setFamily}
@@ -319,7 +319,7 @@ export function MeasureForm({
             )}
             {(kind === "ping" || kind === "tcp") && (
               <Choice
-                className="lg:col-span-3"
+                className="lg:col-span-4"
                 label={kind === "ping" ? t("form.count.ping") : t("form.count.tcp")}
                 value={count}
                 onChange={setCount}
@@ -328,7 +328,7 @@ export function MeasureForm({
             )}
             {kind === "traceroute" && (
               <Choice
-                className="lg:col-span-3"
+                className="lg:col-span-4"
                 label={t("form.rounds")}
                 value={rounds}
                 onChange={setRounds}
@@ -337,7 +337,7 @@ export function MeasureForm({
             )}
             {kind === "tls" && (
               <Choice
-                className="lg:col-span-3"
+                className="lg:col-span-4"
                 label={t("form.transport")}
                 value={tlsTransport}
                 onChange={setTlsTransport}
@@ -345,7 +345,7 @@ export function MeasureForm({
               />
             )}
             {(kind === "tcp" || kind === "http" || kind === "tls") && (
-              <div className="min-w-0 space-y-1.5 lg:col-span-3">
+              <div className="min-w-0 space-y-1.5 lg:col-span-4">
                 <Label htmlFor="port">{kind === "tcp" ? t("form.port") : t("form.portOptional")}</Label>
                 <Input
                   id="port"
@@ -361,7 +361,7 @@ export function MeasureForm({
               </div>
             )}
             {kind === "http" && (
-              <Label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-3">
+              <Label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-4">
                 <Checkbox checked={follow} onCheckedChange={(checked) => setFollow(checked === true)} />
                 {t("form.follow")}
               </Label>

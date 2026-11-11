@@ -2,6 +2,32 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.14.0 (2026-11-11)
+
+A better home page, and the address in "Recent in this browser" is written in full. Interface only: installs backend **v0.11.0** (unchanged,
+still migration `0013`).
+
+### The fix
+- **"Recent in this browser" squeezed the address to nothing** on a normal screen. Each row was one line of four columns (kind, address, a bar,
+  a badge) in a 21 rem column, and the address got what was left: 8 px, at every width from 1280 to 1920. Each row is now two lines: **the
+  address in full on the first** (it breaks onto a second line rather than being cut: the longest IPv6 address, 39 characters, fits on one line
+  at 1024 px and wider, in a smaller type on a phone), and under it what was run, **when** ("3 min. ago", worded in the interface's language by
+  the browser), how many nodes answered (a small bar) and how it ended. While the list loads it shows placeholders instead of popping in.
+
+### The layout
+- **Title with the fleet's numbers**: the four numbers (nodes online, countries, providers, IPv6) are one slim strip in the title's header
+  (beside the title from 1280 px, under it below that) instead of four big cards that took the side column and cut their own captions short.
+- **The command with the recent list beside it** (24 rem), and **the map across the whole width under them**, much larger than before (about 1100 px wide
+  instead of 700), which makes the stations easier to hit and shift-drag over. On a phone: title, numbers, command, recent list, map.
+- **The form's options are three to a row**, not four: "Each node resolves it" was cut off at the new width.
+
+### Tests
+- `tests/ui/20-home-layout.mjs` (browser): at 1920, 1440, 1280, 1024, 768 and 390 px every address in the recent list is whole, has room
+  and is inside its card; the longest IPv6 address is on one line from 1024 px up and never takes more than two; the order is title and
+  numbers, command, recent list (beside the command from 1024 px, after it below), map (across both); nothing sticks out, light or dark; the
+  console is clean; the time is German in German. **Run against the old layout it fails with "has room (8px ...)"**, which is the bug.
+  `ago()` has unit tests (units, languages, a date it cannot read). 135 unit tests, typecheck and lint pass; all 20 browser checks pass.
+
 ## v0.13.0 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.11.0 (schema

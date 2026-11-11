@@ -26,6 +26,23 @@ export function delta(now: number, before: number): string {
   return `${diff > 0 ? "+" : "−"}${ms(Math.abs(diff))}`;
 }
 
+/** "2 min. ago", in the interface's language (`Intl` has the words); an unreadable date gives an empty string. */
+export function ago(iso: string, lang: string, now: number = Date.now()): string {
+  const seconds = Math.round((Date.parse(iso) - now) / 1000);
+  if (!Number.isFinite(seconds)) return "";
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["day", 86_400],
+    ["hour", 3_600],
+    ["minute", 60],
+  ];
+  const [unit, size] = steps.find(([, size]) => Math.abs(seconds) >= size) ?? (["second", 1] as const);
+  try {
+    return new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: "short" }).format(Math.round(seconds / size), unit);
+  } catch {
+    return "";
+  }
+}
+
 type NodeWords = {
   name: string;
   city?: string | null;
