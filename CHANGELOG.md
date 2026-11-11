@@ -6,6 +6,18 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 An API page: a guided, interactive way through the API. The backend is unchanged (v0.13.0).
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation (a file altered after release is refused), `release-manifest.json` names
+backend v0.13.0 (schema `0013`) and its wheel's hash is the one in the backend release, `ipping:0.17.0` is on Docker Hub for amd64 and arm64, and the frontend bundle has
+the page, its route and its text, and none of the administration endpoints or any link to GitHub. **The released `ipping:0.17.0` and `ipping-backend:0.13.0` images were run
+together** (an empty data volume, which the backend filled itself, and the simulated fleet) and the browser checks `pages`, `measurements`, `api-guide`, `ip-data`, `ip-info`,
+`ip-sources`, `languages`, `home-layout`, `no-capable-node` and `measurement-layout` were run against them. **Not every run was clean.** The first run, started the moment the fleet
+reported itself ready, had two failures: `measurement-layout` (no online node at that instant) and one whose output was cut off and not read; all passed when run again with the
+17 nodes online. A second run of all ten had `home-layout` report the React hydration error (#418) that it had reported once before the release. It did not repeat in 3 runs of
+`languages` then `home-layout`, nor in 3 runs of the 7-check sequence it failed in (against the same released images). The same sequence was clean in 4 of 4 runs against the
+released v0.16.0 images, so the page may have made it more likely or it may be an older intermittent problem: that is not settled (2 failures in 6 sequences against 0 in 5 is too
+little to say), its cause has not been found, and it could not be reproduced in 120 plain loads of the home page or against a development server. React recovers from the error by drawing
+the page again in the browser; nothing it shows is wrong. The installer is unchanged in this release, so nothing was installed on a fresh machine.
+
 - **`/developers`, linked as "API" in the header** (the word is the same in all nine languages; the page itself is English, like the admin pages). It cannot be `/api`:
   the proxy and Next's rewrite send everything under `/api` to the backend, so the page lives beside it, and links to the backend's own reference at `/api/docs`.
 - **Connect**: the address of the API, and an optional API key. Without a key, **Send** uses the browser session, as the site does; with one it sends what a script
