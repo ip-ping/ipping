@@ -3,6 +3,7 @@ import type { MessageKey } from "./en";
 export const ja: Partial<Record<MessageKey, string>> = {
   "nav.measure": "測定",
   "nav.nodes": "ノード",
+  "nav.api": "API",
   "nav.main": "メイン",
   language: "言語",
   "theme.toggle": "ダークモードを切り替え",

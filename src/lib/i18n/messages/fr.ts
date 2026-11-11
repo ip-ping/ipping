@@ -3,6 +3,7 @@ import type { MessageKey } from "./en";
 export const fr: Partial<Record<MessageKey, string>> = {
   "nav.measure": "Mesurer",
   "nav.nodes": "Nœuds",
+  "nav.api": "API",
   "nav.main": "Principal",
   language: "Langue",
   "theme.toggle": "Basculer le mode sombre",

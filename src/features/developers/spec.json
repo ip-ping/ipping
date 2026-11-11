@@ -1,0 +1,680 @@
+{
+  "version": "0.13.0",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/health/live",
+      "summary": "Live",
+      "description": "",
+      "parameters": [],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/ready",
+      "summary": "Ready",
+      "description": "",
+      "parameters": [],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/nodes",
+      "summary": "List Nodes",
+      "description": "Approved nodes only, with nothing that identifies the host behind them.",
+      "parameters": [],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/measurements",
+      "summary": "Create Measurement",
+      "description": "",
+      "parameters": [],
+      "body": {
+        "required": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "description": "ping and tcp: probes per node. traceroute: how many times to trace the route (default 1; more shows the loss at each hop, like mtr)",
+              "minimum": 1,
+              "maximum": 10,
+              "nullable": true
+            },
+            "countries": {
+              "type": "array",
+              "description": "Limit to nodes in these ISO 3166 countries",
+              "maxItems": 300,
+              "items": {
+                "type": "string"
+              },
+              "nullable": true
+            },
+            "dns_mode": {
+              "type": "string",
+              "enum": [
+                "fixed",
+                "regional"
+              ],
+              "default": "regional",
+              "description": "regional (the default): each node resolves the hostname itself, so each gets the address that is near it. fixed: resolve it once and have every node probe the same address; `resolve_node_id` says which node resolves it (without one, the backend does)."
+            },
+            "family": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "4",
+                "6"
+              ],
+              "default": "auto"
+            },
+            "follow_redirects": {
+              "type": "boolean",
+              "default": false,
+              "description": "http only: follow redirects (up to the deployment's limit)"
+            },
+            "include_community": {
+              "type": "boolean",
+              "default": false,
+              "description": "Also use community nodes (run by volunteers; their results are not verified). Without this, \"all nodes\" means the official ones; choosing a node by id is a choice."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ping",
+                "tcp",
+                "http",
+                "traceroute",
+                "dns",
+                "tls"
+              ],
+              "default": "ping",
+              "description": "ping: ICMP echo. tcp: time to open a TCP connection to `port`. http: one request, with timings and the TLS certificate. traceroute: the routers on the way. dns: ask each node's resolver (or a public one) about a name and compare the answers. tls: a TLS handshake with no request after it, and what the certificate says."
+            },
+            "node_ids": {
+              "type": "array",
+              "description": "Limit to these nodes; omit for all eligible",
+              "maxItems": 1000,
+              "items": {
+                "type": "string"
+              },
+              "nullable": true
+            },
+            "port": {
+              "type": "integer",
+              "description": "Destination port of a tcp or tls check. It can also be given as host:port or in a URL. An http check takes its port from the URL.",
+              "minimum": 1,
+              "maximum": 65535,
+              "nullable": true
+            },
+            "record_type": {
+              "type": "string",
+              "enum": [
+                "A",
+                "AAAA",
+                "CNAME",
+                "MX",
+                "NS",
+                "TXT",
+                "SOA"
+              ],
+              "description": "dns only: the record type to ask for (default A)",
+              "nullable": true
+            },
+            "resolve_node_id": {
+              "type": "string",
+              "description": "With dns_mode fixed and a hostname: the node that resolves it (an online node that can run DNS checks; any tier, since choosing it is a choice). Every node then probes the address that node got. Ignored for an IP address; refused for a dns check and with dns_mode regional.",
+              "maxLength": 32,
+              "nullable": true
+            },
+            "resolver": {
+              "type": "string",
+              "enum": [
+                "system",
+                "cloudflare",
+                "google",
+                "quad9"
+              ],
+              "description": "dns only: system asks each node's own resolvers (what people near the node get); the others ask that public resolver from every node (default system)",
+              "nullable": true
+            },
+            "target": {
+              "type": "string",
+              "description": "IP address, hostname or URL",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "transport": {
+              "type": "string",
+              "enum": [
+                "udp",
+                "doh",
+                "tcp",
+                "quic"
+              ],
+              "description": "dns: udp (the default) or doh, DNS over HTTPS (cloudflare, google and quad9; not the nodes' own resolvers; quad9 answers only over HTTP/2, which nodes speak from v0.7.0). tls: tcp (the default) or quic, a QUIC handshake offering h3 over UDP",
+              "nullable": true
+            }
+          },
+          "required": [
+            "target"
+          ]
+        }
+      },
+      "responses": [
+        {
+          "status": "201",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/text",
+      "summary": "Text Measurement",
+      "description": "",
+      "parameters": [
+        {
+          "name": "target",
+          "in": "query",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        {
+          "name": "kind",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "ping",
+              "tcp",
+              "http",
+              "traceroute",
+              "dns",
+              "tls"
+            ],
+            "default": "ping"
+          }
+        },
+        {
+          "name": "port",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "nullable": true
+          }
+        },
+        {
+          "name": "count",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "nullable": true
+          }
+        },
+        {
+          "name": "record_type",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "A",
+              "AAAA",
+              "CNAME",
+              "MX",
+              "NS",
+              "TXT",
+              "SOA"
+            ],
+            "nullable": true
+          }
+        },
+        {
+          "name": "resolver",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "system",
+              "cloudflare",
+              "google",
+              "quad9"
+            ],
+            "nullable": true
+          }
+        },
+        {
+          "name": "transport",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "udp",
+              "doh",
+              "tcp",
+              "quic"
+            ],
+            "nullable": true
+          }
+        },
+        {
+          "name": "follow_redirects",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "include_community",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "family",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "4",
+              "6"
+            ],
+            "default": "auto"
+          }
+        },
+        {
+          "name": "dns_mode",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "regional"
+            ],
+            "default": "regional"
+          }
+        },
+        {
+          "name": "resolve_node_id",
+          "in": "query",
+          "required": false,
+          "description": "With dns_mode=fixed: the node that resolves the name",
+          "schema": {
+            "type": "string",
+            "description": "With dns_mode=fixed: the node that resolves the name",
+            "maxLength": 32,
+            "nullable": true
+          }
+        },
+        {
+          "name": "countries",
+          "in": "query",
+          "required": false,
+          "description": "Comma-separated ISO country codes",
+          "schema": {
+            "type": "string",
+            "description": "Comma-separated ISO country codes",
+            "nullable": true
+          }
+        },
+        {
+          "name": "wait",
+          "in": "query",
+          "required": false,
+          "description": "Seconds to wait for the result",
+          "schema": {
+            "type": "number",
+            "default": 20,
+            "description": "Seconds to wait for the result",
+            "minimum": 1,
+            "maximum": 30
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "text/plain"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements",
+      "summary": "List My Measurements",
+      "description": "",
+      "parameters": [
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": "",
+          "schema": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements/{measurement_id}",
+      "summary": "Get Measurement",
+      "description": "",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements/{measurement_id}/events",
+      "summary": "Stream Events",
+      "description": "Server-Sent Events. Reconnecting with `Last-Event-ID` (browsers do this on their own)\nreplays whatever was missed, so a dropped connection never loses a result.",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "after",
+          "in": "query",
+          "required": false,
+          "description": "Resume after this event id",
+          "schema": {
+            "type": "integer",
+            "description": "Resume after this event id",
+            "minimum": 0,
+            "nullable": true
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/measurements/{measurement_id}/cancel",
+      "summary": "Cancel Measurement",
+      "description": "",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "202",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/measurements/{measurement_id}/share",
+      "summary": "Share Measurement",
+      "description": "Opt-in: anyone with the link can view a shared measurement.",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": {
+        "required": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "shared": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "shared"
+          ]
+        }
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements/{measurement_id}/location",
+      "summary": "Estimated Location",
+      "description": "Where the target address appears to be, from the nodes' round-trip times (experimental).",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "ip",
+          "in": "query",
+          "required": false,
+          "description": "When the nodes resolved the name to different addresses (`groups` in the answer): estimate for this one instead of the one most nodes measured",
+          "schema": {
+            "type": "string",
+            "description": "When the nodes resolved the name to different addresses (`groups` in the answer): estimate for this one instead of the one most nodes measured",
+            "nullable": true
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements/{measurement_id}/path",
+      "summary": "Traced Path",
+      "description": "The network (ASN) and the place a GeoIP database gives for each router a traceroute found.\n\nEmpty unless a database is loaded (`ipping-backend geoip-update`). A router's place is a hint:\ncheck it against the round-trip time before believing it.",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/measurements/{measurement_id}/addresses",
+      "summary": "Tested Addresses",
+      "description": "What the IP databases say about each address the nodes tested (place, network, AS), most tested first.\n\nIt belongs to the measurement: whoever may read the measurement may read this, whatever the IP lookup API's\nown access setting says, because the addresses are the ones the measurement itself tested (a name each node\nresolved for itself can be several) and nothing else can be asked for. `info` is null when no database is\ninstalled.",
+      "parameters": [
+        {
+          "name": "measurement_id",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ip",
+      "summary": "My Address",
+      "description": "What the databases say about the address this request comes from.",
+      "parameters": [],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ip/{address}",
+      "summary": "Address Info",
+      "description": "What the databases say about an IPv4 or IPv6 address: its network, place, time zone and AS.",
+      "parameters": [
+        {
+          "name": "address",
+          "in": "path",
+          "required": true,
+          "description": "",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "body": null,
+      "responses": [
+        {
+          "status": "200",
+          "description": "Successful Response",
+          "contentType": "application/json"
+        }
+      ]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const links = [
   { href: "/", label: "nav.measure" },
   { href: "/nodes", label: "nav.nodes" },
+  { href: "/developers", label: "nav.api" },
 ] as const;
 
 export function SiteHeader() {

@@ -6,6 +6,7 @@ export const en = {
   // the frame of every page
   "nav.measure": "Measure",
   "nav.nodes": "Nodes",
+  "nav.api": "API",
   "nav.main": "Main",
   language: "Language",
   "theme.toggle": "Toggle dark mode",

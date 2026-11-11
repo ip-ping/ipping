@@ -2,6 +2,33 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.17.0 (unreleased)
+
+An API page: a guided, interactive way through the API. The backend is unchanged (v0.13.0).
+
+- **`/developers`, linked as "API" in the header** (the word is the same in all nine languages; the page itself is English, like the admin pages). It cannot be `/api`:
+  the proxy and Next's rewrite send everything under `/api` to the backend, so the page lives beside it, and links to the backend's own reference at `/api/docs`.
+- **Connect**: the address of the API, and an optional API key. Without a key, **Send** uses the browser session, as the site does; with one it sends what a script
+  sends (an `Authorization` header and **no cookies**: tested, and the test fails when the page is changed to send cookies). The key is kept in this tab's
+  `sessionStorage` only, shown nowhere, and **never written into a snippet** (they read `IPPING_KEY`).
+- **Guide**: five steps (check the service, start a measurement, read the result, do it from a terminal, look an address up), each with a form, **Send** and the answer.
+  The measurement id from step 2 fills step 3. **Reference**: the fifteen endpoints a script uses, grouped, each opening to the same panel, with the live event stream
+  (**Watch**) and the session-only share switch marked as such. Administration, sessions and node enrolment are left out (they need an administrator's sign-in).
+- **Forms from the contract.** `scripts/build-api-guide-spec.mjs` trims `contracts/openapi.json` to those endpoints (19 KB instead of 204 KB) into
+  `src/features/developers/spec.json`; `npm run api:types` and `sync-contracts.sh` run it, and a unit test fails when the committed file is not what it makes. So the fields, the
+  backend's help text, the ranges (`count` 1 to 10) and the choices (`kind`, `record_type`, ...) are the API's own. A value that cannot be read holds **Send** back; one that is out of
+  range is sent with a warning, so the API's own answer can be seen. A kind of check shows the fields it takes first (a preset for each kind), the rest under "More options".
+  The words (what each endpoint is for, who may call it: none, a session or a key, a key only, a session only) are in `guide.ts`, and a test fails when an endpoint has none.
+- **Snippets** in curl, Python and JavaScript, built from the form (`target` and `kind` first, not the contract's alphabetical order), with the quoting a shell needs and Python's
+  `True`/`None`; 28 unit tests cover them and the rest of the request layer.
+- **Verified** with the backend (0.13.0) and a simulated fleet. A browser check (`23-api-guide.mjs`) goes the whole way: health, a rejected and an out-of-range count, the curl, Python
+  and JavaScript tabs, starting a measurement and reading it to `completed` through the filled-in id, a key made and revoked by the check, the plain-text report, **no cookie
+  with a key** (mutation-tested: it fails when the page sends cookies), the key in no snippet and not on the page, kept in the tab only and forgotten by Clear, the fifteen
+  reference entries, the node list, share, the live events, and no overflow at 390, 768 and 1440 px. `pages` now sweeps `/developers` in light and dark at four widths. The unit tests (167)
+  and the type check and lint pass. **All 23 browser checks together: 22 passed and `home-layout` reported a React hydration error (#418) once.** It did not come back in 14 reruns of that
+  check or in 120 fresh loads of `/`, `/nodes` and `/developers`, the home page itself was not changed here (the shared header gained one link, which is static text), and its cause has not been found. (An earlier full run also needed the test stack's IP data to
+  know the addresses the IP info and layout checks measure.) Not tested: the copy button in an insecure context (the clipboard is blocked there and the button then does nothing).
+
 ## v0.16.0 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation (a file altered after release is refused), `release-manifest.json` names

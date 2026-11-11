@@ -110,6 +110,12 @@ and the graphs, drawn in SVG inside Cards (the plan allows exactly that), with a
   stays yours, and clearing a field hands it back. See [IP data](#ip-data-nine-sources-and-the-lookup-api).
 * **Watches.** In the admin, a check can run on a schedule from every node and alert a webhook or an ntfy topic
   when it goes bad (once) and when it is back (once), with an uptime strip of its recent runs.
+* **An API page, with a guide.** `/developers` (the *API* link in the header) walks through the API with forms: set the address and, if you
+  have one, an API key; then each step has the fields of its request (with the backend's own help text, ranges and choices), a **Send** button that
+  makes the real request and shows the answer, and the same request as **curl, Python and JavaScript** to copy. A measurement you start in one step
+  fills in the next ("Read the result"), the plain-text endpoint and the live event stream can be tried, and a full reference lists every endpoint
+  scripts use. A request with a key is sent the way a script sends it (an `Authorization` header, no cookies), and a key is kept for that tab only and
+  never written into a snippet (they read `IPPING_KEY`). It is drawn from the backend's contract, so it follows the API when the contract is pinned.
 * **From a terminal.** An administrator can create API keys (with quotas) and scripts can use them; `ipping-cli`
   runs any kind from a shell and prints the result as text.
 * **Anycast shows.** When two nodes got round trips too fast for any single place, the map joins them with a
@@ -359,6 +365,8 @@ one the proxy reports (see `ipping.sh proxy`).
 
 ## From a terminal
 
+*(The API page at `/developers` shows every endpoint with a form and ready-made `curl`, Python and JavaScript; this section is about the command-line client.)*
+
 An administrator creates an **API key** on the admin page (API keys tab: a name and how many measurements a
 minute and a day it may start; the key is shown once and only a hash is kept). With a key, a script needs no
 browser: `ipping-cli` is one POSIX shell script that needs only `curl`.
@@ -388,6 +396,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.17.0 (unreleased) | v0.13.0 | migration `0013` | **an API page** at `/developers`: a guided, interactive walk through the API (forms drawn from the backend's contract, **Send** makes the real request, a measurement started in one step feeds the next, curl / Python / JavaScript snippets that never hold a key, a reference of every endpoint scripts use); *API* in the header |
 | v0.16.0 | v0.13.0 | migration `0013` | **every IP data source is a downloaded database, all treated the same**: *Admin > IP data* is one list of nine alike rows (MaxMind is no longer a card of its own, and the "databases in use" table is gone: each row lists its own files), a key box in each row whose free download needs an account (MaxMind's account ID and license key, IPinfo's token, IP2Location's download token), and *Check for updates now*; the public IP info card no longer has an "online service" kind or an "out of requests" status |
 | v0.15.0 | v0.12.0 | migration `0013` | **nine IP data sources and a vote**: the IP info card and the target card give each field a percentage and list every source (what it said, whether it agreed, or why it did not answer); *Admin > IP data* has a switch for each of the nine sources (all on) and an optional key for the online ones; the "no node can run this" alert gives both reasons (the node is older, or its host does not allow it; with node v0.8.1 a node with only `CAP_NET_RAW` offers traceroute); works with nodes of any version |
 | v0.14.1 | v0.11.0 | migration `0013` | no gap between the command and the map on the home page (the recent list scrolls inside a card as tall as the command); works with nodes of any version |
@@ -475,6 +484,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card
 - [x] Every IP data source a downloaded database served from disk (never a source's API), shown as one list of alike rows in the admin page with a key box wherever the free download needs an account
+- [x] An API page (`/developers`) that guides through the API with forms, a Send button and copy-ready snippets
 - [x] IP data: a MaxMind account in the admin page (databases downloaded and kept current), an IP lookup API with its own settings, and nodes filled in from their address unless typed otherwise
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove

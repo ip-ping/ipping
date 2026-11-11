@@ -1,6 +1,6 @@
 {
   "name": "ipping",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "api:types": "openapi-typescript contracts/openapi.json -o src/lib/api/schema.d.ts",
+    "api:types": "openapi-typescript contracts/openapi.json -o src/lib/api/schema.d.ts && node scripts/build-api-guide-spec.mjs",
     "api:sync": "sh scripts/sync-contracts.sh",
     "test": "vitest run",
     "test:ui": "node tests/ui/run.mjs"

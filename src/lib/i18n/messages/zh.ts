@@ -3,6 +3,7 @@ import type { MessageKey } from "./en";
 export const zh: Partial<Record<MessageKey, string>> = {
   "nav.measure": "测量",
   "nav.nodes": "节点",
+  "nav.api": "API",
   "nav.main": "主导航",
   language: "语言",
   "theme.toggle": "切换深色模式",

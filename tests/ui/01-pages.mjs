@@ -7,7 +7,7 @@ export default async function check(t) {
     for (const width of WIDTHS) {
       const session = await open(t.browser, { width, dark });
       const tag = `${dark ? "dark" : "light"} ${width}`;
-      const paths = ["/", "/nodes", ...Object.entries(t.shared).map(([kind, id]) => [kind, `/measurements/${id}`])];
+      const paths = ["/", "/nodes", "/developers", ...Object.entries(t.shared).map(([kind, id]) => [kind, `/measurements/${id}`])];
       for (const entry of paths) {
         const [label, path] = Array.isArray(entry) ? entry : [entry, entry];
         await session.page.goto(BASE + path);
