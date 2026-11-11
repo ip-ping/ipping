@@ -2,10 +2,10 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## v0.16.0 (unreleased)
+## v0.16.0 (2026-11-11)
 
-Every IP data source is a downloaded database, all treated the same, and the admin page says so. Follows backend v0.13.0 (contract pinned to
-its commit; `release.env` is changed when it is released). The checks of the IP data page stop with a note on an older backend.
+Every IP data source is a downloaded database, all treated the same, and the admin page says so. Installs backend v0.13.0 (`release.env`;
+the contract is pinned to its tag). The checks of the IP data page stop with a note on an older backend.
 
 - **One list, nine alike rows.** *Admin > IP data* had a card for MaxMind (account, editions to keep, automatic updates, "Update now"), a table of
   "databases in use" and a list of the other eight. It is now one list: every row has its switch, its state, what it needs, the files it has on
