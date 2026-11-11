@@ -9,6 +9,7 @@ import { KIND_INFO } from "@/features/measurements/kinds";
 import { useSelection } from "@/features/measurements/selection";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { place } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 
 /**
  * Every approved node on the map, live: a station that pulses while the node is connected. It is also
@@ -17,6 +18,7 @@ import { place } from "@/lib/format";
  */
 export function FleetMap({ className }: { className?: string }) {
   const { nodes } = useNodes(8_000);
+  const { t } = useI18n();
   const { kind, scope, selected, toggle, pick, clear } = useSelection();
   const placed = useMemo<MapNode[]>(
     () =>
@@ -44,13 +46,13 @@ export function FleetMap({ className }: { className?: string }) {
   return (
     <Panel
       className={className}
-      label="The fleet"
+      label={t("home.map.title")}
       meta={
         <>
           <span className="tabular-nums">
-            {chosen ? `${chosen.size} chosen of ${live}` : `${live} live`}
+            {chosen ? t("home.map.chosen", { n: chosen.size, live }) : t("home.map.live", { n: live })}
           </span>
-          <span className="tabular-nums hidden sm:inline">{countries} countries</span>
+          <span className="tabular-nums hidden sm:inline">{t("home.map.countries", { n: countries })}</span>
         </>
       }
       flush
@@ -65,21 +67,21 @@ export function FleetMap({ className }: { className?: string }) {
       />
       <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1 border-t px-3 py-2">
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full bg-primary" /> connected
+          <span className="size-2 rounded-full bg-primary" /> {t("home.legend.connected")}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full border border-muted-foreground" /> offline
+          <span className="size-2 rounded-full border border-muted-foreground" /> {t("home.legend.offline")}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="size-2.5 rounded-[3px] border border-primary bg-primary/10" /> chosen
+          <span className="size-2.5 rounded-[3px] border border-primary bg-primary/10" /> {t("home.legend.chosen")}
         </span>
         {chosen ? (
           <Button type="button" variant="ghost" size="sm" onClick={clear} className="h-6 px-2 text-xs">
-            Use all nodes
+            {t("home.map.useAll")}
           </Button>
         ) : (
           <span className="ml-auto hidden normal-case tracking-normal sm:inline">
-            Click stations to choose where to measure from; shift-drag picks a region.
+            {t("home.map.hint")}
           </span>
         )}
       </div>

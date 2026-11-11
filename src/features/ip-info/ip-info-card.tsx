@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { flag } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 
 import { networkLine, nothingToShow, placeLine, positionLine, type IpInfo } from "./describe";
 
@@ -14,6 +15,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 /** What the IP databases say about one address, as rows: place, position, network, time zone and where it comes from. */
 export function IpInfoCard({ info }: { info: IpInfo }) {
+  const { t } = useI18n();
   const nothing = nothingToShow(info);
   const place = placeLine(info);
   const network = networkLine(info);
@@ -23,13 +25,13 @@ export function IpInfoCard({ info }: { info: IpInfo }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-lg font-semibold [overflow-wrap:anywhere]">{info.address}</span>
         <Badge variant="outline">IPv{info.version}</Badge>
-        {!info.public && <Badge variant="secondary">not public</Badge>}
+        {!info.public && <Badge variant="secondary">{t("ip.notPublic")}</Badge>}
       </div>
       {nothing ? (
         <p className="mt-2 text-sm text-muted-foreground">{nothing}</p>
       ) : (
         <dl className="mt-2 divide-y">
-          <Row label="Location">
+          <Row label={t("ip.location")}>
             {place ? (
               <>
                 {flag(info.country)} {place}
@@ -39,11 +41,11 @@ export function IpInfoCard({ info }: { info: IpInfo }) {
             )}
             {info.postal_code ? <span className="text-muted-foreground"> · {info.postal_code}</span> : null}
           </Row>
-          {position && <Row label="Position">{position}</Row>}
-          {info.time_zone && <Row label="Time zone">{info.time_zone}</Row>}
-          <Row label="Network">{network || "–"}</Row>
+          {position && <Row label={t("ip.position")}>{position}</Row>}
+          {info.time_zone && <Row label={t("ip.timeZone")}>{info.time_zone}</Row>}
+          <Row label={t("ip.network")}>{network || "–"}</Row>
           {info.network && (
-            <Row label="Prefix">
+            <Row label={t("ip.prefix")}>
               <span className="font-mono text-xs">{info.network}</span>
             </Row>
           )}

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Panel } from "@/components/panel";
 import { ApiError, errorMessage } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/provider";
 
 import { looksLikeAddress, type IpInfo } from "./describe";
 import { IpInfoCard } from "./ip-info-card";
@@ -26,6 +27,7 @@ const WHY: Record<string, string> = {
  * Leave the address empty to see the one this browser comes from. `tabs` is the form's own row of options, so it stays put.
  */
 export function IpInfoLookup({ tabs, initialAddress = "" }: { tabs: ReactNode; initialAddress?: string }) {
+  const { t } = useI18n();
   const [address, setAddress] = useState(initialAddress);
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<IpInfo | null>(null);
@@ -36,7 +38,7 @@ export function IpInfoLookup({ tabs, initialAddress = "" }: { tabs: ReactNode; i
     const typed = address.trim();
     setInfo(null);
     if (typed && !looksLikeAddress(typed)) {
-      setError({ title: "That is not an IP address", text: "IP info looks up an address. To see which addresses a name leads to, run a DNS check." });
+      setError({ title: t("ip.notAddressTitle"), text: t("ip.notAddressText") });
       return;
     }
     setBusy(true);
@@ -45,24 +47,24 @@ export function IpInfoLookup({ tabs, initialAddress = "" }: { tabs: ReactNode; i
       setInfo(await lookupIp(typed || null));
     } catch (e) {
       const code = e instanceof ApiError ? e.code : "";
-      setError({ title: "No answer", text: WHY[code] ?? errorMessage(e) });
+      setError({ title: t("ip.noAnswer"), text: WHY[code] ?? errorMessage(e) });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Panel label="Command" meta={<span className="normal-case tracking-normal">IP info</span>}>
+    <Panel label={t("form.command")} meta={<span className="normal-case tracking-normal">{t("kind.ip")}</span>}>
       <form onSubmit={submit} className="space-y-5">
         {tabs}
         <div className="space-y-1.5">
-          <Label htmlFor="ip-address">IP address</Label>
+          <Label htmlFor="ip-address">{t("ip.address")}</Label>
           <div className="flex gap-2">
             <Input
               id="ip-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="8.8.8.8, 2606:4700:4700::1111, or empty for your own"
+              placeholder={t("ip.placeholder")}
               autoComplete="off"
               autoCapitalize="off"
               spellCheck={false}
@@ -71,11 +73,11 @@ export function IpInfoLookup({ tabs, initialAddress = "" }: { tabs: ReactNode; i
             />
             <Button type="submit" disabled={busy}>
               {busy ? <Loader2Icon className="animate-spin" /> : <InfoIcon />}
-              Look up
+              {t("ip.lookup")}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Where an address is and whose network it is, from this site&apos;s own IP databases. Nothing is measured and no node is used.
+            {t("ip.help")}
           </p>
         </div>
         {error && (

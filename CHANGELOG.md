@@ -2,6 +2,41 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## v0.13.0 (2026-11-11)
+
+Languages, a reworked home page, and no GitHub link. Installs backend **v0.11.0** (no database change: still `0013`).
+
+### Languages
+- **Nine languages**: English, 简体中文, Español, Français, Deutsch, Português, Русский, 日本語, 한국어. A **language menu** in the header (not shown when
+  the administrator left only one on).
+- **The browser's language is followed**, by its first preferred language that is on (`zh-TW` and `zh-Hant` are `zh`, `pt-BR` is `pt`),
+  **until the visitor chooses one**; the choice is **kept in the browser** (`localStorage`) and wins from then on while that language is still on.
+  A private window or blocked storage just follows the browser. `<html lang>` follows the language. The first paint is the default
+  language (the page is drawn on a server that cannot know the visitor's), then it switches.
+- **The administrator decides**, in *Limits & safety > Language*: which languages are on (at least one), the default (always one that is on:
+  switching off the default moves it), and whether the browser's language is followed. They are backend settings
+  (`languages_enabled`, `default_language`, `language_auto_detect`) the page reads from `GET /api/v1/config` before it draws; a backend too old to
+  have it gives every language, English by default, following the browser.
+- **What is translated**: the header, footer and fleet status, the home page (title, the form with its kinds, options and notes, the map, the
+  fleet and recent measurements), a measurement's title, buttons, section links, alerts, headline numbers, panel titles, table columns and
+  statuses, the headings of the location panel, the target card, the address table, the IP info option, and the nodes page (about 270
+  messages, `src/lib/i18n/messages/`). The long explanations of the location estimate and the administration pages stay in English, and a
+  message a language lacks is shown in English. Unit tests check that every language translates every message, keeps the `{placeholders}`, and
+  that the words the components depend on (the title's accent, "every node tests {ip}") hold in each.
+
+### Home page
+- **The command first**: a compact title, then the command, then the map where the nodes to measure from are chosen, and, from a wide screen
+  up, a side column with **the fleet in numbers** (nodes online, countries, providers, IPv6) and **this browser's recent measurements** (with a
+  line when there are none). On a phone they follow one another.
+- **No GitHub link** in the footer (it was the only one).
+
+### Tests
+- `tests/ui/19-languages.mjs` (browser, real backend): an English browser sees English and nothing links to GitHub; a German browser is followed;
+  choosing Japanese is kept after a reload against a German browser; the home page's order (title, command, map) and the fleet's numbers beside
+  it, no overflow at 390 / 768 / 1024 / 1440; following the browser off gives the default; two languages on with French the default, a
+  Japanese browser gets French, the switcher offers two; a default that is switched off is refused; one language alone has no switcher; the admin
+  card has a checkbox for each language. `03` follows the map's new place. 132 unit tests, typecheck and lint pass; all 17 browser checks pass.
+
 ## v0.12.0 (2026-11-11)
 
 Released and verified: every file matches `SHA256SUMS` and carries an attestation, `release-manifest.json` names backend v0.10.0 (schema

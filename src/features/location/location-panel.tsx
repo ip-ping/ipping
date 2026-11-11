@@ -14,13 +14,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { LocationEstimate } from "@/features/location/use-location";
 import type { Task } from "@/lib/api/client";
 import { flag, ms, place } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const STRENGTH_HELP =
   "A rule of thumb, not a probability or a radius for this answer. It rises with how close the nearest node was and how tightly the measurements agree. Checked on real measurements to known locations (random fleets of 4 to 32 nodes, held-out targets): strong answers were all within 300 km, 9 in 10 within 190 km; moderate ones 99% within 500 km; low ones about 3 in 4 within 1,000 km, with a tenth over 1,750 km off. Your own nodes may be spread differently, so treat these as a guide.";
 
 function StrengthBadge({ strength }: { strength: NonNullable<LocationEstimate["strength"]> }) {
-  const label = { low: "Low evidence", moderate: "Moderate evidence", strong: "Strong evidence" }[strength];
+  const { t } = useI18n();
+  const label = t(`loc.strength.${strength}`);
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="cursor-help" />}>
@@ -46,9 +48,10 @@ function Details({ summary, children }: { summary: string; children: React.React
 type Nodes = ReadonlyMap<string, Task["node"]>;
 
 function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes }) {
+  const { t } = useI18n();
   if (estimate.evidence.length === 0) return null;
   return (
-    <Details summary={`Measurements used (${estimate.evidence.filter((e) => e.used).length} of ${estimate.evidence.length} nodes)`}>
+    <Details summary={t("loc.evidence", { used: estimate.evidence.filter((e) => e.used).length, total: estimate.evidence.length })}>
       <div className="overflow-x-auto">
       <Table className="w-full text-left text-xs">
         <TableHeader className="text-muted-foreground">
@@ -101,8 +104,9 @@ function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Node
 }
 
 function Limitations({ estimate }: { estimate: LocationEstimate }) {
+  const { t } = useI18n();
   return (
-    <Details summary="What this can and cannot tell you">
+    <Details summary={t("loc.limits")}>
       <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
         {estimate.limitations.map((text) => (
           <li key={text}>{text}</li>
@@ -182,14 +186,15 @@ function GeoIpNote({ estimate }: { estimate: LocationEstimate }) {
  * radius. It is a measured rate for answers made with a closest node this far away, not a probability for this address.
  */
 function Accuracy({ estimate, compact = false }: { estimate: LocationEstimate; compact?: boolean }) {
+  const { t } = useI18n();
   const accuracy = estimate.accuracy;
   if (!accuracy) return null;
   const rows = Object.entries(accuracy.by_radius).sort((a, b) => Number(a[0]) - Number(b[0]));
   return (
     <div className="max-w-xl space-y-2" data-testid={compact ? "accuracy-summary" : "accuracy"}>
-      <Progress value={accuracy.percent} aria-label="Accuracy">
-        <ProgressLabel>Accuracy</ProgressLabel>
-        <ProgressValue>{() => `${accuracy.percent}% within ${accuracy.radius_km.toLocaleString()} km`}</ProgressValue>
+      <Progress value={accuracy.percent} aria-label={t("loc.accuracy")}>
+        <ProgressLabel>{t("loc.accuracy")}</ProgressLabel>
+        <ProgressValue>{() => t("loc.within", { p: accuracy.percent, km: accuracy.radius_km.toLocaleString() })}</ProgressValue>
       </Progress>
       {compact ? null : (
         <>
@@ -214,13 +219,14 @@ function Accuracy({ estimate, compact = false }: { estimate: LocationEstimate; c
  * estimate is a guess by design, and this is where the reader sees it first.
  */
 export function EstimateSummary({ estimate }: { estimate: LocationEstimate | null }) {
+  const { t } = useI18n();
   if (!estimate || estimate.status !== "estimated" || !estimate.likely) return null;
   return (
     <Panel
-      label="Best guess where it is"
+      label={t("panel.guess")}
       meta={
         <Button variant="link" size="sm" className="h-auto p-0 text-xs" render={<a href="#location" />}>
-          Evidence and details
+          {t("panel.details")}
         </Button>
       }
     >
@@ -230,7 +236,7 @@ export function EstimateSummary({ estimate }: { estimate: LocationEstimate | nul
             {estimate.likely.name}, {estimate.likely.country}
           </div>
           {estimate.strength && <StrengthBadge strength={estimate.strength} />}
-          {estimate.conflicting && <Badge variant="destructive">nodes disagree</Badge>}
+          {estimate.conflicting && <Badge variant="destructive">{t("loc.disagree")}</Badge>}
         </div>
         <div className="min-w-[15rem] max-w-sm flex-1">
           <Accuracy estimate={estimate} compact />
@@ -241,12 +247,13 @@ export function EstimateSummary({ estimate }: { estimate: LocationEstimate | nul
 }
 
 function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes }) {
+  const { t } = useI18n();
   if (estimate.status === "unavailable") {
     return <p className="text-sm text-muted-foreground">{estimate.summary}</p>;
   }
 
   if (estimate.status !== "estimated") {
-    const title = estimate.status === "inconclusive" ? "A single location could not be established" : "No estimate";
+    const title = estimate.status === "inconclusive" ? "A single location could not be established" : t("loc.noEstimate");
     return (
       <div className="space-y-4">
         <Alert>
@@ -288,12 +295,12 @@ function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes })
       </p>
       {estimate.alternatives.length > 0 && (
         <p className="text-sm">
-          <span className="text-muted-foreground">Also fits: </span>
+          <span className="text-muted-foreground">{t("loc.alsoFits")} </span>
           {estimate.alternatives.map((a, i) => (
             <span key={a.place.name}>
               {i > 0 && ", "}
               {a.place.name}, {a.place.country}{" "}
-              <span className="text-muted-foreground">({a.distance_km.toLocaleString()} km away)</span>
+              <span className="text-muted-foreground">({t("loc.kmAway", { n: a.distance_km.toLocaleString() })})</span>
             </span>
           ))}
         </p>
@@ -301,7 +308,7 @@ function Body({ estimate, nodes }: { estimate: LocationEstimate; nodes: Nodes })
       {estimate.warnings.length > 0 && (
         <Alert>
           <InfoIcon />
-          <AlertTitle>{estimate.conflicting ? "The nodes disagree" : "Keep in mind"}</AlertTitle>
+          <AlertTitle>{estimate.conflicting ? t("loc.nodesDisagree") : t("loc.keepInMind")}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc space-y-0.5 pl-4">
               {estimate.warnings.map((w) => (
@@ -365,13 +372,11 @@ export function LocationPanel({
   /** The nodes of the measurement, for the region and network of each node in the evidence. */
   nodes: Task["node"][];
 }) {
+  const { t } = useI18n();
   if (!finished) return null;
   return (
-    <Panel label="Estimated network location" meta={<Badge variant="outline">Experimental</Badge>}>
-      <p className="mb-4 max-w-prose text-sm text-muted-foreground">
-        Where this address’s network appears to be, worked out from the round-trip times above and the nodes’
-        positions. It is not a person or a business.
-      </p>
+    <Panel label={t("loc.title")} meta={<Badge variant="outline">{t("loc.experimental")}</Badge>}>
+      <p className="mb-4 max-w-prose text-sm text-muted-foreground">{t("loc.intro")}</p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!estimate && !error && <Skeleton className="h-40 w-full" />}
       {estimate && <Addresses estimate={estimate} onAddress={onAddress} />}

@@ -1,17 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Task } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/provider";
+import type { MessageKey } from "@/lib/i18n/translate";
 
-const LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  pending: { label: "Queued", variant: "outline" },
-  dispatched: { label: "Sent", variant: "outline" },
-  running: { label: "Running", variant: "secondary" },
-  completed: { label: "Done", variant: "default" },
-  failed: { label: "Failed", variant: "destructive" },
-  timed_out: { label: "No answer from node", variant: "destructive" },
-  node_disconnected: { label: "Node went offline", variant: "destructive" },
-  interrupted: { label: "Interrupted", variant: "destructive" },
-  cancelled: { label: "Cancelled", variant: "outline" },
+const LABELS: Record<string, { label: MessageKey; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  pending: { label: "task.queued", variant: "outline" },
+  dispatched: { label: "task.sent", variant: "outline" },
+  running: { label: "task.running", variant: "secondary" },
+  completed: { label: "task.done", variant: "default" },
+  failed: { label: "task.failed", variant: "destructive" },
+  timed_out: { label: "task.timedOut", variant: "destructive" },
+  node_disconnected: { label: "task.offline", variant: "destructive" },
+  interrupted: { label: "task.interrupted", variant: "destructive" },
+  cancelled: { label: "task.cancelled", variant: "outline" },
 };
 
 /**
@@ -19,8 +21,9 @@ const LABELS: Record<string, { label: string; variant: "default" | "secondary" |
  * so those statuses never share a label with "100% loss".
  */
 export function TaskStatus({ task }: { task: Task }) {
-  const entry = LABELS[task.status] ?? { label: task.status, variant: "outline" as const };
-  const badge = <Badge variant={entry.variant}>{entry.label}</Badge>;
+  const { t } = useI18n();
+  const entry = LABELS[task.status];
+  const badge = <Badge variant={entry?.variant ?? "outline"}>{entry ? t(entry.label) : task.status}</Badge>;
   const retried = (task.attempts ?? 1) > 1;
   const note = [
     task.error_message,
@@ -33,7 +36,7 @@ export function TaskStatus({ task }: { task: Task }) {
     <Tooltip>
       <TooltipTrigger render={<span className="cursor-help" />}>
         {badge}
-        {retried && <span className="ml-1 text-xs text-muted-foreground">retried</span>}
+        {retried && <span className="ml-1 text-xs text-muted-foreground">{t("task.retried")}</span>}
       </TooltipTrigger>
       <TooltipContent>{note}</TooltipContent>
     </Tooltip>
@@ -41,15 +44,16 @@ export function TaskStatus({ task }: { task: Task }) {
 }
 
 export function MeasurementStatus({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    running: "Running",
-    completed: "Finished",
-    cancelled: "Cancelled",
-    interrupted: "Interrupted",
+  const { t } = useI18n();
+  const map: Record<string, MessageKey> = {
+    running: "status.running",
+    completed: "status.finished",
+    cancelled: "status.cancelled",
+    interrupted: "status.interrupted",
   };
   return (
     <Badge variant={status === "running" ? "secondary" : status === "completed" ? "default" : "outline"}>
-      {map[status] ?? status}
+      {map[status] ? t(map[status]) : status}
     </Badge>
   );
 }

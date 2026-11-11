@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IpInfoLookup } from "@/features/ip-info/ip-info-lookup";
+import { useI18n } from "@/lib/i18n/provider";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
 import { flag, nodeHeading } from "@/lib/format";
@@ -114,6 +115,7 @@ export function MeasureForm({
   initialIpInfo?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { nodes } = useNodes();
   const { kind, setKind, scope, setScope, selected, setSelected } = useSelection();
   const info = KIND_INFO[kind];
@@ -195,10 +197,10 @@ export function MeasureForm({
       <TabsList>
         {KINDS.map((k) => (
           <TabsTrigger key={k} value={k}>
-            {KIND_INFO[k].label}
+            {t(`kind.${k}`)}
           </TabsTrigger>
         ))}
-        <TabsTrigger value="ip">IP info</TabsTrigger>
+        <TabsTrigger value="ip">{t("kind.ip")}</TabsTrigger>
       </TabsList>
     </Tabs>
   );
@@ -211,11 +213,11 @@ export function MeasureForm({
   const KindIcon = KIND_ICON[kind];
 
   return (
-    <Panel label="Command" meta={<span className="normal-case tracking-normal">{info.label}</span>}>
+    <Panel label={t("form.command")} meta={<span className="normal-case tracking-normal">{t(`kind.${kind}`)}</span>}>
         <form onSubmit={submit} className="space-y-5">
           {tabs}
           <div className="space-y-1.5">
-            <Label htmlFor="target">{kind === "dns" ? "Domain name" : "IP address, hostname or URL"}</Label>
+            <Label htmlFor="target">{kind === "dns" ? t("form.target.dns") : t("form.target")}</Label>
             <div className="flex gap-2">
               <Input
                 id="target"
@@ -234,16 +236,14 @@ export function MeasureForm({
                 disabled={busy || !target.trim() || noNodes || noCapable || needsSelection || needsResolver}
               >
                 {busy ? <Loader2Icon className="animate-spin" /> : <KindIcon />}
-                {info.action}
+                {t(`action.${kind}`)}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               {nodes === null
-                ? "Checking which nodes are online…"
-                : `${online.length} node${online.length === 1 ? "" : "s"} online${
-                    kind !== "ping" && online.length > 0 ? `, ${capable.length} can run this` : ""
-                  }.`}{" "}
-              {info.explain}
+                ? t("form.checking")
+                : `${t("form.online", { n: online.length })}${kind !== "ping" && online.length > 0 ? ` ${t("form.canRun", { n: capable.length })}` : ""}`}{" "}
+              {t(`explain.${kind}`)}
             </p>
           </div>
 
@@ -252,25 +252,25 @@ export function MeasureForm({
               <>
                 <Choice
                   className="lg:col-span-3"
-                  label="Record type"
+                  label={t("form.recordType")}
                   value={recordType}
                   onChange={setRecordType}
-                  options={DNS_RECORD_TYPES.map((t) => ({ value: t, label: t }))}
+                  options={DNS_RECORD_TYPES.map((rt) => ({ value: rt, label: rt }))}
                 />
                 <Choice
                   className="lg:col-span-3"
-                  label="Resolver"
+                  label={t("form.resolver")}
                   value={resolver}
                   onChange={setResolver}
-                  options={DNS_RESOLVERS}
+                  options={DNS_RESOLVERS.map((r) => (r.value === "system" ? { ...r, label: t("dns.resolver.system") } : r))}
                 />
                 {canUseDoh(resolver) && (
                   <Choice
                     className="lg:col-span-3"
-                    label="Transport"
+                    label={t("form.transport")}
                     value={viaHttps ? "doh" : "udp"}
                     onChange={setTransport}
-                    options={DNS_TRANSPORTS}
+                    options={DNS_TRANSPORTS.map((x) => ({ ...x, label: t(x.value === "doh" ? "dns.transport.doh" : "dns.transport.udp") }))}
                   />
                 )}
               </>
@@ -278,39 +278,39 @@ export function MeasureForm({
               <>
                 <Choice
                   className="lg:col-span-3"
-                  label="Name resolution"
+                  label={t("form.nameResolution")}
                   value={resolution}
                   onChange={setResolution}
                   options={[
-                    { value: "each", label: "Each node resolves it" },
-                    { value: "one", label: "One node resolves it" },
+                    { value: "each", label: t("form.each") },
+                    { value: "one", label: t("form.one") },
                   ]}
                 />
                 {resolution === "one" &&
                   (askable.length > 0 ? (
                     <Choice
                       className="lg:col-span-3"
-                      label="Resolving node"
+                      label={t("form.resolvingNode")}
                       value={resolverNode?.id ?? ""}
                       onChange={setResolverId}
                       options={askable.map((n) => ({
                         value: n.id,
-                        label: `${nodeHeading(n).named ? n.name : `${flag(n.country)} ${nodeHeading(n).title}${nodeHeading(n).sub ? ` · ${nodeHeading(n).sub}` : ""}`}${n.tier === "community" ? " (community)" : ""}`.trim(),
+                        label: `${nodeHeading(n).named ? n.name : `${flag(n.country)} ${nodeHeading(n).title}${nodeHeading(n).sub ? ` · ${nodeHeading(n).sub}` : ""}`}${n.tier === "community" ? ` (${t("form.communityTag")})` : ""}`.trim(),
                       }))}
                     />
                   ) : (
                     <div className="min-w-0 space-y-1.5 lg:col-span-3">
-                      <Label>Resolving node</Label>
-                      <p className="text-xs text-muted-foreground">No online node can ask DNS questions.</p>
+                      <Label>{t("form.resolvingNode")}</Label>
+                      <p className="text-xs text-muted-foreground">{t("form.noDnsNode")}</p>
                     </div>
                   ))}
                 <Choice
                   className="lg:col-span-3"
-                  label="IP version"
+                  label={t("form.ipVersion")}
                   value={family}
                   onChange={setFamily}
                   options={[
-                    { value: "auto", label: "Automatic" },
+                    { value: "auto", label: t("form.auto") },
                     { value: "4", label: "IPv4" },
                     { value: "6", label: "IPv6" },
                   ]}
@@ -320,7 +320,7 @@ export function MeasureForm({
             {(kind === "ping" || kind === "tcp") && (
               <Choice
                 className="lg:col-span-3"
-                label={kind === "ping" ? "Echo requests per node" : "Connections per node"}
+                label={kind === "ping" ? t("form.count.ping") : t("form.count.tcp")}
                 value={count}
                 onChange={setCount}
                 options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
@@ -329,18 +329,24 @@ export function MeasureForm({
             {kind === "traceroute" && (
               <Choice
                 className="lg:col-span-3"
-                label="Rounds (like mtr)"
+                label={t("form.rounds")}
                 value={rounds}
                 onChange={setRounds}
-                options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: n === 1 ? "1 (just trace)" : String(n) }))}
+                options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: n === 1 ? t("form.rounds.one") : String(n) }))}
               />
             )}
             {kind === "tls" && (
-              <Choice className="lg:col-span-3" label="Transport" value={tlsTransport} onChange={setTlsTransport} options={TLS_TRANSPORTS} />
+              <Choice
+                className="lg:col-span-3"
+                label={t("form.transport")}
+                value={tlsTransport}
+                onChange={setTlsTransport}
+                options={TLS_TRANSPORTS.map((x) => ({ ...x, label: t(x.value === "quic" ? "tls.quic" : "tls.tcp") }))}
+              />
             )}
             {(kind === "tcp" || kind === "http" || kind === "tls") && (
               <div className="min-w-0 space-y-1.5 lg:col-span-3">
-                <Label htmlFor="port">{kind === "tcp" ? "Port" : "Port (optional)"}</Label>
+                <Label htmlFor="port">{kind === "tcp" ? t("form.port") : t("form.portOptional")}</Label>
                 <Input
                   id="port"
                   type="number"
@@ -349,7 +355,7 @@ export function MeasureForm({
                   inputMode="numeric"
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
-                  placeholder={kind === "tcp" ? "443, or host:port above" : kind === "tls" ? "443, or host:port above" : "from the URL"}
+                  placeholder={kind === "tcp" || kind === "tls" ? t("form.port.hint") : t("form.port.fromUrl")}
                   className="h-9"
                 />
               </div>
@@ -357,28 +363,26 @@ export function MeasureForm({
             {kind === "http" && (
               <Label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm lg:col-span-3">
                 <Checkbox checked={follow} onCheckedChange={(checked) => setFollow(checked === true)} />
-                Follow redirects
+                {t("form.follow")}
               </Label>
             )}
             {scope === "all" && online.some((n) => n.tier === "community") && (
               <Label className="flex cursor-pointer items-start gap-2 text-sm sm:col-span-2 lg:col-span-12">
                 <Checkbox checked={includeCommunity} onCheckedChange={(checked) => setIncludeCommunity(checked === true)} className="mt-0.5" />
                 <span>
-                  Include community nodes ({online.filter((n) => n.tier === "community").length} online)
-                  <span className="block text-xs text-muted-foreground">
-                    Run by volunteers. They are left out unless you ask, and what they report has not been verified.
-                  </span>
+                  {t("form.community", { n: online.filter((n) => n.tier === "community").length })}
+                  <span className="block text-xs text-muted-foreground">{t("form.community.help")}</span>
                 </span>
               </Label>
             )}
             <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-6">
-              <Label>Nodes</Label>
+              <Label>{t("form.nodes")}</Label>
               <div className="flex gap-2">
                 <Select
                   value={scope}
                   items={[
-                    { value: "all", label: "All online nodes" },
-                    { value: "selected", label: `Selected (${selected.size})` },
+                    { value: "all", label: t("form.nodes.all") },
+                    { value: "selected", label: t("form.nodes.selected", { n: selected.size }) },
                   ]}
                   onValueChange={(next) => {
                     if (next === null) return;
@@ -390,8 +394,8 @@ export function MeasureForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All online nodes</SelectItem>
-                    <SelectItem value="selected">Selected ({selected.size})</SelectItem>
+                    <SelectItem value="all">{t("form.nodes.all")}</SelectItem>
+                    <SelectItem value="selected">{t("form.nodes.selected", { n: selected.size })}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Dialog open={picking} onOpenChange={setPicking}>
@@ -404,14 +408,12 @@ export function MeasureForm({
                       />
                     }
                   >
-                    Choose
+                    {t("form.choose")}
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Choose nodes</DialogTitle>
-                      <DialogDescription>
-                        Only nodes that are online right now can be selected.
-                      </DialogDescription>
+                      <DialogTitle>{t("form.chooseTitle")}</DialogTitle>
+                      <DialogDescription>{t("form.chooseHelp")}</DialogDescription>
                     </DialogHeader>
                     <div className="max-h-72 space-y-2 overflow-y-auto">
                       {online.map((node) => (
@@ -435,13 +437,13 @@ export function MeasureForm({
                     </div>
                     <DialogFooter>
                       <Button type="button" variant="ghost" onClick={() => setSelected(new Set(online.map((n) => n.id)))}>
-                        Select all
+                        {t("form.selectAll")}
                       </Button>
                       <Button type="button" variant="ghost" onClick={() => setSelected(new Set())}>
-                        Clear
+                        {t("form.clear")}
                       </Button>
                       <Button type="button" onClick={() => setPicking(false)}>
-                        Done
+                        {t("form.done")}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -452,32 +454,25 @@ export function MeasureForm({
 
           {kind !== "dns" && (
             <p className="text-xs text-muted-foreground">
-              {resolverNode
-                ? `${resolverNode.name} looks the name up and every node probes the address it found, so the same server is measured from everywhere. An IP address needs no lookup.`
-                : "Each node looks the name up itself and probes the address it gets: a CDN or geo-DNS may send each node to a nearer server. An IP address needs no lookup."}
+              {resolverNode ? t("form.noteOne", { node: resolverNode.name }) : t("form.noteEach")}
             </p>
           )}
 
           {noCapable && (
             <Alert>
-              <AlertTitle>No online node can run {info.label}</AlertTitle>
-              <AlertDescription>
-                The nodes that are online are older and only know ping. Update them to run{" "}
-                {info.label} measurements.
-              </AlertDescription>
+              <AlertTitle>{t("form.noCapableTitle", { kind: t(`kind.${kind}`) })}</AlertTitle>
+              <AlertDescription>{t("form.noCapableText", { kind: t(`kind.${kind}`) })}</AlertDescription>
             </Alert>
           )}
           {noNodes && (
             <Alert>
-              <AlertTitle>No node is online</AlertTitle>
-              <AlertDescription>
-                Measurements need at least one approved, connected node.
-              </AlertDescription>
+              <AlertTitle>{t("form.noNodesTitle")}</AlertTitle>
+              <AlertDescription>{t("form.noNodesText")}</AlertDescription>
             </Alert>
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>That measurement could not start</AlertTitle>
+              <AlertTitle>{t("form.startFailed")}</AlertTitle>
               <AlertDescription>{error.message}</AlertDescription>
             </Alert>
           )}

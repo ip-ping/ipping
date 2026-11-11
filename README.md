@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.12.0** (application), installing backend **v0.10.0**. Nodes of any earlier version
+Current release: **v0.13.0** (application), installing backend **v0.11.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -51,6 +51,15 @@ for DNS over HTTPS to Quad9 (which needs HTTP/2).
   access setting on the admin page (*IP data*): by default it is for API keys and administrators, so an ordinary visitor sees
   neither the list nor an answer (the option says why) until an administrator opens it to everyone.
 * **Live results** stream in as each node answers and resume after a dropped connection.
+* **Languages.** The interface comes in English, 简体中文, Español, Français, Deutsch, Português, Русский, 日本語 and 한국어. It follows the
+  browser's language until the visitor picks one in the header (the browser remembers the choice and it wins from then on). An
+  administrator decides in *Admin > Limits & safety > Language* which languages are on, which is the default and whether the browser's
+  language is followed (the settings are the backend's `languages_enabled`, `default_language` and `language_auto_detect`; the page
+  reads them from `GET /api/v1/config`). The words of the main screens (the header, the home page, the measure form, a measurement's
+  headings, numbers, table columns and statuses, the nodes page and the IP info) are translated; long explanations of the
+  location estimate and the administration pages are in English, and a message a language has not translated is shown in English. To add
+  a language: its code in the backend's `LANGUAGES` (`runtime_settings.py`), in `src/lib/i18n/languages.ts`, and a file next to
+  `src/lib/i18n/messages/en.ts`; `npm test` checks that every language translates every message and keeps its `{placeholders}`.
 * **Shareable**: a measurement is private to your browser session until you switch on the link.
 * **Admin** (at `/admin`: the header has no link to it): approve nodes, enrollment keys (single-use, or **reusable** for many nodes, up to 30 days), revoke a node (it is removed, and there is no key rotation: enroll it again), which kinds are enabled, the allowed TCP/HTTP ports,
   probe budgets, retries, the target blocklist, retention, an emergency stop and an audit log, and the
@@ -356,6 +365,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.13.0 | v0.11.0 | migration `0013` | languages (nine, followed from the browser, remembered, set by the administrator), a home page with the command first and the fleet and recent measurements beside it, no GitHub link; works with nodes of any version |
 | v0.12.0 | v0.10.0 | migration `0013` | the location estimate always shows with an accuracy percentage and says when nodes disagree; the measurement page redesigned (headline numbers beside the target's IP info, the map, the best guess, then the details) with result numbers on the map; a node is shown by its place with its network beneath instead of a name; nodes need no name (called `City, CC - Provider · ASn`); reusable enrollment keys; no key rotation; a revoked node is removed; no Admin link in the header. Nodes: **v0.8.0** is the first that enrolls without a name; older nodes still work and keep the names they send |
 | v0.11.0 | v0.9.0 | migration `0012` | as v0.10.0 (IP info for the addresses a measurement tested and as an option of its own; the evidence of a location estimate says where each node is and whose it is; the map in the theme's own colours) |
 | v0.10.0 | v0.9.0 | migration `0012` | as v0.9.1 (each node resolves a hostname itself by default, or one node you choose resolves it for the rest; the migration adds which node resolved a measurement) |
@@ -424,7 +434,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0 and v0.12.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0 and v0.13.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

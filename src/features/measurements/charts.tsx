@@ -22,8 +22,8 @@ import { asPath, networkName, placeRoute } from "./route-geo";
 import { AsPathStrip, RouteMapSection } from "./route-extras";
 import { usePath } from "./use-path";
 import { Toggle } from "@/components/ui/toggle";
+import { useI18n } from "@/lib/i18n/provider";
 
-const SEE_TABLE = "Every number is in the table below.";
 
 /** The chart that fits what was measured: round trips, where an HTTP request spent its time, or the route. */
 export function Charts({
@@ -89,14 +89,16 @@ function Strip({
   previousAt?: string | null;
 }) {
   const rows = useMemo(() => stripRows(measurement, colors, previous), [measurement, colors, previous]);
+  const { t } = useI18n();
   const unit = measurement.kind === "tcp" ? "connection time" : measurement.kind === "dns" ? "time to answer" : "round trip";
+  const title = measurement.kind === "dns" ? t("panel.answerTime") : measurement.kind === "tcp" ? t("panel.connectTimes") : t("panel.roundTrips");
   return (
-    <Panel label={measurement.kind === "dns" ? "Time to answer, by node" : `Every ${unit}, by node`} meta={
+    <Panel label={title} meta={
         <>
           {previousAt && previous && previous.size > 0 && (
-            <span>compared with {new Date(previousAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{t("panel.compared", { when: new Date(previousAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) })}</span>
           )}
-          <span className="hidden sm:inline">{SEE_TABLE}</span>
+          <span className="hidden sm:inline">{t("panel.seeTable")}</span>
         </>
       }
     >
@@ -106,15 +108,17 @@ function Strip({
 }
 
 function Waterfall({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
+  const { t } = useI18n();
   const rows = useMemo(() => waterfallRows(measurement), [measurement]);
   return (
-    <Panel label="Where the time went" meta={<span className="hidden sm:inline">{SEE_TABLE}</span>}>
+    <Panel label={t("panel.whereTime")} meta={<span className="hidden sm:inline">{t("panel.seeTable")}</span>}>
       <PhaseWaterfall rows={rows} activeId={focus.active} onActive={focus.setHover} label="Time spent in each phase of the request, by node" />
     </Panel>
   );
 }
 
 function Route({ measurement, focus }: { measurement: Measurement; focus: Focus }) {
+  const { t } = useI18n();
   const [hop, setHop] = useState<number | null>(null);
   const { tasks } = measurement;
   // The route of the pinned node; until one is pinned, the first that reached the target (or has most hops).
@@ -145,7 +149,7 @@ function Route({ measurement, focus }: { measurement: Measurement; focus: Focus 
       meta={
         <>
           {hops.length > 0 && <span>{hops.length} hops</span>}
-          <span className="hidden sm:inline">{SEE_TABLE}</span>
+          <span className="hidden sm:inline">{t("panel.seeTable")}</span>
         </>
       }
     >

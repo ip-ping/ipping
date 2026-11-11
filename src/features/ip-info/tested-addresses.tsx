@@ -3,6 +3,7 @@
 import { Panel } from "@/components/panel";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { flag } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 
 import { networkLine, nothingToShow, placeLine } from "./describe";
 import type { MeasurementAddresses } from "./use-addresses";
@@ -13,18 +14,19 @@ import type { MeasurementAddresses } from "./use-addresses";
  * the top, so it is not repeated here; nothing is shown when no database is installed.
  */
 export function TestedAddresses({ data }: { data: MeasurementAddresses | null }) {
+  const { t } = useI18n();
   if (!data || !data.databases_loaded || data.addresses.length < 2) return null;
   const { addresses } = data;
   return (
-    <Panel label="Tested addresses" meta={<span className="tabular-nums">{addresses.length === 1 ? "1 address" : `${addresses.length} addresses`}</span>} flush>
+    <Panel label={t("panel.addresses")} meta={<span className="tabular-nums">{t("panel.addressCount", { n: addresses.length })}</span>} flush>
       <Table className="text-sm">
         <TableHeader>
           <TableRow>
-            <TableHead className="pl-4">Address</TableHead>
-            <TableHead className="hidden sm:table-cell">Nodes</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead className="hidden md:table-cell">Network</TableHead>
-            <TableHead className="hidden pr-4 lg:table-cell">Prefix</TableHead>
+            <TableHead className="pl-4">{t("addr.address")}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t("addr.nodes")}</TableHead>
+            <TableHead>{t("addr.location")}</TableHead>
+            <TableHead className="hidden md:table-cell">{t("addr.network")}</TableHead>
+            <TableHead className="hidden pr-4 lg:table-cell">{t("addr.prefix")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -40,7 +42,7 @@ export function TestedAddresses({ data }: { data: MeasurementAddresses | null })
                   {!info ? (
                     <span className="text-muted-foreground">–</span>
                   ) : nothing ? (
-                    <span className="text-muted-foreground">{info.public ? "not in the databases" : "not a public address"}</span>
+                    <span className="text-muted-foreground">{info.public ? t("addr.notInDb") : t("addr.notPublic")}</span>
                   ) : (
                     <>
                       {flag(info.country)} {place || "–"}

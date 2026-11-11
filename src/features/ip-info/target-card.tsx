@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { flag } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 
 import { networkLine, nothingToShow, placeLine } from "./describe";
 import type { MeasurementAddresses } from "./use-addresses";
@@ -13,6 +14,7 @@ import type { MeasurementAddresses } from "./use-addresses";
  * the nodes tested several addresses the others are one link away. It leaves itself out when there is nothing to say.
  */
 export function TargetCard({ data }: { data: MeasurementAddresses | null }) {
+  const { t } = useI18n();
   const first = data?.addresses[0];
   if (!data || !data.databases_loaded || !first?.info) return null;
   const { address, info } = first;
@@ -24,7 +26,7 @@ export function TargetCard({ data }: { data: MeasurementAddresses | null }) {
     <Card size="sm" data-testid="target-card" className="min-w-0">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-          Target address
+          {t("target.title")}
           <Badge variant="outline">IPv{info.version}</Badge>
         </CardTitle>
       </CardHeader>
@@ -43,7 +45,7 @@ export function TargetCard({ data }: { data: MeasurementAddresses | null }) {
         )}
         {others > 0 && (
           <Button variant="link" size="sm" className="h-auto p-0 text-xs" render={<a href="#addresses" />}>
-            and {others} more address{others === 1 ? "" : "es"}
+            {t("target.more", { n: others })}
           </Button>
         )}
       </CardContent>

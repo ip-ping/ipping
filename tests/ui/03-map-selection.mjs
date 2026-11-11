@@ -9,6 +9,10 @@ export default async function check(t) {
   await page.goto(BASE + "/");
   await page.getByText(/\d+\/\d+ live/).first().waitFor();
   await page.waitForTimeout(800);
+  // the map is under the command now: bring all of it into the window, so the pointer can reach every station
+  await page.locator("figure svg").first().scrollIntoViewIfNeeded();
+  await page.mouse.wheel(0, 120);
+  await page.waitForTimeout(300);
   const box = await page.locator("figure svg").first().boundingBox();
   const at = (lon, lat) => ({ x: box.x + ((lon + 180 - VIEW.x) / VIEW.w) * box.width, y: box.y + ((90 - lat) / VIEW.h) * box.height });
 
@@ -19,7 +23,7 @@ export default async function check(t) {
   await page.waitForTimeout(40);
   await page.mouse.up();
   await page.waitForTimeout(250);
-  t.ok(/1 chosen of/.test(await page.locator("[data-slot=card-header]").first().innerText()), "a click should choose one station");
+  t.ok(/1 chosen of/.test(await page.locator("[data-slot=card-header]", { hasText: /live|chosen of/ }).first().innerText()), "a click should choose one station");
   t.ok(/Selected \(1\)/.test(await page.getByRole("combobox").last().innerText()), "the form should say Selected (1)");
 
   // shift-drag over the United States replaces the choice
@@ -33,7 +37,7 @@ export default async function check(t) {
   await page.mouse.up();
   await page.keyboard.up("Shift");
   await page.waitForTimeout(300);
-  const meta = await page.locator("[data-slot=card-header]").first().innerText();
+  const meta = await page.locator("[data-slot=card-header]", { hasText: /live|chosen of/ }).first().innerText();
   const chosen = Number(/(\d+) chosen of/.exec(meta)?.[1] ?? 0);
   t.ok(chosen >= 3, `the region should hold several US stations: ${meta}`);
 

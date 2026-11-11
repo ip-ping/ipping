@@ -17,10 +17,11 @@ import { TestedAddresses } from "@/features/ip-info/tested-addresses";
 import { useAddresses } from "@/features/ip-info/use-addresses";
 import { EstimateSummary, LocationPanel } from "@/features/location/location-panel";
 import { useLocation } from "@/features/location/use-location";
-import { DNS_RESOLVERS, KIND_INFO, kindOf } from "@/features/measurements/kinds";
+import { DNS_RESOLVERS, kindOf } from "@/features/measurements/kinds";
 import { Charts } from "@/features/measurements/charts";
 import { useAnswerSlots } from "@/features/measurements/dns-groups";
 import { medians, usePreviousRun } from "@/features/measurements/previous";
+import { useI18n } from "@/lib/i18n/provider";
 import { useFocus } from "@/lib/use-focus";
 import { ExportMenu } from "@/features/measurements/export-menu";
 import { Instrument } from "@/features/measurements/instrument";
@@ -33,6 +34,7 @@ const NO_TASKS: Measurement["tasks"] = [];
 
 export default function MeasurementPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useI18n();
   const state = useMeasurement(id);
   const [shared, setShared] = useState<boolean | null>(null);
   const focus = useFocus();
@@ -61,11 +63,9 @@ export default function MeasurementPage() {
   if (state.phase === "error") {
     return (
       <Alert variant="destructive">
-        <AlertTitle>{state.notFound ? "Measurement not found" : "Could not load it"}</AlertTitle>
+        <AlertTitle>{state.notFound ? t("m.notFound") : t("m.loadFailed")}</AlertTitle>
         <AlertDescription>
-          {state.notFound
-            ? "It may have expired, or it belongs to another browser session and has not been shared."
-            : state.message}
+          {state.notFound ? t("m.notFoundText") : state.message}
         </AlertDescription>
       </Alert>
     );
@@ -97,7 +97,7 @@ export default function MeasurementPage() {
   };
   const copyLink = async () => {
     await navigator.clipboard.writeText(window.location.href);
-    toast.success("Link copied");
+    toast.success(t("m.linkCopied"));
   };
 
   return (
@@ -106,25 +106,25 @@ export default function MeasurementPage() {
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeftIcon className="size-3.5" /> New measurement
+        <ArrowLeftIcon className="size-3.5" /> {t("m.back")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
-          <p className="text-xs text-muted-foreground">{KIND_INFO[kind].label} measurement</p>
+          <p className="text-xs text-muted-foreground">{t("m.kind", { kind: t(`kind.${kind}`) })}</p>
           <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-4xl">{target.host}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MeasurementStatus status={measurement.status} />
-            {running && !live && <Badge variant="outline">Reconnecting…</Badge>}
-            <Badge variant="outline">{KIND_INFO[kind].label}</Badge>
-            {options.port ? <span className="font-mono">port {options.port}</span> : null}
+            {running && !live && <Badge variant="outline">{t("m.reconnecting")}</Badge>}
+            <Badge variant="outline">{t(`kind.${kind}`)}</Badge>
+            {options.port ? <span className="font-mono">{t("m.port", { n: options.port })}</span> : null}
             {target.ip && target.ip !== target.host && (
               <span>
-                every node tests <span className="font-mono">{target.ip}</span>
-                {measurement.resolved_by ? `, as resolved by ${measurement.resolved_by.name}` : null}
+                {t("m.everyNodeTests", { ip: "" }).trimEnd()} <span className="font-mono">{target.ip}</span>
+                {measurement.resolved_by ? t("m.resolvedBy", { name: measurement.resolved_by.name }) : null}
               </span>
             )}
-            {measurement.dns_mode === "regional" && kind !== "dns" && <span>each node resolves the name itself</span>}
+            {measurement.dns_mode === "regional" && kind !== "dns" && <span>{t("m.eachResolves")}</span>}
             {kind === "dns" && (
               <span>
                 <span className="font-mono">{options.record_type ?? "A"}</span> records, asked of{" "}
@@ -135,7 +135,7 @@ export default function MeasurementPage() {
             )}
             {(kind === "ping" || kind === "tcp") && (
               <span>
-                · {options.count} {KIND_INFO[kind].unit.many} per node
+                · {t("m.perNode", { n: options.count, unit: t(`unit.${kind}`) })}
               </span>
             )}
             {kind === "http" && (
@@ -156,18 +156,18 @@ export default function MeasurementPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
             <Switch id="share" checked={isShared} onCheckedChange={share} />
-            <Label htmlFor="share" className="text-sm" title="Anyone with the link can view these results">
-              Share
+            <Label htmlFor="share" className="text-sm" title={t("m.shareTitle")}>
+              {t("m.share")}
             </Label>
             {isShared && (
               <Button variant="ghost" size="sm" onClick={copyLink} className="-mr-2">
-                <CopyIcon /> Copy link
+                <CopyIcon /> {t("m.copyLink")}
               </Button>
             )}
           </div>
           {running && (
             <Button variant="outline" onClick={cancel}>
-              <XIcon /> Cancel
+              <XIcon /> {t("m.cancel")}
             </Button>
           )}
           {!running && <ExportMenu measurement={measurement} />}
@@ -182,7 +182,7 @@ export default function MeasurementPage() {
                 />
               }
             >
-              <RotateCwIcon /> Run again
+              <RotateCwIcon /> {t("m.rerun")}
             </Button>
           )}
         </div>
@@ -190,26 +190,23 @@ export default function MeasurementPage() {
 
       {target.input_kind === "url" && kind === "ping" && (
         <Alert>
-          <AlertTitle>ICMP ping tests the host, not the web page</AlertTitle>
-          <AlertDescription>
-            Only <span className="font-mono">{target.host}</span> was taken from the URL. A reply
-            means the machine answers pings; it does not mean the site is up.
-          </AlertDescription>
+          <AlertTitle>{t("m.icmpTitle")}</AlertTitle>
+          <AlertDescription>{t("m.icmpText", { host: target.host })}</AlertDescription>
         </Alert>
       )}
       {measurement.status === "interrupted" && (
         <Alert variant="destructive">
-          <AlertTitle>The service restarted during this measurement</AlertTitle>
-          <AlertDescription>Results below are partial. Run it again for a full picture.</AlertDescription>
+          <AlertTitle>{t("m.interruptedTitle")}</AlertTitle>
+          <AlertDescription>{t("m.interruptedText")}</AlertDescription>
         </Alert>
       )}
 
-      <nav aria-label="Sections" className="-mt-1 flex flex-wrap items-center gap-1">
+      <nav aria-label={t("m.nav")} className="-mt-1 flex flex-wrap items-center gap-1">
         {[
-          ["#map", "Map"],
-          ...(measurement.tasks.length > 0 ? [["#results", "Round trips"] as const, ["#nodes", "Nodes"] as const] : []),
-          ...(kind === "ping" || kind === "tcp" ? [["#location", "Location"] as const] : []),
-          ...(addresses?.databases_loaded && addresses.addresses.length > 1 ? [["#addresses", "Addresses"] as const] : []),
+          ["#map", t("m.nav.map")],
+          ...(measurement.tasks.length > 0 ? [["#results", t("m.nav.roundTrips")] as const, ["#nodes", t("m.nav.nodes")] as const] : []),
+          ...(kind === "ping" || kind === "tcp" ? [["#location", t("m.nav.location")] as const] : []),
+          ...(addresses?.databases_loaded && addresses.addresses.length > 1 ? [["#addresses", t("m.nav.addresses")] as const] : []),
         ].map(([href, label]) => (
           <Button key={href} variant="ghost" size="sm" render={<a href={href} />}>
             {label}

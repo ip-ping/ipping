@@ -428,6 +428,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Config
+         * @description The interface's language settings (an administrator changes them under Settings).
+         */
+        get: operations["public_config_api_v1_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -1585,6 +1605,24 @@ export interface components {
              */
             version: 4 | 6;
         };
+        /** LanguagesOut */
+        LanguagesOut: {
+            /**
+             * Auto Detect
+             * @description Follow the browser's language until the visitor chooses one
+             */
+            auto_detect: boolean;
+            /**
+             * Default
+             * @description Used when the visitor has not chosen one and the browser's is not followed or not on
+             */
+            default: string;
+            /**
+             * Enabled
+             * @description The languages a visitor can choose, in the interface's order
+             */
+            enabled: string[];
+        };
         /** LocationEstimateOut */
         LocationEstimateOut: {
             /** @description How accurate answers like this are, measured on real targets: the share within each radius. Given whenever there is a likely place. */
@@ -1886,6 +1924,10 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** PublicConfig */
+        PublicConfig: {
+            languages: components["schemas"]["LanguagesOut"];
+        };
         /** PublicNode */
         PublicNode: {
             /** Asn */
@@ -1990,8 +2032,20 @@ export interface components {
              * @default 4
              */
             default_count: number;
+            /**
+             * Default Language
+             * @default en
+             */
+            default_language: string;
             /** Enabled Kinds */
             enabled_kinds?: string[];
+            /**
+             * Language Auto Detect
+             * @default true
+             */
+            language_auto_detect: boolean;
+            /** Languages Enabled */
+            languages_enabled?: string[];
             /**
              * Max Concurrent Per Ip
              * @default 4
@@ -2085,8 +2139,14 @@ export interface components {
             creations_per_minute_per_ip?: number | null;
             /** Default Count */
             default_count?: number | null;
+            /** Default Language */
+            default_language?: string | null;
             /** Enabled Kinds */
             enabled_kinds?: string[] | null;
+            /** Language Auto Detect */
+            language_auto_detect?: boolean | null;
+            /** Languages Enabled */
+            languages_enabled?: string[] | null;
             /** Max Concurrent Per Ip */
             max_concurrent_per_ip?: number | null;
             /** Max Concurrent Per Session */
@@ -3512,6 +3572,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_config_api_v1_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicConfig"];
                 };
             };
         };

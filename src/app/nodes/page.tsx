@@ -11,6 +11,7 @@ import { NetworkMap, type MapNode } from "@/components/viz/network-map";
 import { Readouts } from "@/components/viz/readout";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { flag, nodeHeading, place } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 import { useFocus } from "@/lib/use-focus";
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/components/ui/toggle";
@@ -18,6 +19,7 @@ import { Toggle } from "@/components/ui/toggle";
 const count = (n: number) => String(Math.round(n));
 
 export default function NodesPage() {
+  const { t } = useI18n();
   const { nodes, error } = useNodes();
   const focus = useFocus();
   const list = useMemo(
@@ -47,22 +49,22 @@ export default function NodesPage() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Nodes</h1>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("nodes.title")}</h1>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Every measurement runs from the online nodes below. Point at a station or a name and the other lights up.
+          {t("nodes.intro")}
         </p>
       </header>
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Could not load nodes</AlertTitle>
+          <AlertTitle>{t("nodes.loadFailed")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <Panel
-        label="Stations"
-        meta={nodes && <span className="tabular-nums">{online.length} of {list.length} online</span>}
+        label={t("nodes.stations")}
+        meta={nodes && <span className="tabular-nums">{t("nodes.onlineOf", { n: online.length, total: list.length })}</span>}
         flush
       >
         <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -82,27 +84,27 @@ export default function NodesPage() {
               )}
               <div className="text-xs text-muted-foreground mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 px-1">
                 <span className="inline-flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-foreground" /> connected
+                  <span className="size-2 rounded-full bg-foreground" /> {t("home.legend.connected")}
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <span className="size-2 rounded-full border border-foreground/50" /> offline
+                  <span className="size-2 rounded-full border border-foreground/50" /> {t("home.legend.offline")}
                 </span>
               </div>
             </div>
             <Readouts
               className="mt-auto border-t"
               items={[
-                { label: "Online", text: nodes ? `${online.length} / ${list.length}` : "–", hint: "nodes connected now" },
-                { label: "Countries", value: nodes ? countries : null, format: count, hint: "with a node online" },
-                { label: "Providers", value: nodes ? providers : null, format: count, hint: "networks hosting them" },
-                { label: "IPv6", value: nodes ? online.filter((n) => n.ipv6).length : null, format: count, hint: "online nodes that can use it" },
+                { label: t("nodes.online"), text: nodes ? `${online.length} / ${list.length}` : "–", hint: t("nodes.hint.connected") },
+                { label: t("nodes.countries"), value: nodes ? countries : null, format: count, hint: t("nodes.hint.countries") },
+                { label: t("nodes.providers"), value: nodes ? providers : null, format: count, hint: t("nodes.hint.providers") },
+                { label: t("nodes.ipv6"), value: nodes ? online.filter((n) => n.ipv6).length : null, format: count, hint: t("nodes.hint.ipv6") },
               ]}
             />
           </div>
 
           <ul
             className="max-h-[26rem] min-w-0 divide-y overflow-y-auto border-t lg:max-h-[34rem] lg:border-t-0 lg:border-l"
-            aria-label="Nodes"
+            aria-label={t("nodes.title")}
           >
             {loading &&
               Array.from({ length: 4 }, (_, i) => (
@@ -147,7 +149,7 @@ export default function NodesPage() {
                         </span>
                       </span>
                       {heading.sub && <span className="text-xs text-muted-foreground block truncate">{heading.sub}</span>}
-                      <span className="text-xs text-muted-foreground block truncate">{node.online ? node.kinds.join(" · ") : "offline"}</span>
+                      <span className="text-xs text-muted-foreground block truncate">{node.online ? node.kinds.join(" · ") : t("nodes.offline")}</span>
                     </span>
                   </Toggle>
                 </li>

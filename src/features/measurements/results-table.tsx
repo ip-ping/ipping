@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import type { Measurement, Task } from "@/lib/api/client";
 import { delta, flag, ms, nodeHeading, pct } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
+import type { MessageKey } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
 
 import { commonName } from "./certs";
@@ -41,7 +43,7 @@ const SHOW: Record<Show, string> = {
 type Context = { fastest: boolean; slowest: number; active: boolean; before?: number };
 
 type Column = {
-  head: string;
+  head: MessageKey;
   align?: "right";
   show?: Show;
   cell: (task: Task, context: Context) => ReactNode;
@@ -68,13 +70,13 @@ const bar = (task: Task, { fastest, slowest, before }: Context) => {
   );
 };
 
-const latency = (loss: string): Column[] => [
-  { head: "Min", align: "right", show: "md", cell: (t) => ms(t.summary?.min_ms) },
-  { head: "Median", align: "right", cell: bar },
-  { head: "Avg", align: "right", show: "lg", cell: (t) => ms(t.summary?.avg_ms) },
-  { head: "Max", align: "right", show: "md", cell: (t) => ms(t.summary?.max_ms) },
+const latency = (loss: MessageKey): Column[] => [
+  { head: "th.min", align: "right", show: "md", cell: (t) => ms(t.summary?.min_ms) },
+  { head: "th.median", align: "right", cell: bar },
+  { head: "th.avg", align: "right", show: "lg", cell: (t) => ms(t.summary?.avg_ms) },
+  { head: "th.max", align: "right", show: "md", cell: (t) => ms(t.summary?.max_ms) },
   {
-    head: "Replies",
+    head: "th.replies",
     show: "lg",
     cell: (t, { active }) => (
       <Sparkline
@@ -87,11 +89,11 @@ const latency = (loss: string): Column[] => [
 ];
 
 const COLUMNS: Record<Kind, Column[]> = {
-  ping: latency("Loss"),
-  tcp: latency("Failed"),
+  ping: latency("th.loss"),
+  tcp: latency("th.failed"),
   http: [
     {
-      head: "Result",
+      head: "th.result",
       cell: (t) => {
         const sample = t.samples[0];
         if (!sample) return <span className="text-muted-foreground">–</span>;
@@ -103,15 +105,15 @@ const COLUMNS: Record<Kind, Column[]> = {
         );
       },
     },
-    { head: "Total", align: "right", show: "sm", cell: bar },
-    { head: "Connect", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
-    { head: "TLS", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
-    { head: "First byte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
-    { head: "Certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
+    { head: "th.total", align: "right", show: "sm", cell: bar },
+    { head: "th.connect", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.connect_us != null ? t.samples[0].http.connect_us / 1000 : null) },
+    { head: "th.tls", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.tls_us != null ? t.samples[0].http.tls_us / 1000 : null) },
+    { head: "th.firstByte", align: "right", show: "lg", cell: (t) => ms(t.samples[0]?.http?.ttfb_us != null ? t.samples[0].http.ttfb_us / 1000 : null) },
+    { head: "th.certificate", show: "sm", cell: (t) => <CertificateBadge tls={t.samples[0]?.http?.tls} /> },
   ],
   tls: [
     {
-      head: "Result",
+      head: "th.result",
       cell: (t) => {
         const sample = t.samples[0];
         if (!sample) return <span className="text-muted-foreground">–</span>;
@@ -124,21 +126,21 @@ const COLUMNS: Record<Kind, Column[]> = {
         );
       },
     },
-    { head: "Expires", cell: (t) => <CertificateBadge tls={t.samples[0]?.tls?.tls} /> },
-    { head: "Issued by", show: "md", cell: (t) => <span className="block max-w-[14rem] truncate">{commonName(t.samples[0]?.tls?.tls?.issuer)}</span> },
+    { head: "th.expires", cell: (t) => <CertificateBadge tls={t.samples[0]?.tls?.tls} /> },
+    { head: "th.issuedBy", show: "md", cell: (t) => <span className="block max-w-[14rem] truncate">{commonName(t.samples[0]?.tls?.tls?.issuer)}</span> },
     {
-      head: "Connection",
+      head: "th.connection",
       show: "lg",
       cell: (t) => {
         const d = t.samples[0]?.tls;
         return d?.tls?.version ? `${d.tls.version}${d.transport === "quic" ? " · QUIC" : ""}` : "–";
       },
     },
-    { head: "Handshake", align: "right", show: "sm", cell: (t) => ms(t.samples[0]?.tls?.total_us != null ? t.samples[0].tls.total_us / 1000 : null) },
+    { head: "th.handshake", align: "right", show: "sm", cell: (t) => ms(t.samples[0]?.tls?.total_us != null ? t.samples[0].tls.total_us / 1000 : null) },
   ],
   dns: [
     {
-      head: "Answer",
+      head: "th.answer",
       cell: (t) => {
         const answer = describeAnswer(t);
         if (!answer) return <span className="text-muted-foreground">asking…</span>;
@@ -153,16 +155,16 @@ const COLUMNS: Record<Kind, Column[]> = {
       },
     },
     {
-      head: "Code",
+      head: "th.code",
       show: "sm",
       cell: (t) => {
         const rcode = t.samples[0]?.dns?.rcode;
         return rcode ? <Badge variant={rcode === "NOERROR" ? "default" : "secondary"}>{rcode}</Badge> : <span className="text-muted-foreground">–</span>;
       },
     },
-    { head: "Time", align: "right", cell: bar },
+    { head: "th.time", align: "right", cell: bar },
     {
-      head: "TTL",
+      head: "th.ttl",
       align: "right",
       show: "md",
       cell: (t) => {
@@ -173,7 +175,7 @@ const COLUMNS: Record<Kind, Column[]> = {
   ],
   traceroute: [
     {
-      head: "Destination",
+      head: "th.destination",
       cell: (t) =>
         t.summary?.reached == null ? (
           <span className="text-muted-foreground">tracing…</span>
@@ -184,7 +186,7 @@ const COLUMNS: Record<Kind, Column[]> = {
         ),
     },
     {
-      head: "Hops",
+      head: "th.hops",
       align: "right",
       show: "sm",
       cell: (t) => {
@@ -192,8 +194,8 @@ const COLUMNS: Record<Kind, Column[]> = {
         return last ? `${last.ttl}` : "–";
       },
     },
-    { head: "Answered", align: "right", show: "md", cell: (t) => (t.summary ? `${t.summary.received} / ${t.summary.sent}` : "–") },
-    { head: "Round trip", align: "right", show: "sm", cell: (t) => ms(t.summary?.median_ms) },
+    { head: "th.answered", align: "right", show: "md", cell: (t) => (t.summary ? `${t.summary.received} / ${t.summary.sent}` : "–") },
+    { head: "th.roundTrip", align: "right", show: "sm", cell: (t) => ms(t.summary?.median_ms) },
   ],
 };
 
@@ -206,6 +208,7 @@ export function ResultsTable({
   focus: Focus;
   previous?: ReadonlyMap<string, number>;
 }) {
+  const { t } = useI18n();
   const kind = kindOf(measurement);
   const columns = COLUMNS[kind];
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -221,23 +224,23 @@ export function ResultsTable({
   return (
     // The container lets a row's details be exactly as wide as what is visible, however far the
     // table itself scrolls sideways (see `100cqw` below).
-    <Panel label="Nodes" meta={<span>{measurement.tasks.length} of them</span>} flush>
+    <Panel label={t("panel.nodes")} meta={<span>{t("panel.nodesCount", { n: measurement.tasks.length })}</span>} flush>
     <div className="@container">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-8" />
-            <TableHead>Node</TableHead>
-            {kind !== "dns" && <TableHead className={SHOW.lg}>Tested IP</TableHead>}
+            <TableHead>{t("th.node")}</TableHead>
+            {kind !== "dns" && <TableHead className={SHOW.lg}>{t("th.testedIp")}</TableHead>}
             {columns.map((c) => (
               <TableHead
                 key={c.head}
                 className={cn(SHOW[c.show ?? "always"], c.align === "right" && "text-right")}
               >
-                {c.head}
+                {t(c.head)}
               </TableHead>
             ))}
-            <TableHead>Status</TableHead>
+            <TableHead>{t("th.status")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

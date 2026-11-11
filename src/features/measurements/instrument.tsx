@@ -10,12 +10,14 @@ import type { LocationEstimate } from "@/features/location/use-location";
 import type { Measurement } from "@/lib/api/client";
 import { findConflict } from "@/lib/geo/conflict";
 import { ms, pct } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
+import type { MessageKey, Vars } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
 
 import type { Focus } from "@/lib/use-focus";
 import { certificatesOf } from "./certs";
 import { groupAnswers } from "./dns-groups";
-import { KIND_INFO, kindOf } from "./kinds";
+import { kindOf } from "./kinds";
 import { mapNodes } from "./series";
 import { TERMINAL_TASK } from "./summary";
 
@@ -39,10 +41,10 @@ const CAPTION = {
   },
 };
 
-function readouts(measurement: Measurement): ReadoutItem[] {
+function readouts(measurement: Measurement, t: (key: MessageKey, vars?: Vars) => string): ReadoutItem[] {
   const { tasks, stats } = measurement;
   const kind = kindOf(measurement);
-  const unit = KIND_INFO[kind].unit;
+  const unit = t(`unit.${kind}`);
   const nameOf = (id: string | null | undefined) => tasks.find((t) => t.id === id)?.node.name;
   const sent = tasks.reduce((n, t) => n + (t.summary?.sent ?? 0), 0);
   const received = tasks.reduce((n, t) => n + (t.summary?.received ?? 0), 0);
@@ -58,45 +60,45 @@ function readouts(measurement: Measurement): ReadoutItem[] {
   const fourth: ReadoutItem =
     kind === "tls"
       ? {
-          label: "Trusted",
+          label: t("r.trusted"),
           text: shown ? `${trusted} / ${shown}` : "–",
           alert: shown > 0 && trusted < shown,
-          hint: shown === 0 ? "none yet" : trusted < shown ? "some nodes do not trust it" : "by every node that got one",
+          hint: shown === 0 ? t("r.none") : trusted < shown ? "some nodes do not trust it" : "by every node that got one",
         }
       : kind === "dns"
       ? {
-          label: "Distinct answers",
+          label: t("r.distinct"),
           value: distinct,
           format: (n) => String(Math.round(n)),
           alert: distinct > 1,
-          hint: distinct > 1 ? "the nodes disagree" : distinct === 1 ? "all agree" : "none yet",
+          hint: distinct > 1 ? t("r.disagree") : distinct === 1 ? t("r.allAgree") : t("r.none"),
         }
       : kind === "traceroute"
-      ? { label: "Destination reached", text: finished ? `${reached} / ${finished}` : "–", hint: "Silent hops are normal." }
+      ? { label: t("r.reached"), text: finished ? `${reached} / ${finished}` : "–", hint: "Silent hops are normal." }
       : kind === "http"
-        ? { label: "Answered", text: sent ? `${received} / ${sent}` : "–", hint: "Any status counts." }
+        ? { label: t("r.answered"), text: sent ? `${received} / ${sent}` : "–", hint: "Any status counts." }
         : {
-            label: kind === "tcp" ? "Failed connections" : "Packet loss",
+            label: kind === "tcp" ? t("r.failedConnections") : t("r.packetLoss"),
             value: loss,
             format: (n) => (Number.isInteger(Math.round(n * 10) / 10) ? String(Math.round(n)) : n.toFixed(1)),
             unit: "%",
             alert: (loss ?? 0) > 0,
-            hint: sent ? `${sent - received} of ${sent} ${unit.many}` : undefined,
+            hint: sent ? `${sent - received} / ${sent} ${unit}` : undefined,
           };
 
   return [
-    { label: "Responding", text: `${stats.nodes_responding} / ${stats.nodes_total}`, hint: stats.nodes_failed ? `${stats.nodes_failed} could not complete` : "nodes" },
+    { label: t("r.responding"), text: `${stats.nodes_responding} / ${stats.nodes_total}`, hint: stats.nodes_failed ? t("r.couldNotComplete", { n: stats.nodes_failed }) : t("r.nodes") },
     {
-      label: kind === "http" ? "Fastest response" : kind === "tls" ? "Fastest handshake" : kind === "traceroute" ? "Closest" : "Fastest",
+      label: kind === "http" ? t("r.fastestResponse") : kind === "tls" ? t("r.fastestHandshake") : kind === "traceroute" ? t("r.closest") : t("r.fastest"),
       value: stats.fastest_median_ms,
       unit: "ms",
-      hint: nameOf(stats.fastest_task_id) ?? "median per node",
+      hint: nameOf(stats.fastest_task_id) ?? t("r.medianPerNode"),
     },
     {
-      label: kind === "http" ? "Slowest response" : kind === "tls" ? "Slowest handshake" : kind === "traceroute" ? "Farthest" : "Slowest",
+      label: kind === "http" ? t("r.slowestResponse") : kind === "tls" ? t("r.slowestHandshake") : kind === "traceroute" ? t("r.farthest") : t("r.slowest"),
       value: stats.slowest_median_ms,
       unit: "ms",
-      hint: nameOf(stats.slowest_task_id) ?? "median per node",
+      hint: nameOf(stats.slowest_task_id) ?? t("r.medianPerNode"),
     },
     fourth,
   ];
@@ -152,7 +154,8 @@ export function Instrument({
     lon: a.place.longitude,
     label: a.place.name,
   }));
-  const items = useMemo(() => readouts(measurement), [measurement]);
+  const { t } = useI18n();
+  const items = useMemo(() => readouts(measurement, t), [measurement, t]);
   // what a GeoIP database claims, drawn so the claim can be seen against the rings
   const claim = useMemo<MapClaim | null>(() => {
     const g = estimate?.geoip?.place ? estimate.geoip : estimate?.geofeed;
@@ -191,11 +194,11 @@ export function Instrument({
       {aside}
     </div>
     <Panel
-      label="Where the nodes are"
+      label={t("panel.map")}
       meta={
         <>
           <span>{pct(tasks.length ? (done * 100) / tasks.length : 100)}</span>
-          <span className="hidden sm:inline">{running ? "measuring" : "complete"}</span>
+          <span className="hidden sm:inline">{running ? t("panel.measuring") : t("panel.complete")}</span>
         </>
       }
       flush
@@ -244,9 +247,9 @@ export function Instrument({
       </div>
       <div className="flex items-center gap-3 border-t px-3 py-2">
         <span className="text-xs text-muted-foreground shrink-0">
-          {done} of {tasks.length} nodes finished
+          {t("panel.finished", { done, total: tasks.length })}
         </span>
-        <Progress value={tasks.length ? (done * 100) / tasks.length : 100} className="min-w-0 flex-1" aria-label="Nodes finished" />
+        <Progress value={tasks.length ? (done * 100) / tasks.length : 100} className="min-w-0 flex-1" aria-label={t("panel.finished", { done, total: tasks.length })} />
       </div>
     </Panel>
     </div>

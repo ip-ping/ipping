@@ -9,10 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api, errorMessage, type Schemas } from "@/lib/api/client";
 import { useApiData } from "@/lib/api/use-api-data";
+import { LANGUAGES, type LanguageCode } from "@/lib/i18n/languages";
 
 type Settings = Schemas["RuntimeSettings"];
 type NumericKey = {
@@ -59,6 +61,16 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
   const [deny, setDeny] = useState((data.target_denylist ?? []).join("\n"));
   const [ports, setPorts] = useState((data.allowed_ports ?? []).join(", "));
   const [kinds, setKinds] = useState<string[]>(data.enabled_kinds ?? []);
+  // the interface's languages: which are on, the default (always one that is on) and whether the browser's is followed
+  const [languages, setLanguages] = useState<string[]>(data.languages_enabled ?? []);
+  const [defaultLanguage, setDefaultLanguage] = useState<string>(data.default_language ?? "en");
+  const [followBrowser, setFollowBrowser] = useState(data.language_auto_detect ?? true);
+  const switchLanguage = (code: string, on: boolean) => {
+    const next = LANGUAGES.map((l) => l.code as string).filter((c) => (c === code ? on : languages.includes(c)));
+    if (next.length === 0) return; // at least one has to stay on
+    setLanguages(next);
+    if (!next.includes(defaultLanguage)) setDefaultLanguage(next[0]);
+  };
   const [busy, setBusy] = useState(false);
   const enabled = data.measurements_enabled;
 
@@ -93,6 +105,9 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
     if (JSON.stringify([...kinds].sort()) !== JSON.stringify([...(data.enabled_kinds ?? [])].sort())) {
       changes.enabled_kinds = kinds;
     }
+    if (JSON.stringify(languages) !== JSON.stringify(data.languages_enabled ?? [])) changes.languages_enabled = languages;
+    if (defaultLanguage !== data.default_language) changes.default_language = defaultLanguage;
+    if (followBrowser !== data.language_auto_detect) changes.language_auto_detect = followBrowser;
     if (Object.keys(changes).length === 0) return toast.info("Nothing to save");
     void patch(changes, "Settings saved");
   };
@@ -180,6 +195,63 @@ function SettingsForm({ data, reload }: { data: Settings; reload: () => Promise<
                 port scanner. Nodes keep their own list too (<code>IPPING_NODE_PORTS</code>), so a
                 port added here also has to be allowed on the nodes.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Language</CardTitle>
+            <CardDescription>
+              The languages visitors can choose in the header, and which one they get first. A visitor&apos;s own choice is
+              remembered in their browser and wins from then on. The administration pages are in English.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Languages on">
+              {LANGUAGES.map(({ code, name }) => (
+                <Label key={code} className="flex cursor-pointer items-center gap-3 text-sm">
+                  <Checkbox
+                    checked={languages.includes(code)}
+                    disabled={languages.length === 1 && languages.includes(code)}
+                    onCheckedChange={(checked) => switchLanguage(code, checked === true)}
+                  />
+                  {name}
+                </Label>
+              ))}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Default language</Label>
+                <Select
+                  value={defaultLanguage}
+                  items={LANGUAGES.filter((l) => languages.includes(l.code)).map((l) => ({ value: l.code, label: l.name }))}
+                  onValueChange={(next) => next !== null && setDefaultLanguage(next as LanguageCode)}
+                >
+                  <SelectTrigger className="w-full" aria-label="Default language">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.filter((l) => languages.includes(l.code)).map((l) => (
+                      <SelectItem key={l.code} value={l.code}>
+                        {l.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Shown when a visitor has not chosen one and the browser&apos;s language is not followed or not on.
+                </p>
+              </div>
+              <Label className="flex cursor-pointer items-start gap-3 self-start text-sm">
+                <Switch checked={followBrowser} onCheckedChange={setFollowBrowser} aria-label="Follow the browser's language" />
+                <span>
+                  <span className="font-medium">Follow the browser&apos;s language</span>
+                  <span className="block text-xs text-muted-foreground">
+                    A visitor whose browser asks for a language that is on sees the site in it until they choose another.
+                  </span>
+                </span>
+              </Label>
             </div>
           </CardContent>
         </Card>
