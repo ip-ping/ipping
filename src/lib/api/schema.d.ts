@@ -920,6 +920,11 @@ export interface components {
             /** Remote Addr */
             remote_addr: string | null;
             /**
+             * Sponsored
+             * @description The provider's name is made to stand out wherever the node is shown
+             */
+            sponsored: boolean;
+            /**
              * Status
              * @enum {string}
              */
@@ -1174,6 +1179,12 @@ export interface components {
              * @default false
              */
             reusable: boolean;
+            /**
+             * Sponsored
+             * @description A node that enrolls with it is sponsored: its provider's name is made to stand out wherever the node is shown.
+             * @default false
+             */
+            sponsored: boolean;
             /**
              * Tier
              * @description community: for a volunteer's node. It is left out of measurements unless asked for.
@@ -1858,6 +1869,12 @@ export interface components {
             /** Region */
             region?: string | null;
             /**
+             * Sponsored
+             * @description Whether the node is sponsored: its provider's name is made to stand out. Frozen with the rest.
+             * @default false
+             */
+            sponsored: boolean;
+            /**
              * Tier
              * @default official
              * @enum {string}
@@ -1937,6 +1954,11 @@ export interface components {
             provider: string | null;
             /** Region */
             region: string | null;
+            /**
+             * Sponsored
+             * @default false
+             */
+            sponsored: boolean;
             /**
              * Tier
              * @default official
@@ -2551,6 +2573,11 @@ export interface components {
              */
             reusable: boolean;
             /**
+             * Sponsored
+             * @default false
+             */
+            sponsored: boolean;
+            /**
              * State
              * @enum {string}
              */
@@ -2591,6 +2618,11 @@ export interface components {
             provider?: string | null;
             /** Region */
             region?: string | null;
+            /**
+             * Sponsored
+             * @description Make the node's provider's name stand out wherever the node is shown (it changes nothing else about the node)
+             */
+            sponsored?: boolean | null;
             /** Tier */
             tier?: ("official" | "community") | null;
         };

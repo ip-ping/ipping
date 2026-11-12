@@ -312,5 +312,6 @@ export const pt: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "redes que os hospedam",
   "nodes.hint.ipv6": "nós online que podem usá-lo",
   "nodes.offline": "offline",
+  "node.sponsored": "Nó patrocinado",
   "nodes.loadFailed": "Não foi possível carregar os nós",
 };

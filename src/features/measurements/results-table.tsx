@@ -4,6 +4,7 @@ import { ChevronRightIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
 import { CommunityBadge } from "@/components/community-badge";
+import { NetworkName } from "@/components/network-name";
 import { Panel } from "@/components/panel";
 import { Sparkline } from "@/components/viz/sparkline";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Measurement, Task } from "@/lib/api/client";
-import { delta, flag, ms, nodeHeading, pct } from "@/lib/format";
+import { delta, flag, ms, networkParts, nodeHeading, pct } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 import type { MessageKey } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
@@ -266,7 +267,11 @@ export function ResultsTable({
                   <TableCell className="min-w-0 font-medium">
                     {h.named ? h.title : `${flag(task.node.country)} ${h.title}`.trim()}
                     <CommunityBadge tier={task.node.tier} />
-                    {h.sub && <div className="text-xs font-normal text-muted-foreground [overflow-wrap:anywhere]">{h.sub}</div>}
+                    {h.parts.length > 0 && (
+                      <div className="text-xs font-normal text-muted-foreground [overflow-wrap:anywhere]">
+                        <NetworkName parts={h.parts} />
+                      </div>
+                    )}
                   </TableCell>
                   {kind !== "dns" && (
                     <TableCell className={cn("font-mono text-xs", SHOW.lg)}>{task.tested_ip ?? "–"}</TableCell>
@@ -329,8 +334,12 @@ function TaskDetail({ task, kind, expected }: { task: Task; kind: Kind; expected
         {task.tested_ip && (
           <p className="text-muted-foreground lg:hidden">
             Tested <span className="font-mono text-xs">{task.tested_ip}</span>
-            {task.node.provider ? ` · ${task.node.provider}` : ""}
-            {task.node.asn ? ` · AS${task.node.asn}` : ""}
+            {networkParts(task.node).length > 0 && (
+              <>
+                {" · "}
+                <NetworkName parts={networkParts(task.node)} />
+              </>
+            )}
           </p>
         )}
         {task.resolved_ips.length > 0 && (

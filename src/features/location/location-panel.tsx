@@ -7,13 +7,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+import { NetworkName } from "@/components/network-name";
 import { Panel } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LocationEstimate } from "@/features/location/use-location";
 import type { Task } from "@/lib/api/client";
-import { flag, ms, place } from "@/lib/format";
+import { flag, ms, networkParts, place } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -67,7 +68,7 @@ function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Node
         <TableBody>
           {estimate.evidence.map((e) => {
             const node = nodes.get(e.node_id);
-            const provider = node ? [node.provider, node.asn ? `AS${node.asn}` : null].filter(Boolean).join(" · ") : "";
+            const provider = node ? networkParts(node) : [];
             return (
               <TableRow key={e.node_id} className={e.used ? "" : "text-muted-foreground"}>
                 <TableCell className="py-1">
@@ -75,7 +76,12 @@ function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Node
                   {node && (
                     <div className="text-muted-foreground md:hidden">
                       {flag(node.country)} {place(node)}
-                      {provider ? ` · ${provider}` : ""}
+                      {provider.length > 0 && (
+                        <>
+                          {" · "}
+                          <NetworkName parts={provider} />
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="text-muted-foreground sm:hidden">
@@ -86,7 +92,7 @@ function Evidence({ estimate, nodes }: { estimate: LocationEstimate; nodes: Node
                 <TableCell className="hidden whitespace-nowrap py-1 pl-3 md:table-cell">
                   {node ? `${flag(node.country)} ${place(node)}`.trim() : "–"}
                 </TableCell>
-                <TableCell className="hidden py-1 pl-3 md:table-cell">{provider || "–"}</TableCell>
+                <TableCell className="hidden py-1 pl-3 md:table-cell">{provider.length > 0 ? <NetworkName parts={provider} /> : "–"}</TableCell>
                 <TableCell className="py-1 text-right align-top tabular-nums">{ms(e.rtt_ms)} ms</TableCell>
                 <TableCell className="hidden py-1 text-right tabular-nums sm:table-cell">{Math.round(e.rtt_ms * 150).toLocaleString()} km</TableCell>
                 <TableCell className="hidden py-1 pl-3 sm:table-cell">{e.verified ? "verified" : "not verified"}{e.used ? "" : " · not used"}</TableCell>

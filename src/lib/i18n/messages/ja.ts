@@ -310,5 +310,6 @@ export const ja: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "ノードをホストするネットワーク",
   "nodes.hint.ipv6": "IPv6 を使えるオンラインのノード",
   "nodes.offline": "オフライン",
+  "node.sponsored": "スポンサーノード",
   "nodes.loadFailed": "ノードを読み込めませんでした",
 };

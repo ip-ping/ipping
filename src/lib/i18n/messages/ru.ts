@@ -312,5 +312,6 @@ export const ru: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "сетей, где они размещены",
   "nodes.hint.ipv6": "узлов в сети с поддержкой",
   "nodes.offline": "нет связи",
+  "node.sponsored": "Спонсируемый узел",
   "nodes.loadFailed": "Не удалось загрузить узлы",
 };

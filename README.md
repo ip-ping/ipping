@@ -484,6 +484,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
 - [x] QUIC (HTTP/3) as a transport of the certificate check
 - [x] Community nodes, first slice: volunteers' nodes marked, left out unless asked for, kept out of location estimates until verified, rate limited, and an audit of their declared place (see the backend README for what it does not do)
+- [x] Sponsored nodes: an option beside "Run by a volunteer" (on a node and on an enrollment token) that makes the node's provider name stand out wherever the node is shown (unreleased; needs backend main after v0.14.0)
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card

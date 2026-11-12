@@ -108,3 +108,30 @@ describe("mapNodes", () => {
     expect(mapNodes(measurement("ping", [t]))[0].pulses).toBe(2);
   });
 });
+
+describe("a sponsored node", () => {
+  const sponsored = (over: Record<string, unknown> = {}) => {
+    const base = task("A", { samples: [sample({ seq: 0, rtt_ms: 5, http: { status_code: 200, total_us: 1000 } } as never)], summary: { sent: 1, received: 1, loss_pct: 0, min_ms: 5 } as never });
+    return { ...base, node: { ...base.node, provider: "Hetzner", asn: 24940, sponsored: true, ...over } } as typeof base;
+  };
+  const marked = [{ text: "Hetzner", sponsored: true }, { text: "AS24940" }];
+  const plain = [{ text: "Hetzner" }, { text: "AS24940" }];
+
+  it("has its provider marked in what every chart and the map say about it", () => {
+    for (const kind of ["ping", "http"]) {
+      const m = measurement(kind, [sponsored()]);
+      expect(stripRows(m)[0].network).toEqual(marked);
+      expect(waterfallRows(m)[0].network).toEqual(marked);
+      expect(mapNodes(m)[0].network).toEqual(marked);
+    }
+    expect(stripRows(measurement("ping", [sponsored()]))[0].place).toBe("Hetzner · AS24940"); // the words stay words beside the parts
+  });
+
+  it("is plain when it is not sponsored, or when the result says nothing about it (a result from before the flag)", () => {
+    for (const over of [{ sponsored: false }, { sponsored: undefined }]) {
+      const m = measurement("ping", [sponsored(over)]);
+      expect(stripRows(m)[0].network).toEqual(plain);
+      expect(mapNodes(m)[0].network).toEqual(plain);
+    }
+  });
+});

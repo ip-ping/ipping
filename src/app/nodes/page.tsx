@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { CommunityBadge } from "@/components/community-badge";
+import { NetworkName } from "@/components/network-name";
 import { Panel } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NetworkMap, type MapNode } from "@/components/viz/network-map";
 import { Readouts } from "@/components/viz/readout";
 import { useNodes } from "@/features/nodes/use-nodes";
-import { flag, nodeHeading, place } from "@/lib/format";
+import { flag, nodeHeading } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 import { useFocus } from "@/lib/use-focus";
 import { cn } from "@/lib/utils";
@@ -33,15 +34,19 @@ export default function NodesPage() {
     () =>
       list
         .filter((n) => n.latitude != null && n.longitude != null)
-        .map((n) => ({
-          id: n.id,
-          name: n.name,
-          place: place(n),
-          lat: n.latitude as number,
-          lon: n.longitude as number,
-          online: n.online,
-          note: n.online ? [n.tier === "community" ? "community node (a volunteer's)" : null, n.kinds.join(" · ")].filter(Boolean).join(" · ") : undefined,
-        })),
+        .map((n) => {
+          const heading = nodeHeading(n);
+          return {
+            id: n.id,
+            name: heading.title,
+            place: heading.sub,
+            network: heading.parts,
+            lat: n.latitude as number,
+            lon: n.longitude as number,
+            online: n.online,
+            note: n.online ? [n.tier === "community" ? "community node (a volunteer's)" : null, n.kinds.join(" · ")].filter(Boolean).join(" · ") : undefined,
+          };
+        }),
     [list],
   );
   const loading = nodes === null && !error;
@@ -148,7 +153,11 @@ export default function NodesPage() {
                           {node.ipv6 && <Badge variant="secondary">v6</Badge>}
                         </span>
                       </span>
-                      {heading.sub && <span className="text-xs text-muted-foreground block truncate">{heading.sub}</span>}
+                      {heading.parts.length > 0 && (
+                        <span className="text-xs text-muted-foreground block truncate">
+                          <NetworkName parts={heading.parts} />
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground block truncate">{node.online ? node.kinds.join(" · ") : t("nodes.offline")}</span>
                     </span>
                   </Toggle>

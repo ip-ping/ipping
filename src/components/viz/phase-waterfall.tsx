@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { ms } from "@/lib/format";
+import { ms, type NetworkPart } from "@/lib/format";
 import { useTween } from "@/lib/use-tween";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,8 @@ export type WaterfallRow = {
   id: string;
   name: string;
   place?: string;
+  /** The same line as `place`, in parts: a sponsored node's provider stands out. */
+  network?: NetworkPart[];
   state: "pending" | "running" | "done" | "failed";
   /** Milliseconds per phase, in PHASES order; absent phases are 0. */
   phases: Record<PhaseKey, number>;
@@ -168,7 +170,7 @@ export function PhaseWaterfall({
         )}
         {tip && (
           <ChartTip x={Math.min(Math.max(x0 + 60 + (tip.total ?? 0) * per * 0.5, 0), width)} y={TOP + activeIndex * ROW + 2} width={width}>
-            <TipTitle name={tip.name} place={tip.place} />
+            <TipTitle name={tip.name} place={tip.place} network={tip.network} />
             {tip.total != null ? (
               <>
                 {PHASES.filter((p) => tip.phases[p.key] > 0 || p.key === "dns").map((p) => (

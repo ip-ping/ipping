@@ -310,5 +310,6 @@ export const ko: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "노드를 호스팅하는 네트워크",
   "nodes.hint.ipv6": "IPv6를 쓸 수 있는 온라인 노드",
   "nodes.offline": "오프라인",
+  "node.sponsored": "후원 노드",
   "nodes.loadFailed": "노드를 불러올 수 없습니다",
 };

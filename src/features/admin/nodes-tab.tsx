@@ -29,6 +29,7 @@ import { useApiData } from "@/lib/api/use-api-data";
 import { flag, place } from "@/lib/format";
 
 import { CommunityBadge } from "@/components/community-badge";
+import { SponsorMark } from "@/components/network-name";
 
 
 type Update = Schemas["UpdateNodeRequest"];
@@ -72,6 +73,7 @@ const formOf = (node: AdminNode) => ({
   longitude: node.longitude?.toString() ?? "",
   verified: node.location_verified,
   community: node.tier === "community",
+  sponsored: node.sponsored,
 });
 type Form = ReturnType<typeof formOf>;
 type Key = keyof Form;
@@ -105,6 +107,7 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
     }
     if (changed("verified")) body.location_verified = form.verified;
     if (changed("community")) body.tier = form.community ? "community" : "official";
+    if (changed("sponsored")) body.sponsored = form.sponsored;
     try {
       if (Object.keys(body).length > 0) await api("PATCH", `/admin/nodes/${node.id}`, body);
       toast.success("Node updated");
@@ -185,6 +188,17 @@ function EditNodeDialog({ node, onClose, onSaved }: { node: AdminNode; onClose: 
             <Switch id="community" checked={form.community} onCheckedChange={(community) => setForm({ ...form, community })} />
             <Label htmlFor="community">Run by a volunteer (community node)</Label>
           </div>
+          <div className="flex items-center gap-3">
+            <Switch id="sponsored" checked={form.sponsored} onCheckedChange={(sponsored) => setForm({ ...form, sponsored })} />
+            <Label htmlFor="sponsored">Sponsored</Label>
+          </div>
+          {form.sponsored && (
+            <p className="text-xs text-muted-foreground">
+              {form.provider.trim() === ""
+                ? "The provider's name stands out wherever the node is shown. This node has no provider yet: fill one in above, or fill it from the IP data."
+                : `The provider's name (${form.provider.trim()}) stands out wherever the node is shown. A measurement keeps the node as it was when it began, so earlier results are not changed.`}
+            </p>
+          )}
           {auditOf(node) && <AuditNote audit={auditOf(node) as Audit} />}
           <DialogFooter className="sm:justify-between">
             <Button type="button" variant="outline" onClick={fill} disabled={busy || !current.remote_addr} title={current.remote_addr ? undefined : "The node has not connected yet"}>
@@ -288,6 +302,7 @@ export function NodesTab() {
                   <div className="font-medium">
                     {node.name}
                     <CommunityBadge tier={node.tier} />
+                    <SponsorMark node={node} />
                   </div>
                   <div className="font-mono text-xs text-muted-foreground">{node.remote_addr ?? ""}</div>
                   {auditOf(node) && (

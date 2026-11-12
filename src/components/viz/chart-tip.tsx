@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { NetworkName } from "@/components/network-name";
+import type { NetworkPart } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,11 +37,18 @@ export function ChartTip({
   );
 }
 
-export function TipTitle({ name, place }: { name: string; place?: string }) {
+/** The node's name, and beneath it where it is or whose network: `network` (when it has parts) is drawn in place of `place`, with a sponsored provider standing out. */
+export function TipTitle({ name, place, network }: { name: string; place?: string; network?: readonly NetworkPart[] }) {
   return (
     <div className="mb-1">
       <div className="leading-none text-sm font-semibold">{name}</div>
-      {place && <div className="text-xs text-muted-foreground">{place}</div>}
+      {network && network.length > 0 ? (
+        <div className="text-xs text-muted-foreground">
+          <NetworkName parts={network} />
+        </div>
+      ) : (
+        place && <div className="text-xs text-muted-foreground">{place}</div>
+      )}
     </div>
   );
 }

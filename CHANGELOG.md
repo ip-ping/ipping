@@ -2,6 +2,32 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+Sponsored nodes. Needs the backend after v0.14.0 (`contracts/backend-ref.txt` is pinned to its `main` at `f9c09f7`, to be pinned to a tag when that is released); no change to anything else.
+
+- **An administrator can mark a node as sponsored, and its provider's name stands out wherever the node is shown.** In the node's edit dialog the option is **Sponsored**,
+  a switch right below *Run by a volunteer*, and on the Enrollment tab a checkbox below *For a volunteer's node* makes a token whose node enrolls sponsored (the token list says
+  `us, sponsored`). It is independent of *volunteer*: a volunteer's node can be sponsored and a sponsored node stays official. Only the flag is sent when it is changed (as for every field
+  of that dialog), and the dialog says whose name will stand out, or that the node has no provider yet.
+- **What "stands out" is:** the provider's name in a stock shadcn `Badge` (the primary colour, a star, the name; the title and a hidden label say "Sponsored node" in the language shown, nine of them),
+  in place of the same words in the muted line that every node has: the results table (the row, and the line under an opened row on a phone), the network map's tooltip on the home page,
+  the nodes page and the measurement page, the tooltips of the round-trip and HTTP charts, the nodes page's list, the evidence of the location estimate (the Provider / ASN column and the phone's line), the list of nodes to choose from, and the
+  administrator's list of nodes. It is the node that is marked, not the provider: another node on the same provider stays plain (the check has a fleet where Vultr is on six). The AS number stays plain beside it.
+  A long name is shortened inside its badge and does not widen the page (checked at 390 px with an 84-character one). Where only text fits (the option of the *Resolving node* list) the provider has a star in front of it.
+  A measurement keeps what the node was when it began, so a result from while it was sponsored goes on saying so after the flag is turned off, and one from before the flag existed does not.
+- **The maps of the nodes page and the home page now introduce a node the way the rest of the interface does:** the place as the title and the network beneath (it was the node's name, which for a node named
+  after its place and network said the same twice), with the sponsored provider standing out in that line.
+- **Not marked, on purpose:** the CSV and plain-text exports (the data has a `provider` column and no styling; the JSON export, which is the measurement as the API gives it, has `sponsored` on every node), and a node's name when somebody typed one that
+  contains the provider (a name is a name; the default name is not shown where the provider is).
+- Tests: `format.test.ts`, `network-name.test.ts` (the badge, its hidden label, the AS number staying plain, no mark without a provider) and `series.test.ts` (the chart rows and the map stations carry the mark), each mutant caught
+  (the component never marking, the parts not marking the provider, the AS number marked instead). The browser check `tests/ui/24-sponsored.mjs` marks one node of the simulated fleet and looks at every place above in a browser
+  (the edit dialog and the list, the nodes page and both maps, the node picker, the results table, the measurement's map and its location evidence, the tooltips of the round-trip chart and of the HTTP chart, the star in the list of resolving nodes),
+  at a phone's width with a long name, turns the flag off and checks that the first measurement still says it, enrolls a node with a sponsored token, and puts the fleet back as it was. It is made of steps that fail separately, so one broken
+  screen does not hide the others, and it was run against eight screens broken on purpose (the results table, the map tooltip, the node picker, the evidence table, the nodes page, the two chart tooltips, the list of resolving nodes) and failed on each one
+  (the first version of the evidence assertion counted a badge that was in the page but not shown at that width, and did not: it now needs a visible one; the first version of the chart steps focused the row and failed about one run in two on the working code, because focusing scrolls the page and whatever lay under the pointer, left on an earlier click, then took the tooltip: they put the pointer on the row now, passed 6 runs out of 6, and the two chart mutants were run again and failed 3 out of 3). 182 unit tests. Run on the whole stack (the backend from source on PostgreSQL, a production build of this frontend, the 17-node fleet): all 24 checks pass (`geofeed` and `ip-info` stop with a note and `measurement-layout` leaves out its IP-data parts: this stack had no IP database; they were not run for this change).
+  Not looked at: the languages other than English for the badge's title (the key is in all nine files, which `i18n.test.ts` enforces) and a real sponsor on a real network (the fleet's providers are made up).
+
 ## v0.17.1 (2026-11-12)
 
 The intermittent hydration error on the home page, found and fixed. The text about the IP data vote is brought in line with the backend's new vote.

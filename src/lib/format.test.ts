@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ago, networkOf, nodeHeading, shortName } from "./format";
+import { ago, networkOf, networkParts, networkText, nodeHeading, shortName } from "./format";
 
 const node = (over: Record<string, unknown> = {}) => ({
   name: "Sydney, AU - OVH SAS · AS16276",
@@ -22,12 +22,47 @@ describe("networkOf", () => {
 
 describe("nodeHeading", () => {
   it("shows the place and the network, not the name, when both are known", () => {
-    expect(nodeHeading(node({ name: "Falkenstein 1" }))).toEqual({ title: "Sydney, AU", sub: "OVH SAS · AS16276", named: false });
+    expect(nodeHeading(node({ name: "Falkenstein 1" }))).toEqual({
+      title: "Sydney, AU",
+      sub: "OVH SAS · AS16276",
+      parts: [{ text: "OVH SAS" }, { text: "AS16276" }],
+      named: false,
+    });
   });
   it("keeps the name when the place or the network is missing: it is all there is to tell the node by", () => {
-    expect(nodeHeading(node({ name: "Falkenstein 1", provider: null, asn: null }))).toEqual({ title: "Falkenstein 1", sub: "Sydney, AU", named: true });
-    expect(nodeHeading(node({ name: "Falkenstein 1", city: null, country: null }))).toEqual({ title: "Falkenstein 1", sub: "OVH SAS · AS16276", named: true });
-    expect(nodeHeading(node({ name: "Node abc123", city: null, country: null, provider: null, asn: null }))).toEqual({ title: "Node abc123", sub: "", named: true });
+    expect(nodeHeading(node({ name: "Falkenstein 1", provider: null, asn: null }))).toEqual({ title: "Falkenstein 1", sub: "Sydney, AU", parts: [{ text: "Sydney, AU" }], named: true });
+    expect(nodeHeading(node({ name: "Falkenstein 1", city: null, country: null }))).toEqual({
+      title: "Falkenstein 1",
+      sub: "OVH SAS · AS16276",
+      parts: [{ text: "OVH SAS" }, { text: "AS16276" }],
+      named: true,
+    });
+    expect(nodeHeading(node({ name: "Node abc123", city: null, country: null, provider: null, asn: null }))).toEqual({ title: "Node abc123", sub: "", parts: [], named: true });
+  });
+});
+
+describe("a sponsored node", () => {
+  it("has its provider, and only its provider, marked in the parts of its network", () => {
+    expect(networkParts(node({ sponsored: true }))).toEqual([{ text: "OVH SAS", sponsored: true }, { text: "AS16276" }]);
+    expect(networkParts(node({ sponsored: false }))).toEqual([{ text: "OVH SAS" }, { text: "AS16276" }]);
+    expect(networkParts(node())).toEqual([{ text: "OVH SAS" }, { text: "AS16276" }]); // a node that says nothing about it
+    expect(networkParts(node({ sponsored: null }))).toEqual([{ text: "OVH SAS" }, { text: "AS16276" }]);
+  });
+  it("has nothing to mark without a provider: the AS number is a number, not a name", () => {
+    expect(networkParts(node({ sponsored: true, provider: null }))).toEqual([{ text: "AS16276" }]);
+    expect(networkParts(node({ sponsored: true, provider: null, asn: null }))).toEqual([]);
+  });
+  it("is told in the same words as any node where the words are only text", () => {
+    expect(networkOf(node({ sponsored: true }))).toBe("OVH SAS · AS16276");
+    expect(nodeHeading(node({ sponsored: true })).sub).toBe("OVH SAS · AS16276");
+    expect(nodeHeading(node({ sponsored: true })).parts[0]).toEqual({ text: "OVH SAS", sponsored: true });
+    // a node that is named (the place or the network is missing) keeps the mark on its provider, after the place
+    expect(nodeHeading(node({ sponsored: true, name: "Falkenstein 1", city: null, country: null })).parts).toEqual([{ text: "OVH SAS", sponsored: true }, { text: "AS16276" }]);
+    expect(nodeHeading(node({ sponsored: true, name: "Falkenstein 1", asn: null, provider: null })).parts).toEqual([{ text: "Sydney, AU" }]);
+  });
+  it("is starred in a place that can only hold text, like the option of a list", () => {
+    expect(networkText(networkParts(node({ sponsored: true })))).toBe("★ OVH SAS · AS16276");
+    expect(networkText(networkParts(node()))).toBe("OVH SAS · AS16276");
   });
 });
 

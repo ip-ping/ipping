@@ -29,6 +29,7 @@ export function TokensTab() {
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("60");
   const [community, setCommunity] = useState(false);
+  const [sponsored, setSponsored] = useState(false);
   const [reusable, setReusable] = useState(false);
   const [created, setCreated] = useState<Created | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +42,7 @@ export function TokensTab() {
         label: label.trim() || null,
         ttl_minutes: Number(ttl),
         tier: community ? "community" : "official",
+        sponsored,
         reusable,
       });
       setCreated(result);
@@ -87,6 +89,10 @@ export function TokensTab() {
           <Checkbox checked={community} onCheckedChange={(checked) => setCommunity(checked === true)} />
           For a volunteer&apos;s node (community)
         </Label>
+        <Label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
+          <Checkbox checked={sponsored} onCheckedChange={(checked) => setSponsored(checked === true)} />
+          Sponsored (its provider&apos;s name stands out)
+        </Label>
         <Button type="submit" disabled={busy}>
           Create enrollment token
         </Button>
@@ -97,6 +103,12 @@ export function TokensTab() {
           : "A key works once and expires. "}
         The node trades it for its own credential, then waits for your approval on the Nodes tab, so a key on its own
         puts nothing into a measurement.{" "}
+        {sponsored && (
+          <span>
+            A sponsored node&apos;s provider is named wherever the node is shown: its name stands out. It changes nothing else about the
+            node.{" "}
+          </span>
+        )}
         {community && (
           <span>
             A community node is left out of measurements unless a visitor asks for it, is rate limited, and cannot
@@ -142,7 +154,7 @@ export function TokensTab() {
               <TableCell>
                 <Badge variant={token.state === "active" ? "default" : "outline"}>{token.state}</Badge>
               </TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">{token.tier === "community" ? "a volunteer" : "us"}</TableCell>
+              <TableCell className="hidden text-muted-foreground sm:table-cell">{token.tier === "community" ? "a volunteer" : "us"}{token.sponsored ? ", sponsored" : ""}</TableCell>
               <TableCell className="text-right">
                 {token.state === "active" && (
                   <Button size="sm" variant="outline" onClick={() => revoke(token.id)}>

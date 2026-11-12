@@ -325,6 +325,7 @@ export const en = {
   "nodes.hint.providers": "networks hosting them",
   "nodes.hint.ipv6": "online nodes that can use it",
   "nodes.offline": "offline",
+  "node.sponsored": "Sponsored node",
   "nodes.loadFailed": "Could not load nodes",
 } as const;
 

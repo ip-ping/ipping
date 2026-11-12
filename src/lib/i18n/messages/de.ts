@@ -312,5 +312,6 @@ export const de: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "Netze, die sie hosten",
   "nodes.hint.ipv6": "Knoten online, die es nutzen können",
   "nodes.offline": "offline",
+  "node.sponsored": "Gesponserter Knoten",
   "nodes.loadFailed": "Knoten konnten nicht geladen werden",
 };

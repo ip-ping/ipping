@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { LABEL_FONT, placeLabels } from "./map-labels";
 
 import { circlePath, KM_PER_RTT_MS, KM_PER_RTT_MS_MAX, px, py, routeSegment } from "@/lib/geo/project";
+import { NetworkName } from "@/components/network-name";
+import type { NetworkPart } from "@/lib/format";
 import { WORLD_PATH } from "@/lib/geo/world-path";
 import { useTween } from "@/lib/use-tween";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,8 @@ export type MapNode = {
   id: string;
   name: string;
   place?: string;
+  /** The same line as `place`, in parts: a sponsored node's provider stands out. */
+  network?: NetworkPart[];
   lat: number;
   lon: number;
   online?: boolean;
@@ -475,7 +479,7 @@ function Station({
       transform={`translate(${px(node.lon)} ${py(node.lat)})`}
       tabIndex={0}
       role="button"
-      aria-label={`${node.name}${node.place ? `, ${node.place}` : ""}${live ? "" : ", offline"}`}
+      aria-label={`${node.name}${node.place ? `, ${node.place}` : ""}${node.network?.some((part) => part.sponsored) ? ", sponsored" : ""}${live ? "" : ", offline"}`}
       aria-pressed={selected || marked}
       aria-disabled={node.disabled || undefined}
       className={cn("outline-none [&:focus-visible_.focus]:opacity-100", node.disabled ? "cursor-not-allowed opacity-35" : "cursor-pointer")}
@@ -544,7 +548,13 @@ function Tooltip({ node }: { node: MapNode }) {
       style={{ left: `${left}%`, top: `${top}%` }}
     >
       <div className="text-sm leading-none font-medium">{node.name}</div>
-      {node.place && <div className="mt-1 text-muted-foreground">{node.place}</div>}
+      {node.network && node.network.length > 0 ? (
+        <div className="mt-1 text-muted-foreground">
+          <NetworkName parts={node.network} />
+        </div>
+      ) : (
+        node.place && <div className="mt-1 text-muted-foreground">{node.place}</div>
+      )}
       <div className="mt-1.5 flex items-center gap-2">
         <span
           className={cn(

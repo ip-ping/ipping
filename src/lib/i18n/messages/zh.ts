@@ -303,5 +303,6 @@ export const zh: Partial<Record<MessageKey, string>> = {
   "nodes.hint.providers": "托管节点的网络",
   "nodes.hint.ipv6": "可使用 IPv6 的在线节点",
   "nodes.offline": "离线",
+  "node.sponsored": "赞助节点",
   "nodes.loadFailed": "无法加载节点",
 };

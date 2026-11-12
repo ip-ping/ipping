@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/panel";
 import { CommunityBadge } from "@/components/community-badge";
+import { NetworkName } from "@/components/network-name";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -32,7 +33,7 @@ import { IpInfoLookup } from "@/features/ip-info/ip-info-lookup";
 import { useI18n } from "@/lib/i18n/provider";
 import { useNodes } from "@/features/nodes/use-nodes";
 import { api, ApiError, type Measurement, type Schemas } from "@/lib/api/client";
-import { flag, nodeHeading } from "@/lib/format";
+import { flag, networkText, nodeHeading } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { useSelection } from "./selection";
@@ -295,7 +296,7 @@ export function MeasureForm({
                       onChange={setResolverId}
                       options={askable.map((n) => ({
                         value: n.id,
-                        label: `${nodeHeading(n).named ? n.name : `${flag(n.country)} ${nodeHeading(n).title}${nodeHeading(n).sub ? ` · ${nodeHeading(n).sub}` : ""}`}${n.tier === "community" ? ` (${t("form.communityTag")})` : ""}`.trim(),
+                        label: `${nodeHeading(n).named ? n.name : `${flag(n.country)} ${nodeHeading(n).title}${nodeHeading(n).sub ? ` · ${networkText(nodeHeading(n).parts)}` : ""}`}${n.tier === "community" ? ` (${t("form.communityTag")})` : ""}`.trim(),
                       }))}
                     />
                   ) : (
@@ -431,7 +432,9 @@ export function MeasureForm({
                             {nodeHeading(node).named ? node.name : `${flag(node.country)} ${nodeHeading(node).title}`.trim()}
                             <CommunityBadge tier={node.tier} />
                           </span>
-                          <span className="text-muted-foreground">{nodeHeading(node).sub}</span>
+                          <span className="text-muted-foreground">
+                            <NetworkName parts={nodeHeading(node).parts} />
+                          </span>
                         </Label>
                       ))}
                     </div>

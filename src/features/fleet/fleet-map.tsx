@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { KIND_INFO } from "@/features/measurements/kinds";
 import { useSelection } from "@/features/measurements/selection";
 import { useNodes } from "@/features/nodes/use-nodes";
-import { place } from "@/lib/format";
+import { nodeHeading } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 
 /**
@@ -26,10 +26,12 @@ export function FleetMap({ className }: { className?: string }) {
         .filter((n) => n.latitude != null && n.longitude != null)
         .map((n) => {
           const capable = n.kinds.includes(kind);
+          const heading = nodeHeading(n);
           return {
             id: n.id,
-            name: n.name,
-            place: place(n),
+            name: heading.title,
+            place: heading.sub,
+            network: heading.parts,
             lat: n.latitude as number,
             lon: n.longitude as number,
             online: n.online,

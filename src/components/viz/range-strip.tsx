@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { delta, ms } from "@/lib/format";
+import { delta, ms, type NetworkPart } from "@/lib/format";
 import { useTween } from "@/lib/use-tween";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,8 @@ export type StripRow = {
   id: string;
   name: string;
   place?: string;
+  /** The same line as `place`, in parts: a sponsored node's provider stands out. */
+  network?: NetworkPart[];
   state: "pending" | "running" | "done" | "failed";
   points: StripPoint[];
   /** Probes that got no answer at all. */
@@ -202,7 +204,7 @@ export function RangeStrip({
             y={TOP + activeIndex * ROW}
             width={width}
           >
-            <TipTitle name={tip.row.name} place={tip.row.place} />
+            <TipTitle name={tip.row.name} place={tip.row.place} network={tip.row.network} />
             {tip.med != null ? (
               <>
                 <TipRow k="Median" v={`${ms(tip.med)} ms`} />
