@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.17.0** (application), installing backend **v0.13.0**. Nodes of any earlier version
+Current release: **v0.17.1** (application), installing backend **v0.14.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -399,6 +399,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.17.1 | v0.14.0 | migration `0013` | **the home page's hydration error fixed** (a language chosen before a `<Suspense>` boundary was hydrated; with a test that does not depend on luck), **the IP data vote measured** (backend v0.14.0: the country is right 93.2% of the time on held-out anchors, up from 90.8%; registries count once) and said so in the admin page and the README; no change to the API |
 | v0.17.0 | v0.13.0 | migration `0013` | **an API page** at `/developers`: a guided, interactive walk through the API (forms drawn from the backend's contract, **Send** makes the real request, a measurement started in one step feeds the next, curl / Python / JavaScript snippets that never hold a key, a reference of every endpoint scripts use); *API* in the header |
 | v0.16.0 | v0.13.0 | migration `0013` | **every IP data source is a downloaded database, all treated the same**: *Admin > IP data* is one list of nine alike rows (MaxMind is no longer a card of its own, and the "databases in use" table is gone: each row lists its own files), a key box in each row whose free download needs an account (MaxMind's account ID and license key, IPinfo's token, IP2Location's download token), and *Check for updates now*; the public IP info card no longer has an "online service" kind or an "out of requests" status |
 | v0.15.0 | v0.12.0 | migration `0013` | **nine IP data sources and a vote**: the IP info card and the target card give each field a percentage and list every source (what it said, whether it agreed, or why it did not answer); *Admin > IP data* has a switch for each of the nine sources (all on) and an optional key for the online ones; the "no node can run this" alert gives both reasons (the node is older, or its host does not allow it; with node v0.8.1 a node with only `CAP_NET_RAW` offers traceroute); works with nodes of any version |
@@ -473,7 +474,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0, v0.14.1, v0.15.0, v0.16.0 and v0.17.0 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0, v0.14.1, v0.15.0, v0.16.0, v0.17.0 and v0.17.1 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)

@@ -2,7 +2,7 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.17.1 (2026-11-12)
 
 The intermittent hydration error on the home page, found and fixed. The text about the IP data vote is brought in line with the backend's new vote.
 
