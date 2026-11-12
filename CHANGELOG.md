@@ -6,6 +6,13 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 The intermittent hydration error on the home page, found and fixed. The text about the IP data vote is brought in line with the backend's new vote.
 
+Released and verified: every file matches `SHA256SUMS` and carries an attestation (an installer altered after release is refused), `release-manifest.json` names backend v0.14.0
+(schema `0013`) and its wheel's hash is the one in the backend release, `ipping:0.17.1` and `0.17` are on Docker Hub for amd64 and arm64 (one digest), and the frontend bundle has
+the new admin text, none of the old, and no link to GitHub. **The released `ipping:0.17.1` and `ipping-backend:0.14.0` images were run together** (an empty data volume, which the backend
+filled itself, and the simulated fleet of 17 nodes) and **all 23 browser checks passed in each of three full runs, `home-layout` included**. It failed in 2 of 6 full runs before the fix, so three clean
+runs are encouraging and are not proof: the proof is `hydration.test.ts`, which fails on the old code every time. A loop of 600 page loads on a production build after the fix, with the CPU slowed
+and a language stored, showed no hydration error.
+
 - **The hydration error (React #418) in the `home-layout` check, which was left unexplained in v0.17.0, is explained and fixed.** It was reproduced in a
   browser (1 load in 450, with the CPU slowed down, a language stored in the browser and the page reloaded) and the page said what differed:
   `<Panel label="Befehl">` was hydrated against server HTML that said `Command`. The home page's form is in a `<Suspense>` boundary, and React
