@@ -2,9 +2,9 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
-## Unreleased
+## v0.18.0 (2026-11-12)
 
-Sponsored nodes. Needs the backend after v0.14.0 (`contracts/backend-ref.txt` is pinned to its `main` at `f9c09f7`, to be pinned to a tag when that is released); no change to anything else.
+Sponsored nodes. Needs backend v0.15.0 (database migration `0014`); no change to anything else.
 
 - **An administrator can mark a node as sponsored, and its provider's name stands out wherever the node is shown.** In the node's edit dialog the option is **Sponsored**,
   a switch right below *Run by a volunteer*, and on the Enrollment tab a checkbox below *For a volunteer's node* makes a token whose node enrolls sponsored (the token list says

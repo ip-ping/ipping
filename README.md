@@ -20,7 +20,7 @@ browser --HTTPS--> Caddy --/--------> Next.js (this repo)
                       nodes connect out over WebSocket, no inbound ports
 ```
 
-Current release: **v0.17.1** (application), installing backend **v0.14.0**. Nodes of any earlier version
+Current release: **v0.18.0** (application), installing backend **v0.15.0**. Nodes of any earlier version
 keep working for ping; they need node **v0.3.0 or newer** for TCP, HTTP and traceroute, **v0.4.0** for DNS, and
 **v0.5.0** to repeat a traceroute in rounds and to check certificates, **v0.6.0** for DNS over HTTPS and QUIC, and **v0.7.0**
 for DNS over HTTPS to Quad9 (which needs HTTP/2).
@@ -399,6 +399,7 @@ unencrypted. Without the script, the same thing is one request:
 
 | This release | Installs backend | Database | Nodes |
 |---|---|---|---|
+| v0.18.0 | v0.15.0 | migration `0014` | **sponsored nodes**: an option below *Run by a volunteer* (on a node and on an enrollment token) that makes the node's provider name stand out, as a badge with a star, in the results table, the maps and the charts' tooltips, the nodes page, the location evidence, the node picker and the administrator's list; only the marked node, and a measurement keeps what the node was when it began; no change to the node |
 | v0.17.1 | v0.14.0 | migration `0013` | **the home page's hydration error fixed** (a language chosen before a `<Suspense>` boundary was hydrated; with a test that does not depend on luck), **the IP data vote measured** (backend v0.14.0: the country is right 93.2% of the time on held-out anchors, up from 90.8%; registries count once) and said so in the admin page and the README; no change to the API |
 | v0.17.0 | v0.13.0 | migration `0013` | **an API page** at `/developers`: a guided, interactive walk through the API (forms drawn from the backend's contract, **Send** makes the real request, a measurement started in one step feeds the next, curl / Python / JavaScript snippets that never hold a key, a reference of every endpoint scripts use); *API* in the header |
 | v0.16.0 | v0.13.0 | migration `0013` | **every IP data source is a downloaded database, all treated the same**: *Admin > IP data* is one list of nine alike rows (MaxMind is no longer a card of its own, and the "databases in use" table is gone: each row lists its own files), a key box in each row whose free download needs an account (MaxMind's account ID and license key, IPinfo's token, IP2Location's download token), and *Check for updates now*; the public IP info card no longer has an "online service" kind or an "out of requests" status |
@@ -474,7 +475,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Full-stack `compose.yaml` (Caddy, frontend, backend, PostgreSQL, one-shot migration)
 - [x] `ipping.sh` installer: direct (systemd, no Docker) and Docker modes, plus update / backup / restore / geoip-update / geofeed-update, a guided interface, retry-safety, narrow-terminal layout
 - [x] `release-manifest.json`, the release workflow and the rolling `edge` installer ([RELEASING.md](RELEASING.md))
-- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0, v0.14.1, v0.15.0, v0.16.0, v0.17.0 and v0.17.1 for the application)
+- [x] Tagged releases: v0.1.0, v0.2.0, v0.3.0 (v0.3.1, v0.3.2, v0.4.0, v0.4.1, v0.5.0, v0.5.1, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.8.1, v0.9.0, v0.9.1, v0.10.0, v0.11.0, v0.12.0, v0.13.0, v0.14.0, v0.14.1, v0.15.0, v0.16.0, v0.17.0, v0.17.1 and v0.18.0 for the application)
 - [x] Estimated network location panel with an SVG world map (no map library; outline from Natural Earth, public domain)
 - [x] TCP, HTTP and traceroute in the interface (kind switch, per-kind results, admin settings)
 - [x] Responsive results table, measure form, dialogs and admin pages (phones, tablets, dark mode)
@@ -484,7 +485,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Traceroute in rounds like `mtr`: loss and spread per hop, real loss told from rate limiting
 - [x] QUIC (HTTP/3) as a transport of the certificate check
 - [x] Community nodes, first slice: volunteers' nodes marked, left out unless asked for, kept out of location estimates until verified, rate limited, and an audit of their declared place (see the backend README for what it does not do)
-- [x] Sponsored nodes: an option beside "Run by a volunteer" (on a node and on an enrollment token) that makes the node's provider name stand out wherever the node is shown (unreleased; needs backend main after v0.14.0)
+- [x] Sponsored nodes: an option beside "Run by a volunteer" (on a node and on an enrollment token) that makes the node's provider name stand out wherever the node is shown (needs backend v0.15.0)
 - [x] DNS over HTTPS as a choice of the DNS check (Cloudflare and Google)
 - [x] Certificate checks: trust, expiry, names and issuer from every node, with a card for each distinct certificate and a watch that alerts before it expires
 - [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card
