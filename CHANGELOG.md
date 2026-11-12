@@ -23,6 +23,7 @@ The intermittent hydration error on the home page, found and fixed. The text abo
   (nothing of it is shipped).
 - **Not shown:** that the browser check never fails again. The browser failure was too rare to count on (1 in 450 loads before the fix), so the proof is the test above, which is certain,
   and the browser loop run again after the fix.
+- `.mailmap`: commit 158e1e5 has a zero-width space in its author name (a typo, the email is right). `git log` and `git shortlog` now show one author; history is not rewritten.
 - The admin page and the README no longer say "a majority vote" with unmeasured priors: the value with the most evidence wins, a source counts for how often it was found to be right,
   and the registries count once (backend, *Unreleased*: the sources were measured against RIPE Atlas anchors).
 
