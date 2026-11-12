@@ -2,6 +2,30 @@
 
 Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
+## Unreleased
+
+The intermittent hydration error on the home page, found and fixed. The text about the IP data vote is brought in line with the backend's new vote.
+
+- **The hydration error (React #418) in the `home-layout` check, which was left unexplained in v0.17.0, is explained and fixed.** It was reproduced in a
+  browser (1 load in 450, with the CPU slowed down, a language stored in the browser and the page reloaded) and the page said what differed:
+  `<Panel label="Befehl">` was hydrated against server HTML that said `Command`. The home page's form is in a `<Suspense>` boundary, and React
+  hydrates such a boundary later than the rest of the page. The language is chosen once the page is up and was kept in the provider's state, so a
+  language chosen in between (a stored or detected one that is not the default) reached the boundary before it was hydrated, which then hydrated in
+  German against English HTML and was thrown away and drawn again. It needs a language other than the default (the check stores German and reloads) and unlucky timing,
+  which depends on how busy the machine is: it showed in 2 of 6 full runs of the checks, in 1 of 450 loads of the loop and in none of 14 solo runs. That it is not tied to
+  v0.17.0 is likely (the home page's form was in a boundary before it) but was not tested.
+  The language is now kept in a small store that every component reads with `useSyncExternalStore`, with the server's language as the
+  snapshot to hydrate with, so a boundary is hydrated from what the server drew whenever it is hydrated and shown the chosen language right after. No component changed:
+  `useI18n()` gives the same thing.
+- **A test that does not depend on luck** (`src/lib/i18n/hydration.test.ts`): it draws the page on a "server", holds the boundary back with a component that has not loaded, lets the language
+  be chosen, and then lets the boundary hydrate. With the old provider it fails with the very error of the browser (`Befehl` against `Command`, inside the boundary); with the new one
+  it passes, and a second test checks that the visitor's own choice still reaches the whole page, the boundary too, and is remembered. It runs in `jsdom`, a new development dependency
+  (nothing of it is shipped).
+- **Not shown:** that the browser check never fails again. The browser failure was too rare to count on (1 in 450 loads before the fix), so the proof is the test above, which is certain,
+  and the browser loop run again after the fix.
+- The admin page and the README no longer say "a majority vote" with unmeasured priors: the value with the most evidence wins, a source counts for how often it was found to be right,
+  and the registries count once (backend, *Unreleased*: the sources were measured against RIPE Atlas anchors).
+
 ## v0.17.0 (2026-11-11)
 
 An API page: a guided, interactive way through the API. The backend is unchanged (v0.13.0).

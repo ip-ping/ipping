@@ -160,7 +160,7 @@ function SourceRow({ source, send, busy }: { source: Source; send: Send; busy: b
 
 /**
  * Every IP data source, all the same: its switch (all on by default), what its download needs, what is on disk and how the last check went.
- * A lookup asks every source that is on and takes a majority vote. Every source is a database this server downloads and answers from.
+ * A lookup asks every source that is on and votes on the answers. Every source is a database this server downloads and answers from.
  */
 export function SourcesCard({ data, send, busy, checkNow }: { data: IpData; send: Send; busy: string | null; checkNow: () => void }) {
   const [hours, setHours] = useState(String(data.data_update_hours));
@@ -172,8 +172,9 @@ export function SourcesCard({ data, send, busy, checkNow }: { data: IpData; send
         <CardTitle>IP data sources</CardTitle>
         <CardDescription>
           {on} of {data.sources.length} sources are on. Each is a database this server downloads and answers from, so nothing is asked of a service when
-          an address is looked up. Every address is put to every source that is on and the answers are voted on: the value most sources give wins, and
-          each field says how sure the vote is. One source with something to say is enough.
+          an address is looked up. Every address is put to every source that is on and the answers are voted on: the value with the most evidence wins (a
+          source counts for what it is measured to be right, and two that are wrong the same way, as the two registries are, count once), and each field says how
+          sure the vote is. One source with something to say is enough.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

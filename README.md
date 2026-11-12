@@ -294,13 +294,16 @@ shipped to both architectures without emulation.
 
 ## IP data (nine sources) and the lookup API
 
-**The vote.** Every source that is on is asked for an address and **a majority vote** is taken for each field (country, region,
+**The vote.** Every source that is on is asked for an address and the answers are **voted on** for each field (country, region,
 city, position, postal code, time zone, AS number, organization). A field is answered whenever one source has something for it:
 one source of nine with data, the other eight empty, failed or off, still gives that data. The sources are held together (only
-those that agree on the country vote on the city; only those that agree on the AS number vote on the organization). Each answered
-field carries **how sure it is**, from how many sources voted for it and how reliable each is for that kind of data: those
-reliabilities are priors (a country is surer than a city), **not measured on your deployment**, so the percentage is an estimate
-of how sure the vote is, not a guarantee. The details and the formula are in the
+those that agree on the country vote on the city; only those that agree on the AS number vote on the organization). The value
+with the most evidence wins, and each answered field carries **how sure it is** (the same evidence, as a percentage). A source counts for
+how often it was found to be right: the backend **measured** the six sources that need no account against RIPE Atlas anchors, and two
+sources that are wrong the same way (the registries, IPtoASN and IPdeny) count once. MaxMind, IPinfo and IP2Location could not be measured
+(no account) and are trusted no more than the best source that was; the AS number, region, city, postal code, time zone and
+organization keep estimated reliabilities. Anchors are easier than the typical address, so the percentage is an estimate of how sure
+the vote is, not a guarantee. The details, the numbers and the formula are in the
 [backend README](https://github.com/ip-ping/ipping-backend#ip-data-nine-sources-one-vote). The IP info card shows the percentage
 beside each field and, under it, the sources: what each said, whether it voted with the winner, or why it did not answer
 (turned off, needs setup, not downloaded yet, offline mode).
@@ -485,6 +488,7 @@ Small steps, each one committed and logged in [CHANGELOG.md](CHANGELOG.md).
 - [x] Nine IP data sources with a switch each (all on), optional keys for the online ones, and a majority vote with a percentage for every field in the IP info card
 - [x] Every IP data source a downloaded database served from disk (never a source's API), shown as one list of alike rows in the admin page with a key box wherever the free download needs an account
 - [x] An API page (`/developers`) that guides through the API with forms, a Send button and copy-ready snippets
+- [x] The intermittent hydration error on the home page explained and fixed (a language chosen before a `<Suspense>` boundary was hydrated), with a test that fails on the old code every time
 - [x] IP data: a MaxMind account in the admin page (databases downloaded and kept current), an IP lookup API with its own settings, and nodes filled in from their address unless typed otherwise
 - [x] Path analysis: the networks a route crosses and the route on a map (GeoIP database; places checked against the round trip)
 - [x] Every kind over IPv6 with global addresses and the real policy, in a network-namespace lab (node CI); see the node README for what that does and does not prove
