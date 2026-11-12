@@ -6,6 +6,7 @@ Progress log for `ipping`, newest first. Each entry is one small, tested step.
 
 Sponsored nodes. Needs backend v0.15.0 (database migration `0014`); no change to anything else.
 
+- **The hydration test of v0.17.1 no longer depends on timing.** It slept a fixed 30 ms between its steps and failed once on a CI runner during this release's first attempt (`expected 'Command' to be 'Befehl'`: the boundary had not been drawn again yet), which stopped the release before anything was published. It now waits for each state it expects. With every core busy it passed 15 of 15 runs (the old version failed 2 of 15 under the same load), and it still fails on the old provider of v0.17.0 every time.
 - **An administrator can mark a node as sponsored, and its provider's name stands out wherever the node is shown.** In the node's edit dialog the option is **Sponsored**,
   a switch right below *Run by a volunteer*, and on the Enrollment tab a checkbox below *For a volunteer's node* makes a token whose node enrolls sponsored (the token list says
   `us, sponsored`). It is independent of *volunteer*: a volunteer's node can be sponsored and a sponsored node stays official. Only the flag is sent when it is changed (as for every field

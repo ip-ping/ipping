@@ -16,7 +16,8 @@ import { I18nProvider, useI18n } from "./provider";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false;
 
 const CONFIG = { languages: { enabled: ["en", "de", "fr"], default: "en", auto_detect: true } };
-const later = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Waits for what React has not done yet, as long as a slow machine needs (a fixed sleep failed on a CI runner), and says what was missing if it never is. */
+const settled = (check: () => void) => vi.waitFor(check, { timeout: 5000, interval: 10 });
 
 /** Shows "Command" in the language being shown, in the page and in the held-back part. */
 function Heading({ id }: { id: string }): ReactElement {
@@ -55,14 +56,16 @@ describe("a language chosen before a part of the page is hydrated", () => {
     const Held = lazy(() => new Promise<{ default: () => ReactElement }>((resolve) => (release = () => resolve({ default: Inside }))));
     hydrateRoot(container, tree(() => createElement(Held)), { onRecoverableError: (error) => errors.push(error) });
 
-    await later(); // the page is hydrated, its effects have run, the language is chosen
-    expect(document.documentElement.lang).toBe("de");
-    expect(container.querySelector("#outside")?.textContent).toBe("Befehl");
+    // the page is hydrated, its effects have run, the language is chosen, and the part in the boundary is still held back
+    await settled(() => {
+      expect(document.documentElement.lang).toBe("de");
+      expect(container.querySelector("#outside")?.textContent).toBe("Befehl");
+      expect(release).toBeDefined();
+    });
 
     release?.(); // now the boundary is hydrated
-    await later();
-    expect(errors.map(String)).toEqual([]);
-    expect(container.querySelector("#inside")?.textContent).toBe("Befehl"); // and it is in the language that was chosen
+    await settled(() => expect(container.querySelector("#inside")?.textContent).toBe("Befehl")); // in the language that was chosen
+    expect(errors.map(String)).toEqual([]); // and what the server drew was not thrown away
   });
 
   it("changes the whole page when the visitor chooses another language, in the boundary too", async () => {
@@ -75,15 +78,17 @@ describe("a language chosen before a part of the page is hydrated", () => {
     const page = () => createElement(I18nProvider, null, createElement(Chooser), createElement(Heading, { id: "outside" }), createElement(Suspense, { fallback: null }, createElement(Inside)));
     container.innerHTML = renderToString(page());
     hydrateRoot(container, page(), { onRecoverableError: (error) => errors.push(error) });
-    await later();
+    // hydrated, and the language chosen for the visitor (English: nothing is stored) once the page is up
+    await settled(() => expect(document.documentElement.lang).toBe("en"));
     expect(container.querySelector("#inside")?.textContent).toBe("Command");
     expect(errors).toEqual([]);
 
     container.querySelector<HTMLButtonElement>("#choose-fr")?.click();
-    await later();
-    expect(container.querySelector("#outside")?.textContent).toBe("Commande");
-    expect(container.querySelector("#inside")?.textContent).toBe("Commande");
-    expect(document.documentElement.lang).toBe("fr");
-    expect(window.localStorage.getItem("ipping.language")).toBe("fr"); // remembered
+    await settled(() => {
+      expect(container.querySelector("#outside")?.textContent).toBe("Commande");
+      expect(container.querySelector("#inside")?.textContent).toBe("Commande");
+      expect(document.documentElement.lang).toBe("fr");
+      expect(window.localStorage.getItem("ipping.language")).toBe("fr"); // remembered
+    });
   });
 });
